@@ -19,13 +19,19 @@ save.xml
 *.lo
 
 # Executables
-src/fty_asset_selftest
-src/fty-asset-cli
+src/fty-asset_selftest
 src/fty-asset
+src/fty-asset-cli
+src/fty_asset_selftest
 *.exe
 *.out
 *.app
 core
+
+ # Distcheck workspace and archives
+fty-asset-1.0.0/
+fty-asset-1.0.0.tar.gz
+fty-asset-1.0.0.zip
 
 # Man pages
 doc/*.1
@@ -59,8 +65,20 @@ CMakeCache.txt
 CMakeFiles/
 CTestTestfile.cmake
 cmake_install.cmake
+compile_commands.json
+DartConfiguration.tcl
 install_manifest.txt
 Testing/
+
+# Repositories downloaded by CI integration scripts
+*.git/
+
+# Travis build area
+tmp/
+
+# Valgrind files
+callgrind*
+vgcore*
 
 # GYP files
 project.Makefile
@@ -82,7 +100,21 @@ src/app/jni/output
 # Python build directory
 build/
 
+# MSVC build directories
+obj/
+bin/
+*.tlog
+
+# Qt
+*pro.user
+moc_*
+build-*
+bindings/qt/selftest/selftest
+
 # Temporary files
 *.swp
-*~
 *.bak
+.test*
+
+# editor backups
+*~
