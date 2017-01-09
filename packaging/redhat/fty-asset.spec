@@ -99,6 +99,7 @@ This package contains development files for fty-asset: agent managing informatio
 %{_libdir}/libfty_asset.so
 %{_libdir}/pkgconfig/libfty_asset.pc
 %{_mandir}/man3/*
+%{_mandir}/man7/*
 
 %prep
 %setup -q
@@ -123,15 +124,15 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_bindir}/fty-asset-cli
 %{_mandir}/man1/fty-asset-cli*
 %config(noreplace) %{_sysconfdir}/fty-asset/fty-asset.cfg
-/usr/lib/systemd/system/fty-asset.service
+/usr/lib/systemd/system/fty-asset{,@*}.{service,*}
 %dir %{_sysconfdir}/fty-asset
 %if 0%{?suse_version} > 1315
 %post
-%systemd_post fty-asset.service
+%systemd_post fty-asset{,@*}.{service,*}
 %preun
-%systemd_preun fty-asset.service
+%systemd_preun fty-asset{,@*}.{service,*}
 %postun
-%systemd_postun_with_restart fty-asset.service
+%systemd_postun_with_restart fty-asset{,@*}.{service,*}
 %endif
 
 %changelog

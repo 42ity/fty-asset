@@ -26,6 +26,11 @@ src_libfty_asset_la_SOURCES = \
     src/fty_asset_autoupdate.cc \
     src/platform.h
 
+if ENABLE_DRAFTS
+src_libfty_asset_la_SOURCES += \
+    src/fty_asset_private_selftest.cc
+endif
+
 src_libfty_asset_la_CPPFLAGS = ${AM_CPPFLAGS}
 src_libfty_asset_la_CXXFLAGS = ${AM_CXXFLAGS}
 

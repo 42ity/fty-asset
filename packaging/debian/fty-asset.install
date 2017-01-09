@@ -3,5 +3,5 @@ usr/share/man/man1/fty-asset.1
 usr/bin/fty-asset-cli
 usr/share/man/man1/fty-asset-cli.1
 etc/fty-asset/fty-asset.cfg
-lib/systemd/system/fty-asset.service
+lib/systemd/system/fty-asset{,@*}.{service,*}
 

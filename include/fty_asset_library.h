@@ -82,6 +82,12 @@ typedef struct _fty_asset_autoupdate_t fty_asset_autoupdate_t;
 #include "fty_asset_server.h"
 #include "fty_asset_autoupdate.h"
 
+#ifdef FTY_ASSET_BUILD_DRAFT_API
+//  Self test for private classes
+FTY_ASSET_EXPORT void
+    fty_asset_private_selftest (bool verbose);
+#endif // FTY_ASSET_BUILD_DRAFT_API
+
 #endif
 /*
 ################################################################################

@@ -2,3 +2,4 @@ usr/include/*
 usr/lib/*/libfty_asset.so
 usr/lib/*/pkgconfig/libfty_asset.pc
 usr/share/man/man3/*
+usr/share/man/man7/*

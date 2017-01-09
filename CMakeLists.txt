@@ -201,6 +201,12 @@ set (fty_asset_sources
     src/fty_asset_server.c
     src/fty_asset_autoupdate.c
 )
+IF (ENABLE_DRAFTS)
+    list (APPEND fty_asset_sources
+        src/fty_asset_private_selftest.cc
+    )
+ENDIF (ENABLE_DRAFTS)
+
 source_group("Source Files" FILES ${fty_asset_sources})
 if (NOT DEFINED BUILD_SHARED_LIBS)
     SET(BUILD_SHARED_LIBS ON)
@@ -335,6 +341,12 @@ set(TEST_CLASSES
     fty_asset_server
     fty_asset_autoupdate
 )
+
+IF (ENABLE_DRAFTS)
+    list (APPEND TEST_CLASSES
+    private_classes
+    )
+ENDIF (ENABLE_DRAFTS)
 
 foreach(TEST_CLASS ${TEST_CLASSES})
     add_test(
