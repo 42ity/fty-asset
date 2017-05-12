@@ -45,7 +45,7 @@
         <use project = "malamute"/>
     </use>
 
-    <use project = "openssl" header = "openssl/sha.h" />
+    <use project = "openssl" header = "openssl/sha.h" debian_name="libssl-dev"/>
 
     <class name = "defs" state="stable" private = "1"> Defines constants </class>
     <class name = "dbhelpers" state="stable" private = "1"> Helpers functions for database </class>

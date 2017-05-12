@@ -31,7 +31,7 @@ Build-Depends: debhelper (>= 9),
     libcxxtools-dev,
     libtntdb-dev,
     libfty-proto-dev,
-    libopenssl-dev,
+    libssl-dev,
     systemd,
     dh-systemd,
     asciidoc-base | asciidoc, xmlto,
@@ -54,7 +54,7 @@ Depends:
     libcxxtools-dev,
     libtntdb-dev,
     libfty-proto-dev,
-    libopenssl-dev,
+    libssl-dev,
     libfty-asset1 (= ${binary:Version})
 Description: agent managing information about assets development tools
  This package contains development files for fty-asset: agent managing information about assets
