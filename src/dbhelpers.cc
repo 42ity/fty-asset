@@ -697,14 +697,7 @@ create_or_update_asset (fty_proto_t *fmsg, bool read_only, bool test, LIMITATION
         ret.errtype    = DB_ERR;
         ret.errsubtype = DB_ERROR_INTERNAL;
     }
-    // we should check if asset is activable, insert it as inactive and then activate it if:
-    // * asset is a device
-    // * asset is not a RC
-    // * new status is "active"
-    // we should insert asset "as is" if:
-    // * asset is not a device OR asset is RC
-    // we should insert asset "as is" and deactivate if:
-    // * asset is a device, was active and is now inactive
+    return ret;
 }
 
 //  Self test of this class
