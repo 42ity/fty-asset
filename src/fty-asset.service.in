@@ -1,7 +1,7 @@
 [Unit]
 Description=fty-asset service
-After=malamute.service fty-db-init.service
-Requires=malamute.service fty-db-init.service
+After=malamute.service fty-db.target
+Requires=malamute.service fty-db.target
 PartOf=bios.target
 
 [Service]
