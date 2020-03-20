@@ -18,7 +18,9 @@ EnvironmentFile=-@sysconfdir@/default/fty
 EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
 Environment="prefix=@prefix@"
 EnvironmentFile=@sysconfdir@/default/bios-db-rw
-ExecStart=@prefix@/bin/fty-asset @sysconfdir@/@PACKAGE@/fty-asset.cfg
+ExecStart=@prefix@/bin/fty-asset
+### TODO: Currently there is no meaningful config support
+#ExecStart=@prefix@/bin/fty-asset -c @sysconfdir@/@PACKAGE@/fty-asset.cfg
 
 [Install]
 WantedBy=bios.target
