@@ -201,6 +201,23 @@
 
 // TODO define as class constants?
 static constexpr const char* FTY_ASSET_MAILBOX = "FTY.Q.ASSET.QUERY";
+// new interface mailbox subjects
+static constexpr const char* FTY_ASSET_SUBJECT_CREATE = "CREATE";
+static constexpr const char* FTY_ASSET_SUBJECT_UPDATE = "UPDATE";
+static constexpr const char* FTY_ASSET_SUBJECT_DELETE = "DELETE";
+static constexpr const char* FTY_ASSET_SUBJECT_GET    = "GET";
+static constexpr const char* FTY_ASSET_SUBJECT_LIST   = "LIST";
+
+// new interface topics
+static constexpr const char* FTY_ASSET_TOPIC_CREATED = "FTY.T.ASSET.CREATED";
+static constexpr const char* FTY_ASSET_TOPIC_UPDATED = "FTY.T.ASSET.UPDATED";
+static constexpr const char* FTY_ASSET_TOPIC_DELETED = "FTY.T.ASSET.DELETED";
+
+// new interface topic subjects
+static constexpr const char* FTY_ASSET_SUBJECT_CREATED = "CREATED";
+static constexpr const char* FTY_ASSET_SUBJECT_UPDATED = "UPDATED";
+static constexpr const char* FTY_ASSET_SUBJECT_DELETED = "DELETED";
+
 
 static constexpr const char* METADATA_TRY_ACTIVATE      = "TRY_ACTIVATE";
 static constexpr const char* METADATA_NO_ERROR_IF_EXIST = "NO_ERROR_IF_EXIST";
@@ -246,6 +263,10 @@ class FtyAssetServer
         void connectMailboxClientNg();
         void receiveMailboxClientNg(const std::string& query);
 
+        void createPublisherClientNg();
+        void resetPublisherClientNg();
+        void connectPublisherClientNg();
+
     private:
         bool                m_testMode        = false;
         std::string         m_agentName       = "asset-agent";
@@ -258,10 +279,16 @@ class FtyAssetServer
 
         // new generation interface
         std::string         m_agentNameNg     = "asset-agent-ng";
-        msgBusPtr           m_mailboxClientNg;
+        msgBusPtr           m_assetMsgQueue;
+        msgBusPtr           m_publisherCreate;
+        msgBusPtr           m_publisherUpdate;
+        msgBusPtr           m_publisherDelete;
 
         // topic handlers
         void handleAssetManipulationReq(const messagebus::Message & msg);
+
+        // notifications
+        void sendNotification(const messagebus::Message&);
 };
 
 FtyAssetServer::FtyAssetServer()
@@ -275,31 +302,55 @@ FtyAssetServer::FtyAssetServer()
 
 void FtyAssetServer::createMailboxClientNg()
 {
+    m_assetMsgQueue.reset(messagebus::MlmMessageBus(m_mailboxEndpoint, m_agentNameNg));
     log_debug("New mailbox client registered to endpoint %s with name %s", m_mailboxEndpoint.c_str(), m_agentNameNg.c_str());
-    m_mailboxClientNg.reset(messagebus::MlmMessageBus(m_mailboxEndpoint, m_agentNameNg));
 }
 
 void FtyAssetServer::resetMailboxClientNg()
 {
     log_debug("Mailbox client %s deleted", m_agentNameNg.c_str());
-    m_mailboxClientNg.reset();
+    m_assetMsgQueue.reset();
 }
 
 void FtyAssetServer::connectMailboxClientNg()
 {
-    m_mailboxClientNg->connect();
+    m_assetMsgQueue->connect();
 }
 
 void FtyAssetServer::receiveMailboxClientNg(const std::string& query)
 {
-    m_mailboxClientNg->receive(query,
+    m_assetMsgQueue->receive(query,
         [&](messagebus::Message m) {
             this->handleAssetManipulationReq(m); 
         });
 }
 
+void FtyAssetServer::createPublisherClientNg()
+{
+    m_publisherCreate.reset(messagebus::MlmMessageBus(m_mailboxEndpoint, m_agentNameNg + "-create"));
+    log_debug("New publisher client registered to endpoint %s with name %s", m_mailboxEndpoint.c_str(), (m_agentNameNg + "-create").c_str());
+    m_publisherUpdate.reset(messagebus::MlmMessageBus(m_mailboxEndpoint, m_agentNameNg + "-update"));
+    log_debug("New publisher client registered to endpoint %s with name %s", m_mailboxEndpoint.c_str(), (m_agentNameNg + "-update").c_str());
+    m_publisherDelete.reset(messagebus::MlmMessageBus(m_mailboxEndpoint, m_agentNameNg + "-delete"));
+    log_debug("New publisher client registered to endpoint %s with name %s", m_mailboxEndpoint.c_str(), (m_agentNameNg + "-delete").c_str());
+}
+
+void FtyAssetServer::resetPublisherClientNg()
+{
+    m_publisherCreate.reset();
+    m_publisherUpdate.reset();
+    m_publisherDelete.reset();
+}
+
+void FtyAssetServer::connectPublisherClientNg()
+{
+    m_publisherCreate->connect();
+    m_publisherUpdate->connect();
+    m_publisherDelete->connect();
+}
+
 // create response (data is a single string)
-static messagebus::Message createResponse(
+static messagebus::Message createMessage(
     const std::string& subject,
     const std::string& correlationID,
     const std::string& from,
@@ -310,11 +361,26 @@ static messagebus::Message createResponse(
 {
     messagebus::Message msg;
 
-    msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
-    msg.metaData().emplace(messagebus::Message::FROM, from);
-    msg.metaData().emplace(messagebus::Message::TO, to);
-    msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
-    msg.metaData().emplace(messagebus::Message::STATUS, status);
+    if(!subject.empty())
+    {
+        msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
+    }
+    if(!from.empty())
+    {
+        msg.metaData().emplace(messagebus::Message::FROM, from);
+    }
+    if(!to.empty())
+    {
+        msg.metaData().emplace(messagebus::Message::TO, to);
+    }
+    if(!correlationID.empty())
+    {
+        msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
+    }
+    if(!status.empty())
+    {
+        msg.metaData().emplace(messagebus::Message::STATUS, status);
+    }
 
     msg.userData().push_back(data);
 
@@ -322,7 +388,7 @@ static messagebus::Message createResponse(
 }
 
 // create response (data is a vector of strings)
-static messagebus::Message createResponse(
+static messagebus::Message createMessage(
     const std::string& subject,
     const std::string& correlationID,
     const std::string& from,
@@ -333,11 +399,26 @@ static messagebus::Message createResponse(
 {
     messagebus::Message msg;
 
-    msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
-    msg.metaData().emplace(messagebus::Message::FROM, from);
-    msg.metaData().emplace(messagebus::Message::TO, to);
-    msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
-    msg.metaData().emplace(messagebus::Message::STATUS, status);
+    if(!subject.empty())
+    {
+        msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
+    }
+    if(!from.empty())
+    {
+        msg.metaData().emplace(messagebus::Message::FROM, from);
+    }
+    if(!to.empty())
+    {
+        msg.metaData().emplace(messagebus::Message::TO, to);
+    }
+    if(!correlationID.empty())
+    {
+        msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
+    }
+    if(!status.empty())
+    {
+        msg.metaData().emplace(messagebus::Message::STATUS, status);
+    }
 
     for(const auto& e : data)
     {
@@ -380,7 +461,7 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
     const std::string& messageSubject = msg.metaData().at(messagebus::Message::SUBJECT);
 
     // Request to add a new asset into the DB   
-    if(messageSubject == "CREATE")
+    if(messageSubject == FTY_ASSET_SUBJECT_CREATE)
     {
         log_debug("[handle asset manipulation] : subject CREATE");
 
@@ -392,8 +473,8 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
 
             fty::Asset createdAsset = createAsset(asset, tryActivate, m_testMode);
 
-            response = createResponse(
-                "CREATE",
+            response = createMessage(
+                FTY_ASSET_SUBJECT_CREATE,
                 msg.metaData().find(messagebus::Message::CORRELATION_ID)->second,
                 m_agentNameNg,
                 msg.metaData().find(messagebus::Message::FROM)->second,
@@ -403,16 +484,18 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
 
             // send response
             log_debug("[handle asset manipulation] : sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
-            m_mailboxClientNg->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+            m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
 
-            // TODO send notification
+            // send notification
+            messagebus::Message notification = createMessage(FTY_ASSET_SUBJECT_CREATED, "", m_agentNameNg, "", messagebus::STATUS_OK, createdAsset.toJson());
+            sendNotification(notification);
         }
         catch (std::exception& e)
         {
             log_error(e.what());
             // create response (error)
-            response = createResponse(
-                "CREATE",
+            response = createMessage(
+                FTY_ASSET_SUBJECT_CREATE,
                 msg.metaData().find(messagebus::Message::CORRELATION_ID)->second,
                 m_agentNameNg,
                 msg.metaData().find(messagebus::Message::FROM)->second,
@@ -422,12 +505,12 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
 
             // send response
             log_debug("[handle asset manipulation] : sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
-            m_mailboxClientNg->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+            m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
         }
     
     }
     // Request to update an existing asset into the DB
-    else if(messageSubject == "UPDATE")
+    else if(messageSubject == FTY_ASSET_SUBJECT_UPDATE)
     {
         log_debug("[handle asset manipulation] : subject UPDATE");
 
@@ -435,13 +518,20 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
         {
             std::string userData = msg.userData().front();
 
-            fty::Asset asset = fty::Asset::fromJson(userData);
+            fty::Asset requestedAsset = fty::Asset::fromJson(userData);
+            
+            // data vector (contains asset before and after update)
+            std::vector<std::string> assetJsonVector;
+            // before update
+            assetJsonVector.push_back(getAsset(requestedAsset.getInternalName(), m_testMode).toJson());
 
-            fty::Asset updatedAsset = updateAsset(asset, tryActivate, m_testMode);
+            fty::Asset updatedAsset = updateAsset(requestedAsset, tryActivate, m_testMode);
+            // after update
+            assetJsonVector.push_back(updatedAsset.toJson());
 
             // create response (ok)
-            response = createResponse(
-                "UPDATE",
+            response = createMessage(
+                FTY_ASSET_SUBJECT_UPDATE,
                 msg.metaData().find(messagebus::Message::CORRELATION_ID)->second,
                 m_agentNameNg,
                 msg.metaData().find(messagebus::Message::FROM)->second,
@@ -451,16 +541,18 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
 
             // send response
             log_debug("[handle asset manipulation] : sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
-            m_mailboxClientNg->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+            m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
 
-            // TODO send notification
+            // send notification
+            messagebus::Message notification = createMessage(FTY_ASSET_SUBJECT_UPDATED, "", m_agentNameNg, "", messagebus::STATUS_OK, assetJsonVector);
+            sendNotification(notification);
         }
         catch (std::exception& e)
         {
             log_error(e.what());
             // create response (error)
-            response = createResponse(
-                "UPDATE",
+            response = createMessage(
+                FTY_ASSET_SUBJECT_UPDATE,
                 msg.metaData().find(messagebus::Message::CORRELATION_ID)->second,
                 m_agentNameNg,
                 msg.metaData().find(messagebus::Message::FROM)->second,
@@ -470,19 +562,19 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
 
             // send response
             log_debug("[handle asset manipulation] : sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
-            m_mailboxClientNg->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+            m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
         }
     
     }
     // Request to delete an existing asset from the DB
-    else if(messageSubject == "DELETE")
+    else if(messageSubject == FTY_ASSET_SUBJECT_DELETE)
     {
         // TODO not implemented yet
         log_debug("[handle asset manipulation] : subject DELETE");
     
     }
     // Return the status of the requested asset
-    else if(messageSubject == "GET")
+    else if(messageSubject == FTY_ASSET_SUBJECT_GET)
     {
         log_debug("[handle asset manipulation] : subject GET");
 
@@ -492,8 +584,8 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
             fty::Asset asset = getAsset(assetIname, m_testMode);
 
             // create response (ok)
-            response = createResponse(
-                "GET",
+            response = createMessage(
+                FTY_ASSET_SUBJECT_GET,
                 msg.metaData().find(messagebus::Message::CORRELATION_ID)->second,
                 m_agentNameNg,
                 msg.metaData().find(messagebus::Message::FROM)->second,
@@ -503,14 +595,14 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
 
             // send response
             log_debug("[handle asset manipulation] : sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
-            m_mailboxClientNg->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+            m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
         }
         catch (std::exception& e)
         {
             log_error(e.what());
             // create response (error)
-            response = createResponse(
-                "GET",
+            response = createMessage(
+                FTY_ASSET_SUBJECT_GET,
                 msg.metaData().find(messagebus::Message::CORRELATION_ID)->second,
                 m_agentNameNg,
                 msg.metaData().find(messagebus::Message::FROM)->second,
@@ -520,12 +612,12 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
 
             // send response
             log_debug("[handle asset manipulation] : sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
-            m_mailboxClientNg->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+            m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
         }
     
     }
     // Return a list of all assets in the system
-    else if(messageSubject == "LIST")
+    else if(messageSubject == FTY_ASSET_SUBJECT_LIST)
     {
         log_debug("[handle asset manipulation] : subject LIST");
 
@@ -541,8 +633,8 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
             }
 
             // create response (ok)
-            response = createResponse(
-                "LIST",
+            response = createMessage(
+                FTY_ASSET_SUBJECT_LIST,
                 msg.metaData().find(messagebus::Message::CORRELATION_ID)->second,
                 m_agentNameNg,
                 msg.metaData().find(messagebus::Message::FROM)->second,
@@ -552,14 +644,14 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
 
             // send response
             log_debug("[handle asset manipulation] : sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
-            m_mailboxClientNg->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+            m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
         }
         catch (std::exception& e)
         {
             log_error(e.what());
             // create response (error)
-            response = createResponse(
-                "LIST",
+            response = createMessage(
+                FTY_ASSET_SUBJECT_LIST,
                 msg.metaData().find(messagebus::Message::CORRELATION_ID)->second,
                 m_agentNameNg,
                 msg.metaData().find(messagebus::Message::FROM)->second,
@@ -569,12 +661,51 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
 
             // send response
             log_debug("[handle asset manipulation] : sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
-            m_mailboxClientNg->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+            m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
         }
     }
     else
     {
         log_warning("Handle asset manipulation - Unknown subject");
+    }
+}
+
+
+// REMOVE as soon as old interface is not needed anymore
+// fwd declaration
+static void s_send_create_or_update_asset(const FtyAssetServer& config, const std::string &asset_name, const char* operation, bool read_only);
+
+// sends create/update/delete notification on both new and old interface
+void FtyAssetServer::sendNotification(const messagebus::Message& msg)
+{
+    const std::string& subject = msg.metaData().at(messagebus::Message::SUBJECT);
+
+    if(!m_testMode)
+    {
+        if(subject == FTY_ASSET_SUBJECT_CREATED)
+        {
+            m_publisherCreate->publish(FTY_ASSET_TOPIC_CREATED, msg);
+
+            // REMOVE as soon as old interface is not needed anymore
+            // old interface
+            fty::Asset asset;
+            asset = fty::Asset::fromJson(msg.userData().back());
+            s_send_create_or_update_asset(*this, asset.getInternalName(), "create", false /* read_only is not used */);
+        }
+        else if(subject == FTY_ASSET_SUBJECT_UPDATED)
+        {
+            m_publisherUpdate->publish(FTY_ASSET_TOPIC_UPDATED, msg);
+
+            // REMOVE as soon as old interface is not needed anymore
+            // old interface
+            fty::Asset asset;
+            asset = fty::Asset::fromJson(msg.userData().back()); // old interface replies only with updated asset
+            s_send_create_or_update_asset(*this, asset.getInternalName(), "update", false /* read_only is not used */);
+        }
+        else if(subject == FTY_ASSET_SUBJECT_DELETED)
+        {
+            m_publisherDelete->publish(FTY_ASSET_TOPIC_DELETED, msg);
+        }
     }
 }
 
@@ -1630,9 +1761,14 @@ fty_asset_server (zsock_t *pipe, void *args)
                     log_error ("%s:\tCan't connect to malamute endpoint '%s'", serverConfig.getAgentName().c_str(), serverConfig.getMailboxEndpoint().c_str());
                 }
 
-                serverConfig.createMailboxClientNg();
+                serverConfig.createMailboxClientNg();   // queue
+                serverConfig.createPublisherClientNg(); // notifications
+
                 serverConfig.connectMailboxClientNg();
+                serverConfig.connectPublisherClientNg();
+
                 serverConfig.receiveMailboxClientNg(FTY_ASSET_MAILBOX);
+
 
                 zstr_free(&endpoint);
                 zsock_signal (pipe, 0);
@@ -1736,7 +1872,7 @@ static void test_asset_mailbox_handler(const messagebus::Message & msg)
     try
     {
         std::string msgSubject = msg.metaData().find(messagebus::Message::SUBJECT)->second;
-        if(msgSubject == "CREATE")
+        if(msgSubject == FTY_ASSET_SUBJECT_CREATED)
         {
             std::string assetJson = msg.userData().front();
 
@@ -1749,7 +1885,7 @@ static void test_asset_mailbox_handler(const messagebus::Message & msg)
                 log_error ("fty-asset-server-test:Test #13.1: FAILED");
             }
         }
-        else if(msgSubject == "UPDATE")
+        else if(msgSubject == FTY_ASSET_SUBJECT_UPDATE)
         {
             std::string assetJson = msg.userData().front();
 
@@ -1762,7 +1898,7 @@ static void test_asset_mailbox_handler(const messagebus::Message & msg)
                 log_error ("fty-asset-server-test:Test #13.2: FAILED");
             }
         }
-        else if(msgSubject == "GET")
+        else if(msgSubject == FTY_ASSET_SUBJECT_GET)
         {
             std::string assetJson = msg.userData().front();
             fty::Asset a = fty::Asset::fromJson(assetJson);
@@ -2395,7 +2531,7 @@ fty_asset_server_test (bool verbose)
 
         // test create
         msg.metaData().emplace(messagebus::Message::CORRELATION_ID, messagebus::generateUuid());
-        msg.metaData().emplace(messagebus::Message::SUBJECT, "CREATE");
+        msg.metaData().emplace(messagebus::Message::SUBJECT, FTY_ASSET_SUBJECT_CREATED);
         msg.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_TEST_REC);
         msg.metaData().emplace(messagebus::Message::TO, FTY_ASSET_TEST_MAIL_NAME);
         msg.metaData().emplace(messagebus::Message::REPLY_TO, FTY_ASSET_TEST_Q);
@@ -2413,7 +2549,7 @@ fty_asset_server_test (bool verbose)
         // test update
         msg.metaData().clear();
         msg.metaData().emplace(messagebus::Message::CORRELATION_ID, messagebus::generateUuid());
-        msg.metaData().emplace(messagebus::Message::SUBJECT, "UPDATE");
+        msg.metaData().emplace(messagebus::Message::SUBJECT, FTY_ASSET_SUBJECT_UPDATE);
         msg.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_TEST_REC);
         msg.metaData().emplace(messagebus::Message::TO, FTY_ASSET_TEST_MAIL_NAME);
         msg.metaData().emplace(messagebus::Message::REPLY_TO, FTY_ASSET_TEST_Q);
@@ -2431,7 +2567,7 @@ fty_asset_server_test (bool verbose)
         // test get
         msg.metaData().clear();
         msg.metaData().emplace(messagebus::Message::CORRELATION_ID, messagebus::generateUuid());
-        msg.metaData().emplace(messagebus::Message::SUBJECT, "GET");
+        msg.metaData().emplace(messagebus::Message::SUBJECT, FTY_ASSET_SUBJECT_GET);
         msg.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_TEST_REC);
         msg.metaData().emplace(messagebus::Message::TO, FTY_ASSET_TEST_MAIL_NAME);
         msg.metaData().emplace(messagebus::Message::REPLY_TO, FTY_ASSET_TEST_Q);
