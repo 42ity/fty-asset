@@ -421,7 +421,7 @@ fty::Asset ftyProtoToAsset(fty_proto_t * proto, bool extAttributeReadOnly, bool 
         int parentId = fty_proto_aux_number(proto, "parent", 0);
         if(parentId != 0)
         {
-            asset.setParentIname(selectAssetProperty<std::string>("name", "id_parent", parentId));
+            asset.setParentIname(selectAssetProperty<std::string>("name", "id_asset_element", parentId));
         }
         else
         {
