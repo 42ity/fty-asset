@@ -521,12 +521,12 @@ fi
 
 
 # Start of recipe for dependency: uuid
-if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libuuid >/dev/null 2>&1) || \
+if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list uuid-dev >/dev/null 2>&1) || \
        (command -v brew >/dev/null 2>&1 && brew ls --versions uuid >/dev/null 2>&1) || \
        ([ -e "uuid" ]) \
 ; then
- echo "INFO: Get 'uuid' using apt-get libuuid" >&2
- sudo apt-get install libuuid -y || exit $?
+ echo "INFO: Get 'uuid' using apt-get uuid-dev" >&2
+ sudo apt-get install uuid-dev -y || exit $?
 fi
 
 

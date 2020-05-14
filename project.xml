@@ -88,7 +88,7 @@
     
     <use project = "uuid"
         header = "uuid/uuid.h"
-        debian_name = "libuuid"
+        debian_name = "uuid-dev"
         />
 
     <!-- Note: pure C projects should use fty-log/fty_logger.h, C++ use fty_log.h -->
