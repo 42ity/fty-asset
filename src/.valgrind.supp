@@ -19,3 +19,10 @@
    fun:mlm_proto_recv
    ...
 }
+{
+   <mlm_client2>
+   Memcheck:Leak
+   ...
+   fun:mlm_msg_set_proto
+   ...
+}

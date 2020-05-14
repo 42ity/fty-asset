@@ -267,6 +267,9 @@ class FtyAssetServer
         void resetPublisherClientNg();
         void connectPublisherClientNg();
 
+        // notifications
+        void sendNotification(const messagebus::Message&) const;
+
     private:
         bool                m_testMode        = false;
         std::string         m_agentName       = "asset-agent";
@@ -286,9 +289,6 @@ class FtyAssetServer
 
         // topic handlers
         void handleAssetManipulationReq(const messagebus::Message & msg);
-
-        // notifications
-        void sendNotification(const messagebus::Message&);
 };
 
 FtyAssetServer::FtyAssetServer()
@@ -676,36 +676,30 @@ void FtyAssetServer::handleAssetManipulationReq(const messagebus::Message & msg)
 static void s_send_create_or_update_asset(const FtyAssetServer& config, const std::string &asset_name, const char* operation, bool read_only);
 
 // sends create/update/delete notification on both new and old interface
-void FtyAssetServer::sendNotification(const messagebus::Message& msg)
+void FtyAssetServer::sendNotification(const messagebus::Message& msg) const
 {
     const std::string& subject = msg.metaData().at(messagebus::Message::SUBJECT);
-
-    if(!m_testMode)
+    if(subject == FTY_ASSET_SUBJECT_CREATED)
     {
-        if(subject == FTY_ASSET_SUBJECT_CREATED)
-        {
-            m_publisherCreate->publish(FTY_ASSET_TOPIC_CREATED, msg);
-
-            // REMOVE as soon as old interface is not needed anymore
-            // old interface
-            fty::Asset asset;
-            asset = fty::Asset::fromJson(msg.userData().back());
-            s_send_create_or_update_asset(*this, asset.getInternalName(), "create", false /* read_only is not used */);
-        }
-        else if(subject == FTY_ASSET_SUBJECT_UPDATED)
-        {
-            m_publisherUpdate->publish(FTY_ASSET_TOPIC_UPDATED, msg);
-
-            // REMOVE as soon as old interface is not needed anymore
-            // old interface
-            fty::Asset asset;
-            asset = fty::Asset::fromJson(msg.userData().back()); // old interface replies only with updated asset
-            s_send_create_or_update_asset(*this, asset.getInternalName(), "update", false /* read_only is not used */);
-        }
-        else if(subject == FTY_ASSET_SUBJECT_DELETED)
-        {
-            m_publisherDelete->publish(FTY_ASSET_TOPIC_DELETED, msg);
-        }
+        m_publisherCreate->publish(FTY_ASSET_TOPIC_CREATED, msg);
+        // REMOVE as soon as old interface is not needed anymore
+        // old interface
+        fty::Asset asset;
+        asset = fty::Asset::fromJson(msg.userData().back());
+        s_send_create_or_update_asset(*this, asset.getInternalName(), "create", false /* read_only is not used */);
+    }
+    else if(subject == FTY_ASSET_SUBJECT_UPDATED)
+    {
+        m_publisherUpdate->publish(FTY_ASSET_TOPIC_UPDATED, msg);
+        // REMOVE as soon as old interface is not needed anymore
+        // old interface
+        fty::Asset asset;
+        asset = fty::Asset::fromJson(msg.userData().back()); // old interface replies only with updated asset
+        s_send_create_or_update_asset(*this, asset.getInternalName(), "update", false /* read_only is not used */);
+    }
+    else if(subject == FTY_ASSET_SUBJECT_DELETED)
+    {
+        m_publisherDelete->publish(FTY_ASSET_TOPIC_DELETED, msg);
     }
 }
 
@@ -1925,6 +1919,11 @@ static void test_asset_mailbox_handler(const messagebus::Message & msg)
     }
 }
 
+static void test_asset_notification_handler(const messagebus::Message & msg)
+{
+    log_debug("test notification received");
+}
+
 void
 fty_asset_server_test (bool verbose)
 {
@@ -1938,6 +1937,10 @@ fty_asset_server_test (bool verbose)
     }
 
     static const char* endpoint = "inproc://fty_asset_server-test";
+
+    std::unique_ptr<messagebus::MessageBus> notificationClientCreated;
+    std::unique_ptr<messagebus::MessageBus> notificationClientUpdated;
+    std::unique_ptr<messagebus::MessageBus> notificationClientDeleted;
 
     zactor_t *server = zactor_new (mlm_server, (void*) "Malamute");
     assert ( server != NULL );
@@ -1962,6 +1965,20 @@ fty_asset_server_test (bool verbose)
     zstr_sendx (asset_server, "CONNECTMAILBOX", endpoint, NULL);
     zsock_wait (asset_server);
     static const char *asset_name = TEST_INAME;
+
+    // connect notification clients
+    notificationClientCreated.reset(messagebus::MlmMessageBus(endpoint, "notification-created"));
+    notificationClientUpdated.reset(messagebus::MlmMessageBus(endpoint, "notification-updated"));
+    notificationClientDeleted.reset(messagebus::MlmMessageBus(endpoint, "notification-deleted"));
+
+    notificationClientCreated->connect();
+    notificationClientUpdated->connect();
+    notificationClientDeleted->connect();
+
+    notificationClientCreated->subscribe(FTY_ASSET_TOPIC_CREATED, test_asset_notification_handler);
+    notificationClientUpdated->subscribe(FTY_ASSET_TOPIC_UPDATED, test_asset_notification_handler);
+    notificationClientDeleted->subscribe(FTY_ASSET_TOPIC_DELETED, test_asset_notification_handler);
+
     // Test #2: subject ASSET_MANIPULATION, message fty_proto_t *asset
     {
         log_debug ("fty-asset-server-test:Test #2");
@@ -2509,8 +2526,7 @@ fty_asset_server_test (bool verbose)
 
         log_debug ("fty-asset-server-test:Test #13");
 
-        std::unique_ptr<messagebus::MessageBus> publisher(messagebus::MlmMessageBus(endpoint, FTY_ASSET_TEST_PUB));
-        std::unique_ptr<messagebus::MessageBus> receiver(messagebus::MlmMessageBus(endpoint, FTY_ASSET_TEST_REC));
+        std::unique_ptr<messagebus::MessageBus> client(messagebus::MlmMessageBus(endpoint, FTY_ASSET_TEST_PUB));
 
         messagebus::Message msg;
 
@@ -2524,14 +2540,13 @@ fty_asset_server_test (bool verbose)
         asset.setPriority(4);
         asset.setExtEntry("name", "Test asset", false);
 
-        publisher->connect();
+        client->connect();
 
-        receiver->connect();
-        receiver->receive(FTY_ASSET_TEST_Q, test_asset_mailbox_handler);
+        client->receive(FTY_ASSET_TEST_Q, test_asset_mailbox_handler);
 
         // test create
         msg.metaData().emplace(messagebus::Message::CORRELATION_ID, messagebus::generateUuid());
-        msg.metaData().emplace(messagebus::Message::SUBJECT, FTY_ASSET_SUBJECT_CREATED);
+        msg.metaData().emplace(messagebus::Message::SUBJECT, FTY_ASSET_SUBJECT_CREATE);
         msg.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_TEST_REC);
         msg.metaData().emplace(messagebus::Message::TO, FTY_ASSET_TEST_MAIL_NAME);
         msg.metaData().emplace(messagebus::Message::REPLY_TO, FTY_ASSET_TEST_Q);
@@ -2543,7 +2558,7 @@ fty_asset_server_test (bool verbose)
         assetTestMap.emplace(msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, asset.toJson());
 
         log_info ("fty-asset-server-test:Test #13.1: send CREATE message");
-        publisher->sendRequest(FTY_ASSET_MAILBOX, msg);
+        client->sendRequest(FTY_ASSET_MAILBOX, msg);
         zclock_sleep (200);
 
         // test update
@@ -2561,7 +2576,7 @@ fty_asset_server_test (bool verbose)
         assetTestMap.emplace(msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, asset.toJson());
 
         log_info ("fty-asset-server-test:Test #13.2: send UPDATE message");
-        publisher->sendRequest(FTY_ASSET_MAILBOX, msg);
+        client->sendRequest(FTY_ASSET_MAILBOX, msg);
         zclock_sleep (200);
 
         // test get
@@ -2579,9 +2594,15 @@ fty_asset_server_test (bool verbose)
         assetTestMap.emplace(msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, "test-asset");
 
         log_info ("fty-asset-server-test:Test #13.3: send GET message");
-        publisher->sendRequest(FTY_ASSET_MAILBOX, msg);
+        client->sendRequest(FTY_ASSET_MAILBOX, msg);
         zclock_sleep (200);
+
+        client.reset();
     }
+
+    notificationClientCreated.reset();
+    notificationClientUpdated.reset();
+    notificationClientDeleted.reset();
 
     zactor_destroy (&autoupdate_server);
     zactor_destroy (&asset_server);
