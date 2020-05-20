@@ -25,8 +25,7 @@
 @discuss
 @end
 */
-
-#define AGENT_ASSET_ACTIVATOR   "etn-licensing-credits"
+#define AGENT_ASSET_ACTIVATOR "etn-licensing-credits"
 
 #define TIME_STR_SIZE 100
 
@@ -44,6 +43,8 @@
 
 #include <ftyproto.h>
 #include <zhash.h>
+
+// clang-format off
 
 // needed for UUID gen
 #define EATON_NS "\x93\x3d\x6c\x80\xde\xa9\x8c\x6b\xd1\x11\x8b\x3b\x46\xa1\x81\xf1"
@@ -365,6 +366,7 @@ fty_proto_t * assetToFtyProto(const fty::Asset& asset, const std::string& operat
 
     // no need to free, as fty_proto_set_aux transfers ownership to caller
     zhash_t *aux = zhash_new();
+    zhash_autofree(aux);
 
     std::string priority = std::to_string(asset.getPriority());
     zhash_insert(aux, "priority", const_cast<void *>(reinterpret_cast<const void *>(priority.c_str())));
