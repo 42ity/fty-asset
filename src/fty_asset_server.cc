@@ -765,17 +765,11 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
             zhash_insert(ext_new, "uuid", (void*)uuid_new);
             process_insert_inventory(asset_name.c_str(), ext_new, true, test_mode);
         } else {
-            if (streq(type, "device")) {
-                // it is device, put FFF... and wait for information
-                zhash_insert(ext, "uuid", (void*)fty_uuid_calculate(uuid, NULL, NULL, NULL));
-            } else {
-                // it is not device, we will probably not get more information
-                // lets generate random uuid and save it
-                const char* uuid_new = fty_uuid_generate(uuid);
-                zhash_insert(ext, "uuid", (void*)uuid_new);
-                zhash_insert(ext_new, "uuid", (void*)uuid_new);
-                process_insert_inventory(asset_name.c_str(), ext_new, true, test_mode);
-            }
+            // generate random uuid and save it
+            const char* uuid_new = fty_uuid_generate(uuid);
+            zhash_insert(ext, "uuid", (void*)uuid_new);
+            zhash_insert(ext_new, "uuid", (void*)uuid_new);
+            process_insert_inventory(asset_name.c_str(), ext_new, true, test_mode);
         }
         fty_uuid_destroy(&uuid);
         zhash_destroy(&ext_new);
@@ -1122,6 +1116,7 @@ void fty_asset_server(zsock_t* pipe, void* args)
     server.setAgentName((char*)args);
     // new messagebus interfaces (-ng suffix)
     server.setAgentNameNg(server.getAgentName() + "-ng");
+    server.setSrrAgentName(server.getAgentName() + "-srr");
 
     zpoller_t* poller =
         zpoller_new(pipe, mlm_client_msgpipe(const_cast<mlm_client_t*>(server.getMailboxClient())),
@@ -1132,6 +1127,9 @@ void fty_asset_server(zsock_t* pipe, void* args)
     // Signal need to be send as it is required by "actor_new"
     zsock_signal(pipe, 0);
     log_info("%s:\tStarted", server.getAgentName().c_str());
+
+    // set-up SRR
+    server.initSrr(FTY_ASSET_SRR_QUEUE);
 
     while (!zsys_interrupted) {
 

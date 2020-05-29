@@ -22,6 +22,7 @@
 #pragma once
 #include "asset.h"
 #include <memory>
+#include <mutex>
 #include <tntdb.h>
 
 namespace fty {
@@ -29,15 +30,22 @@ namespace fty {
 class AssetImpl::DB
 {
 public:
-    DB();
-    virtual void init();
+    static DB& getInstance()
+    {
+        static DB m_instance;
+        return m_instance;
+    }
+
     virtual void loadAsset(const std::string& nameId, Asset& asset);
 
     virtual void loadExtMap(Asset& asset);
     virtual void loadChildren(Asset& asset);
     virtual void loadLinkedAssets(Asset& asset);
 
-    virtual void unlinkFrom(Asset& asset);
+    virtual bool hasLinkedAssets(const Asset& asset);
+    virtual void link(Asset& src, Asset& dest);
+    virtual void unlink(Asset& src, Asset& dest);
+    virtual void unlinkAll(Asset& dest);
     virtual void clearGroup(Asset& asset);
     virtual void removeAsset(Asset& asset);
     virtual void removeFromRelations(Asset& asset);
@@ -58,7 +66,11 @@ public:
 
     virtual std::vector<std::string> listAllAssets();
 
+protected:
+    DB(bool test = false);
+
 private:
+    std::mutex                m_conn_lock;
     mutable tntdb::Connection m_conn;
 };
 

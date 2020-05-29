@@ -20,28 +20,42 @@
 */
 
 #pragma once
+
 #include "include/fty_asset_dto.h"
 
 extern bool g_testMode;
 
 namespace fty {
 
+static constexpr const char* RC0 = "rackcontroller-0";
+
 class AssetImpl : public Asset
 {
 public:
     AssetImpl();
-    AssetImpl(const std::string& nameId);
+    AssetImpl(const std::string& nameId, bool loadLinks = true);
     ~AssetImpl() override;
 
-    void remove(bool recursive = false);
+    AssetImpl(const AssetImpl& a);
+
+    AssetImpl& operator=(const AssetImpl& a);
+
+    // asset operations
+    void remove(bool recursive = false, bool removeLastDC = false);
+    bool hasLinkedAssets() const;
     bool hasLogicalAsset() const;
-    void save();
-    void reload();
+    void load(bool loadLinks = true);
+    void save(bool saveLinks = true);
     bool isActivable();
     void activate();
+    void deactivate();
+    void linkTo(const std::string& src);
+    void unlinkFrom(const std::string& src);
+    void unlinkAll();
 
     static std::vector<std::string> list();
-    static void                     massDelete(const std::vector<std::string>& assets);
+    static void                     deleteList(const std::vector<std::string>& assets);
+    static void                     deleteAll();
 
     using Asset::operator==;
 
@@ -49,7 +63,7 @@ private:
     class Interface;
     class DB;
     class DBTest;
-    std::unique_ptr<DB> m_db;
+    DB& m_db;
 };
 
 } // namespace fty

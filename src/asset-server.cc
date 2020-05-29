@@ -22,9 +22,16 @@
 #include "asset-server.h"
 #include "asset/conversion/json.h"
 #include "include/fty_asset_dto.h"
+#include <cxxtools/jsondeserializer.h>
+#include <cxxtools/jsonserializer.h>
+#include <cxxtools/serializationinfo.h>
 #include <fty_common_messagebus.h>
+#include <functional>
 #include <malamute.h>
 #include <mlm_client.h>
+#include <sstream>
+
+using namespace std::placeholders;
 
 // REMOVE as soon as old interface is not needed anymore
 // fwd declaration
@@ -207,6 +214,118 @@ void AssetServer::handleAssetManipulationReq(const messagebus::Message& msg)
     }
 }
 
+// static void sendResponse(std::unique_ptr<messagebus::MessageBus>& msgBus, const messagebus::Message& msg,
+//     const dto::UserData& userData)
+// {
+//     try {
+//         messagebus::Message resp;
+//         resp.userData() = userData;
+//         resp.metaData().emplace(
+//             messagebus::Message::SUBJECT, msg.metaData().find(messagebus::Message::SUBJECT)->second);
+//         resp.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_SRR_NAME);
+//         resp.metaData().emplace(
+//             messagebus::Message::TO, msg.metaData().find(messagebus::Message::FROM)->second);
+//         resp.metaData().emplace(messagebus::Message::CORRELATION_ID,
+//             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second);
+//         msgBus->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, resp);
+//     } catch (messagebus::MessageBusException& ex) {
+//         log_error("Message bus error: %s", ex.what());
+//     } catch (const std::exception& ex) {
+//         log_error("Unexpected error: %s", ex.what());
+//     }
+// }
+
+void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
+{
+    log_debug("Handle SRR request");
+
+    const std::string& subject = msg.metaData().at(messagebus::Message::SUBJECT);
+
+    if (subject == FTY_ASSET_SRR_SUBJECT_BACKUP) {
+        log_debug("BACKUP");
+        cxxtools::SerializationInfo si = saveAssets();
+    } else if (subject == FTY_ASSET_SRR_SUBJECT_RESTORE) {
+        log_debug("RESTORE");
+        cxxtools::SerializationInfo si = saveAssets();
+        restoreAssets(si);
+    } else if (subject == FTY_ASSET_SRR_SUBJECT_RESET) {
+        log_debug("RESET");
+        AssetImpl::deleteAll();
+    } else if (subject == "TEST") {
+        log_debug("TEST");
+
+        cxxtools::SerializationInfo si = saveAssets();
+
+        std::ostringstream       output;
+        cxxtools::JsonSerializer serializer(output);
+        serializer.serialize(si);
+
+        std::string json = output.str();
+
+        auto response = createMessage(FTY_ASSET_SRR_SUBJECT_BACKUP,
+            msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_srrAgentName,
+            msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_OK, json);
+
+        // send response
+        log_debug("sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
+        m_srrClient->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+
+        messagebus::Message notification =
+            createMessage(FTY_ASSET_SRR_SUBJECT_BACKUP, "", m_srrAgentName, "", messagebus::STATUS_OK, json);
+
+        m_srrClient->publish("BACKUP", notification);
+
+        AssetImpl::deleteAll();
+        restoreAssets(si);
+
+    } else {
+        log_error("Unkwnown subject %s", subject.c_str());
+    }
+
+
+    // using namespace dto;
+    // using namespace dto::srr;
+
+    // try {
+    //     messagebus::UserData response;
+
+    //     // Get request
+    //     UserData data = msg.userData();
+    //     Query    query;
+    //     data >> query;
+
+    //     response << (m_srrProcessor.processQuery(query));
+
+    //     // Send response
+    //     sendResponse(m_srrClient, msg, response);
+    // } catch (std::exception& e) {
+    //     log_error("Unexpected error: %s", e.what());
+    // } catch (...) {
+    //     log_error("Unexpected error: unknown");
+    // }
+}
+
+dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)
+{
+    using namespace dto;
+    using namespace dto::srr;
+
+    log_debug("Saving assets");
+    std::map<FeatureName, FeatureAndStatus> mapFeaturesData;
+
+    return (createSaveResponse(mapFeaturesData, ACTIVE_VERSION)).save();
+}
+dto::srr::RestoreResponse AssetServer::handleRestore(const dto::srr::RestoreQuery& query)
+{
+    using namespace dto;
+    using namespace dto::srr;
+
+    log_debug("Restoring assets");
+    std::map<FeatureName, FeatureStatus> mapStatus;
+
+    return (createRestoreResponse(mapStatus)).restore();
+}
+
 // sends create/update/delete notification on both new and old interface
 void AssetServer::sendNotification(const messagebus::Message& msg) const
 {
@@ -234,6 +353,27 @@ void AssetServer::sendNotification(const messagebus::Message& msg) const
     } else if (subject == FTY_ASSET_SUBJECT_DELETED) {
         m_publisherDelete->publish(FTY_ASSET_TOPIC_DELETED, msg);
     }
+}
+
+void AssetServer::initSrr(const std::string& query)
+{
+    m_srrClient.reset(messagebus::MlmMessageBus(m_srrEndpoint, m_srrAgentName));
+    log_debug("New publisher client registered to endpoint %s with name %s", m_srrEndpoint.c_str(),
+        (m_srrAgentName).c_str());
+
+    m_srrClient->connect();
+
+    m_srrProcessor.saveHandler    = std::bind(&AssetServer::handleSave, this, _1);
+    m_srrProcessor.restoreHandler = std::bind(&AssetServer::handleRestore, this, _1);
+
+    m_srrClient->receive(query, [&](messagebus::Message m) {
+        this->handleAssetSrrReq(m);
+    });
+}
+
+void AssetServer::resetSrrClient()
+{
+    m_srrClient.reset();
 }
 
 void AssetServer::createAsset(const messagebus::Message& msg)
@@ -429,7 +569,162 @@ void AssetServer::deleteAssetList(const messagebus::Message& msg)
         assetInames.push_back(elId);
     }
 
-    AssetImpl::massDelete(assetInames);
+    AssetImpl::deleteList(assetInames);
+}
+
+cxxtools::SerializationInfo AssetServer::saveAssets()
+{
+    using namespace fty::conversion;
+
+    std::vector<std::string> assets = AssetImpl::list();
+
+    cxxtools::SerializationInfo si;
+
+    si.addMember("version") <<= ACTIVE_VERSION;
+
+    cxxtools::SerializationInfo& data = si.addMember("data");
+
+    for (const std::string assetName : assets) {
+        AssetImpl a(assetName);
+
+        log_debug("Saving asset %s...", a.getInternalName().c_str());
+
+        cxxtools::SerializationInfo& siAsset = data.addMember("");
+        siAsset <<= a;
+    }
+
+    data.setCategory(cxxtools::SerializationInfo::Array);
+
+    return si;
+}
+
+static void printAssetTreeRec(const std::string& iname, int level)
+{
+    for (int i = 0; i < level; i++) {
+        std::cout << "\t";
+    }
+    std::cout << iname << std::endl;
+
+    AssetImpl a(iname);
+    for (const auto& child : a.getChildren()) {
+        printAssetTreeRec(child, level + 1);
+    }
+}
+
+static void buildRestoreTree(
+    std::vector<AssetImpl>& dest, const std::vector<AssetImpl> src, const AssetImpl& node)
+{
+    dest.push_back(node);
+    std::vector<std::string> children = node.getChildren();
+    for (const auto& c : children) {
+        auto child = std::find_if(src.begin(), src.end(), [&](const AssetImpl& a) {
+            return a.getInternalName() == c;
+        });
+        if (child == src.end()) {
+            throw std::runtime_error("Cannot find asset " + child->getInternalName() + " to restore");
+        }
+
+        buildRestoreTree(dest, src, *child);
+    }
+}
+
+void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
+{
+    using namespace fty::conversion;
+
+    // if database is not empty, can't load assets
+    if (AssetImpl::list().size() != 0) {
+        throw std::runtime_error("Database already contains assets, impossible to restore from SRR");
+    }
+
+    std::string srrVersion;
+    si.getMember("version") >>= srrVersion;
+
+    if (srrVersion != ACTIVE_VERSION) {
+        throw std::runtime_error("Version " + srrVersion + " is not supported");
+    }
+
+    const cxxtools::SerializationInfo& assets = si.getMember("data");
+
+    std::vector<AssetImpl> roots;
+    std::vector<AssetImpl> list;
+    std::vector<AssetImpl> assetsToRestore;
+
+    for (auto it = assets.begin(); it != assets.end(); ++it) {
+        AssetImpl a;
+        *it >>= a;
+
+        if (a.getParentIname() == "") {
+            roots.push_back(a);
+        }
+        list.push_back(a);
+    }
+
+    // build restore tree
+    for (const auto& r : roots) {
+        buildRestoreTree(assetsToRestore, list, r);
+    }
+
+    // TODO move to message header
+    bool tryActivate = true;
+
+    std::map<std::string, std::string> assetInames;
+
+    for (AssetImpl& a : assetsToRestore) {
+        log_debug("Restoring asset %s...", a.getInternalName().c_str());
+
+        try {
+            bool requestActivation = (a.getAssetStatus() == AssetStatus::Active);
+
+            if (requestActivation && !a.isActivable()) {
+                if (tryActivate) {
+                    a.setAssetStatus(fty::AssetStatus::Nonactive);
+                    requestActivation = false;
+                } else {
+                    throw std::runtime_error(
+                        "Licensing limitation hit - maximum amount of active power devices allowed in "
+                        "license reached.");
+                }
+            }
+            // update parent iname with new one
+            if (a.getParentIname() != "") {
+                a.setParentIname(assetInames[a.getParentIname()]);
+            }
+            // store previous iname
+            std::string oldIname = a.getInternalName();
+
+            // store asset to db
+            a.save(false);
+
+            // save new iname
+            assetInames[oldIname] = a.getInternalName();
+
+            // activate asset
+            if (requestActivation) {
+                try {
+                    a.activate();
+                } catch (std::exception& e) {
+                    // if activation fails, delete asset
+                    a.remove(false);
+                    throw std::runtime_error(e.what());
+                }
+            }
+        } catch (std::exception& e) {
+            log_error(e.what());
+        }
+    }
+
+    // restore links
+    for (AssetImpl& a : assetsToRestore) {
+        try {
+            auto links = a.getLinkedAssets();
+            for (const auto& l : links) {
+                a.linkTo(assetInames[l]);
+            }
+        } catch (std::exception& e) {
+            log_error(e.what());
+        }
+    }
 }
 
 void AssetServer::getAsset(const messagebus::Message& msg)

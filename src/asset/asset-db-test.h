@@ -28,15 +28,22 @@ namespace fty {
 class AssetImpl::DBTest : public AssetImpl::DB
 {
 public:
-    DBTest();
-    void init();
+    static DBTest& getInstance()
+    {
+        static DBTest m_instance;
+        return m_instance;
+    }
+
     void loadAsset(const std::string& nameId, Asset& asset) override;
 
     void loadExtMap(Asset& asset) override;
     void loadChildren(Asset& asset) override;
     void loadLinkedAssets(Asset& asset) override;
 
-    void unlinkFrom(Asset& asset) override;
+    bool hasLinkedAssets(const Asset& asset) override;
+    void link(Asset& src, Asset& dest) override;
+    void unlink(Asset& src, Asset& dest) override;
+    void unlinkAll(Asset& dest) override;
     void clearGroup(Asset& asset) override;
     void removeAsset(Asset& asset) override;
     void removeFromRelations(Asset& asset) override;
@@ -56,6 +63,9 @@ public:
     std::string unameById(uint32_t id) override;
 
     std::vector<std::string> listAllAssets() override;
+
+private:
+    DBTest();
 };
 
 } // namespace fty
