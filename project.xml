@@ -99,6 +99,10 @@
     <use project = "fty-common-mlm" libname = "libfty_common_mlm" header = "fty_common_mlm.h"
         test = "fty_common_mlm_selftest"
         repository = "https://github.com/42ity/fty-common-mlm.git" />
+
+    <use project = "fty-common-dto" libname = "libfty_common_dto" header = "fty_common_dto.h"
+        repository = "https://github.com/42ity/fty-common-dto.git"
+        test = "fty_common_dto_selftest" />
     
     <!-- use fty-common-messagebus -->
     <use project = "fty-common-messagebus" libname = "libfty_common_messagebus" header = "fty_common_messagebus.h"

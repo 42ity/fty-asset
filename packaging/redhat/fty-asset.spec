@@ -68,6 +68,7 @@ BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  fty-common-db-devel
 BuildRequires:  fty-common-mlm-devel
+BuildRequires:  fty-common-dto-devel
 BuildRequires:  fty-common-messagebus-devel
 BuildRequires:  fty-asset-activator-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
@@ -107,6 +108,7 @@ Requires:       fty-common-logging-devel
 Requires:       fty-proto-devel >= 1.0.0
 Requires:       fty-common-db-devel
 Requires:       fty-common-mlm-devel
+Requires:       fty-common-dto-devel
 Requires:       fty-common-messagebus-devel
 Requires:       fty-asset-activator-devel
 

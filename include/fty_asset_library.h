@@ -41,6 +41,7 @@
 #include <ftyproto.h>
 #include <fty_common_db.h>
 #include <fty_common_mlm.h>
+#include <fty_common_dto.h>
 #include <fty_common_messagebus.h>
 #include <fty_asset_activator.h>
 
