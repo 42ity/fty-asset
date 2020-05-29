@@ -23,8 +23,11 @@
 #include "asset/conversion/json.h"
 #include "include/fty_asset_dto.h"
 #include <fty_common_messagebus.h>
+#include <functional>
 #include <malamute.h>
 #include <mlm_client.h>
+
+using namespace std::placeholders;
 
 // REMOVE as soon as old interface is not needed anymore
 // fwd declaration
@@ -207,6 +210,74 @@ void AssetServer::handleAssetManipulationReq(const messagebus::Message& msg)
     }
 }
 
+static void sendResponse(std::unique_ptr<messagebus::MessageBus>& msgBus, const messagebus::Message& msg,
+    const dto::UserData& userData)
+{
+    try {
+        messagebus::Message resp;
+        resp.userData() = userData;
+        resp.metaData().emplace(
+            messagebus::Message::SUBJECT, msg.metaData().find(messagebus::Message::SUBJECT)->second);
+        resp.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_SRR_NAME);
+        resp.metaData().emplace(
+            messagebus::Message::TO, msg.metaData().find(messagebus::Message::FROM)->second);
+        resp.metaData().emplace(messagebus::Message::CORRELATION_ID,
+            msg.metaData().find(messagebus::Message::CORRELATION_ID)->second);
+        msgBus->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, resp);
+    } catch (messagebus::MessageBusException& ex) {
+        log_error("Message bus error: %s", ex.what());
+    } catch (const std::exception& ex) {
+        log_error("Unexpected error: %s", ex.what());
+    }
+}
+
+void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
+{
+    log_debug("Handle SRR request");
+
+    using namespace dto;
+    using namespace dto::srr;
+
+    try {
+        messagebus::UserData response;
+
+        // Get request
+        UserData data = msg.userData();
+        Query    query;
+        data >> query;
+
+        response << (m_srrProcessor.processQuery(query));
+
+        // Send response
+        sendResponse(m_srrClient, msg, response);
+    } catch (std::exception& e) {
+        log_error("Unexpected error: %s", e.what());
+    } catch (...) {
+        log_error("Unexpected error: unknown");
+    }
+}
+
+dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)
+{
+    using namespace dto;
+    using namespace dto::srr;
+
+    log_debug("Saving assets");
+    std::map<FeatureName, FeatureAndStatus> mapFeaturesData;
+
+    return (createSaveResponse(mapFeaturesData, ACTIVE_VERSION)).save();
+}
+dto::srr::RestoreResponse AssetServer::handleRestore(const dto::srr::RestoreQuery& query)
+{
+    using namespace dto;
+    using namespace dto::srr;
+
+    log_debug("Restoring assets");
+    std::map<FeatureName, FeatureStatus> mapStatus;
+
+    return (createRestoreResponse(mapStatus)).restore();
+}
+
 // sends create/update/delete notification on both new and old interface
 void AssetServer::sendNotification(const messagebus::Message& msg) const
 {
@@ -234,6 +305,27 @@ void AssetServer::sendNotification(const messagebus::Message& msg) const
     } else if (subject == FTY_ASSET_SUBJECT_DELETED) {
         m_publisherDelete->publish(FTY_ASSET_TOPIC_DELETED, msg);
     }
+}
+
+void AssetServer::initSrr(const std::string& query)
+{
+    m_srrClient.reset(messagebus::MlmMessageBus(m_srrEndpoint, m_srrAgentName));
+    log_debug("New publisher client registered to endpoint %s with name %s", m_srrEndpoint.c_str(),
+        (m_srrAgentName).c_str());
+
+    m_srrClient->connect();
+
+    m_srrProcessor.saveHandler    = std::bind(&AssetServer::handleSave, this, _1);
+    m_srrProcessor.restoreHandler = std::bind(&AssetServer::handleRestore, this, _1);
+
+    m_srrClient->receive(query, [&](messagebus::Message m) {
+        this->handleAssetSrrReq(m);
+    });
+}
+
+void AssetServer::resetSrrClient()
+{
+    m_srrClient.reset();
 }
 
 void AssetServer::createAsset(const messagebus::Message& msg)

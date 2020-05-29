@@ -1122,6 +1122,7 @@ void fty_asset_server(zsock_t* pipe, void* args)
     server.setAgentName((char*)args);
     // new messagebus interfaces (-ng suffix)
     server.setAgentNameNg(server.getAgentName() + "-ng");
+    server.setSrrAgentName(server.getAgentName() + "-srr");
 
     zpoller_t* poller =
         zpoller_new(pipe, mlm_client_msgpipe(const_cast<mlm_client_t*>(server.getMailboxClient())),
@@ -1132,6 +1133,9 @@ void fty_asset_server(zsock_t* pipe, void* args)
     // Signal need to be send as it is required by "actor_new"
     zsock_signal(pipe, 0);
     log_info("%s:\tStarted", server.getAgentName().c_str());
+
+    // set-up SRR
+    server.initSrr(FTY_ASSET_SRR_QUEUE);
 
     while (!zsys_interrupted) {
 

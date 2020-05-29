@@ -23,6 +23,7 @@
 #include "asset-db-test.h"
 #include "asset-db.h"
 #include "conversion/full-asset.h"
+#include "conversion/json.h"
 #include <fty_asset_activator.h>
 #include <fty_common_db_dbpath.h>
 #include <memory>
@@ -241,6 +242,41 @@ void AssetImpl::activate()
 
         setAssetStatus(fty::AssetStatus::Active);
         m_db->update(*this);
+    }
+}
+
+// fwd declaration from conversion/json
+void operator<<=(cxxtools::SerializationInfo& si, const Asset& asset);
+void operator>>=(const cxxtools::SerializationInfo& si, Asset& asset);
+
+cxxtools::SerializationInfo AssetImpl::getSerializedData()
+{
+    cxxtools::SerializationInfo si;
+
+    cxxtools::SerializationInfo& assets = si.addMember("assets");
+
+    for (const std::string assetName : m_db->listAllAssets()) {
+        Asset a;
+        m_db->loadAsset(assetName, a);
+
+        cxxtools::SerializationInfo& siAsset = assets.addMember("");
+        siAsset <<= a;
+    }
+
+    assets.setCategory(cxxtools::SerializationInfo::Array);
+
+    return si;
+}
+void AssetImpl::restoreDataFromSi(cxxtools::SerializationInfo& si)
+{
+    const cxxtools::SerializationInfo& assets = si.getMember("assets");
+
+    for (auto it = assets.begin(); it != assets.end(); ++it) {
+        AssetImpl a;
+
+        *it >>= a;
+
+        // a.save();
     }
 }
 

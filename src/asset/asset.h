@@ -21,6 +21,7 @@
 
 #pragma once
 #include "include/fty_asset_dto.h"
+#include <cxxtools/serializationinfo.h>
 
 extern bool g_testMode;
 
@@ -33,12 +34,17 @@ public:
     AssetImpl(const std::string& nameId);
     ~AssetImpl() override;
 
+    // asset operations
     void remove(bool recursive = false);
     bool hasLogicalAsset() const;
     void save();
     void reload();
     bool isActivable();
     void activate();
+
+    // serialize/deserialize data
+    cxxtools::SerializationInfo getSerializedData();
+    void                        restoreDataFromSi(cxxtools::SerializationInfo& si);
 
     static std::vector<std::string> list();
     static void                     massDelete(const std::vector<std::string>& assets);
