@@ -20,12 +20,15 @@
 */
 
 #pragma once
+
 #include "include/fty_asset_dto.h"
 #include <cxxtools/serializationinfo.h>
 
 extern bool g_testMode;
 
 namespace fty {
+
+static constexpr const char* RC0_INAME = "rackcontroller-0";
 
 class AssetImpl : public Asset
 {
@@ -43,8 +46,8 @@ public:
     void activate();
 
     // serialize/deserialize data
-    cxxtools::SerializationInfo getSerializedData();
-    void                        restoreDataFromSi(cxxtools::SerializationInfo& si);
+    static cxxtools::SerializationInfo getSerializedData();
+    static void                        restoreDataFromSi(cxxtools::SerializationInfo& si);
 
     static std::vector<std::string> list();
     static void                     massDelete(const std::vector<std::string>& assets);

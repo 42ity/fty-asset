@@ -210,51 +210,55 @@ void AssetServer::handleAssetManipulationReq(const messagebus::Message& msg)
     }
 }
 
-static void sendResponse(std::unique_ptr<messagebus::MessageBus>& msgBus, const messagebus::Message& msg,
-    const dto::UserData& userData)
-{
-    try {
-        messagebus::Message resp;
-        resp.userData() = userData;
-        resp.metaData().emplace(
-            messagebus::Message::SUBJECT, msg.metaData().find(messagebus::Message::SUBJECT)->second);
-        resp.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_SRR_NAME);
-        resp.metaData().emplace(
-            messagebus::Message::TO, msg.metaData().find(messagebus::Message::FROM)->second);
-        resp.metaData().emplace(messagebus::Message::CORRELATION_ID,
-            msg.metaData().find(messagebus::Message::CORRELATION_ID)->second);
-        msgBus->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, resp);
-    } catch (messagebus::MessageBusException& ex) {
-        log_error("Message bus error: %s", ex.what());
-    } catch (const std::exception& ex) {
-        log_error("Unexpected error: %s", ex.what());
-    }
-}
+// static void sendResponse(std::unique_ptr<messagebus::MessageBus>& msgBus, const messagebus::Message& msg,
+//     const dto::UserData& userData)
+// {
+//     try {
+//         messagebus::Message resp;
+//         resp.userData() = userData;
+//         resp.metaData().emplace(
+//             messagebus::Message::SUBJECT, msg.metaData().find(messagebus::Message::SUBJECT)->second);
+//         resp.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_SRR_NAME);
+//         resp.metaData().emplace(
+//             messagebus::Message::TO, msg.metaData().find(messagebus::Message::FROM)->second);
+//         resp.metaData().emplace(messagebus::Message::CORRELATION_ID,
+//             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second);
+//         msgBus->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, resp);
+//     } catch (messagebus::MessageBusException& ex) {
+//         log_error("Message bus error: %s", ex.what());
+//     } catch (const std::exception& ex) {
+//         log_error("Unexpected error: %s", ex.what());
+//     }
+// }
 
 void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
 {
     log_debug("Handle SRR request");
 
-    using namespace dto;
-    using namespace dto::srr;
+    cxxtools::SerializationInfo si = AssetImpl::getSerializedData();
 
-    try {
-        messagebus::UserData response;
+    AssetImpl::restoreDataFromSi(si);
 
-        // Get request
-        UserData data = msg.userData();
-        Query    query;
-        data >> query;
+    // using namespace dto;
+    // using namespace dto::srr;
 
-        response << (m_srrProcessor.processQuery(query));
+    // try {
+    //     messagebus::UserData response;
 
-        // Send response
-        sendResponse(m_srrClient, msg, response);
-    } catch (std::exception& e) {
-        log_error("Unexpected error: %s", e.what());
-    } catch (...) {
-        log_error("Unexpected error: unknown");
-    }
+    //     // Get request
+    //     UserData data = msg.userData();
+    //     Query    query;
+    //     data >> query;
+
+    //     response << (m_srrProcessor.processQuery(query));
+
+    //     // Send response
+    //     sendResponse(m_srrClient, msg, response);
+    // } catch (std::exception& e) {
+    //     log_error("Unexpected error: %s", e.what());
+    // } catch (...) {
+    //     log_error("Unexpected error: unknown");
+    // }
 }
 
 dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)

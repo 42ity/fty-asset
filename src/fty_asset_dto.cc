@@ -242,6 +242,14 @@ void Asset::dump(std::ostream& os)
     for (const auto& e : m_ext) {
         os << "- key: " << e.first << " - value: " << e.second.first << std::endl;
     }
+
+    for (const auto& l : m_linkedAssets) {
+        os << "- linked to: " << l << std::endl;
+    }
+
+    for (const auto& c : m_children) {
+        os << "- parent of: " << c << std::endl;
+    }
 }
 
 bool Asset::operator==(const Asset& asset) const

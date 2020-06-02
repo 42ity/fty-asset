@@ -556,7 +556,11 @@ std::vector<std::string> AssetImpl::DB::listAllAssets()
     // clang-format on
 
     for (const auto& row : res) {
-        assetList.emplace_back(row.getString("name"));
+        const std::string& assetName = row.getString("name");
+        // discard rackcontroller 0
+        if (assetName != RC0_INAME) {
+            assetList.emplace_back(assetName);
+        }
     }
 
     return assetList;

@@ -27,16 +27,13 @@
 #include <fty_asset_activator.h>
 #include <fty_common_db_dbpath.h>
 #include <memory>
+#include <sstream>
 #include <time.h>
 #include <uuid/uuid.h>
 
 #define AGENT_ASSET_ACTIVATOR "etn-licensing-credits"
 
 namespace fty {
-
-//============================================================================================================
-
-static constexpr const char* RC0_INAME = "rackcontroller-0";
 
 //============================================================================================================
 
@@ -245,19 +242,26 @@ void AssetImpl::activate()
     }
 }
 
-// fwd declaration from conversion/json
-void operator<<=(cxxtools::SerializationInfo& si, const Asset& asset);
-void operator>>=(const cxxtools::SerializationInfo& si, Asset& asset);
-
 cxxtools::SerializationInfo AssetImpl::getSerializedData()
 {
+    using namespace fty::conversion;
+
+    std::unique_ptr<AssetImpl::DB> db;
+    if (g_testMode) {
+        db = std::unique_ptr<AssetImpl::DB>(new DBTest);
+    } else {
+        db = std::unique_ptr<AssetImpl::DB>(new DB);
+        db->init();
+    }
+
     cxxtools::SerializationInfo si;
 
     cxxtools::SerializationInfo& assets = si.addMember("assets");
 
-    for (const std::string assetName : m_db->listAllAssets()) {
-        Asset a;
-        m_db->loadAsset(assetName, a);
+    for (const std::string assetName : db->listAllAssets()) {
+        AssetImpl a(assetName);
+
+        log_debug("Backing up asset %s...", a.getInternalName().c_str());
 
         cxxtools::SerializationInfo& siAsset = assets.addMember("");
         siAsset <<= a;
@@ -269,12 +273,21 @@ cxxtools::SerializationInfo AssetImpl::getSerializedData()
 }
 void AssetImpl::restoreDataFromSi(cxxtools::SerializationInfo& si)
 {
+    using namespace fty::conversion;
+
     const cxxtools::SerializationInfo& assets = si.getMember("assets");
 
     for (auto it = assets.begin(); it != assets.end(); ++it) {
         AssetImpl a;
 
         *it >>= a;
+
+        log_debug("Restoring asset %s...", a.getInternalName().c_str());
+
+        std::stringstream s;
+        a.dump(s);
+
+        std::cout << s.str() << std::endl;
 
         // a.save();
     }
