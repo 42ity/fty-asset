@@ -28,7 +28,7 @@ extern bool g_testMode;
 
 namespace fty {
 
-static constexpr const char* RC0_INAME = "rackcontroller-0";
+static constexpr const char* RC0 = "rackcontroller-0";
 
 class AssetImpl : public Asset
 {
@@ -37,6 +37,10 @@ public:
     AssetImpl(const std::string& nameId);
     ~AssetImpl() override;
 
+    AssetImpl(const AssetImpl& a);
+
+    AssetImpl& operator=(const AssetImpl& a);
+
     // asset operations
     void remove(bool recursive = false);
     bool hasLogicalAsset() const;
@@ -44,13 +48,15 @@ public:
     void reload();
     bool isActivable();
     void activate();
+    void deactivate();
 
     // serialize/deserialize data
     static cxxtools::SerializationInfo getSerializedData();
     static void                        restoreDataFromSi(cxxtools::SerializationInfo& si);
 
     static std::vector<std::string> list();
-    static void                     massDelete(const std::vector<std::string>& assets);
+    static void                     deleteList(const std::vector<std::string>& assets);
+    static void                     deleteAll();
 
     using Asset::operator==;
 

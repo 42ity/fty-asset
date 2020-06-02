@@ -24,6 +24,7 @@
 #include "asset-db.h"
 #include "conversion/full-asset.h"
 #include "conversion/json.h"
+#include <algorithm>
 #include <fty_asset_activator.h>
 #include <fty_common_db_dbpath.h>
 #include <memory>
@@ -127,6 +128,18 @@ AssetImpl::~AssetImpl()
 {
 }
 
+AssetImpl::AssetImpl(const AssetImpl& a)
+    : Asset(a)
+    , m_db(g_testMode ? new DBTest : new DB)
+{
+    m_db->init();
+}
+
+AssetImpl& AssetImpl::operator=(const AssetImpl& a)
+{
+    return *this;
+}
+
 bool AssetImpl::hasLogicalAsset() const
 {
     return getExt().find("logical_asset") != getExt().end();
@@ -134,7 +147,7 @@ bool AssetImpl::hasLogicalAsset() const
 
 void AssetImpl::remove(bool recursive)
 {
-    if (RC0_INAME == getInternalName()) {
+    if (RC0 == getInternalName()) {
         throw std::runtime_error("Prevented deleting RC-0");
     }
 
@@ -242,6 +255,22 @@ void AssetImpl::activate()
     }
 }
 
+void AssetImpl::deactivate()
+{
+    if (!g_testMode) {
+        mlm::MlmSyncClient  client(AGENT_FTY_ASSET, AGENT_ASSET_ACTIVATOR);
+        fty::AssetActivator activationAccessor(client);
+
+        // TODO remove as soon as fty::Asset activation is supported
+        fty::FullAsset fa = fty::conversion::toFullAsset(*this);
+
+        activationAccessor.deactivate(fa);
+
+        setAssetStatus(fty::AssetStatus::Nonactive);
+        m_db->update(*this);
+    }
+}
+
 cxxtools::SerializationInfo AssetImpl::getSerializedData()
 {
     using namespace fty::conversion;
@@ -313,8 +342,141 @@ void AssetImpl::reload()
     m_db->loadLinkedAssets(*this);
 }
 
-void AssetImpl::massDelete(const std::vector<std::string>& assets)
+static void printAssetTreeRec(const std::string& iname, int level)
 {
+    std::cout << "print on asset " << iname << std::endl;
+    AssetImpl a(iname);
+    for (const auto& child : a.getChildren()) {
+        for (int i = 0; i < level; i++) {
+            std::cout << "\t";
+        }
+        std::cout << child << std::endl;
+
+        printAssetTreeRec(child, level + 1);
+    }
+}
+
+static void getChildrenTree(const std::string& iname, std::vector<AssetImpl>& tree)
+{
+    AssetImpl a(iname);
+    for (const auto& child : a.getChildren()) {
+        tree.push_back(a);
+        getChildrenTree(child, tree);
+    }
+}
+
+void AssetImpl::deleteList(const std::vector<std::string>& assets)
+{
+    std::vector<AssetImpl> toDel;
+
+    std::cerr << "list of asset to delete:\n" << std::endl;
+    for (const auto& a : assets) {
+        std::cerr << a << " ";
+    }
+    std::cerr << std::endl;
+
+    std::vector<std::string> errors;
+
+    for (const std::string& iname : assets) {
+        std::vector<AssetImpl> childrenTree;
+
+        AssetImpl a(iname);
+        toDel.push_back(a);
+
+        // get tree of children recursively
+        getChildrenTree(iname, childrenTree);
+
+        std::cerr << "list of children of " << iname << ":\n" << std::endl;
+        for (const auto& a : assets) {
+            std::cerr << a << " ";
+        }
+        std::cerr << std::endl;
+
+        // remove assets already in the list
+        for (const std::string& iname : assets) {
+            childrenTree.erase(std::remove_if(childrenTree.begin(), childrenTree.end(),
+                                   [&](const Asset& child) {
+                                       return iname == child.getInternalName();
+                                   }),
+                childrenTree.end());
+        }
+
+        // get linked assets
+        std::vector<std::string> linkedAssets = a.getLinkedAssets();
+        // remove assets already in the list
+        for (const std::string& iname : assets) {
+            linkedAssets.erase(
+                std::remove(linkedAssets.begin(), linkedAssets.end(), iname), linkedAssets.end());
+        }
+
+        if (!childrenTree.empty() || !linkedAssets.empty()) {
+            errors.push_back(iname);
+        }
+    }
+
+    auto isLinked = [&](const Asset& l, const Asset& r) {
+        // check if l is linked to r (l < r)
+        auto linksL    = l.getLinkedAssets();
+        auto isLinkedL = std::find(linksL.begin(), linksL.end(), r.getInternalName());
+        if (isLinkedL != linksL.end()) {
+            return false;
+        }
+        // check if r is linked to l (l > r)
+        auto linksR    = r.getLinkedAssets();
+        auto isLinkedR = std::find(linksR.begin(), linksR.end(), l.getInternalName());
+        if (isLinkedR != linksR.end()) {
+            return true;
+        }
+        return false;
+    };
+
+    auto isAnyParent = [&](const Asset& l, const Asset& r) {
+        auto rUp = r;
+        while (true) {
+            // if l is child of r, l < r
+            if (l.getParentIname() == rUp.getInternalName()) {
+                return true;
+            }
+            // if r is not parent of l, look in deletion list for ancestor of r
+            auto it = std::find_if(toDel.begin(), toDel.end(), [&](const Asset& it) {
+                return it.getInternalName() == rUp.getParentIname();
+            });
+            // if parent of r is not in the list, they are on separate branches
+            if (it == toDel.end()) {
+                return false;
+            }
+            // go one level up on r side
+            rUp = *it;
+        }
+    };
+
+    // sort by deletion order
+    std::sort(toDel.begin(), toDel.end(), [&](const Asset& l, const Asset& r) {
+        return isAnyParent(l, r) || isLinked(l, r);
+    });
+
+    // TODO remove
+    printAssetTreeRec(toDel.begin()->getInternalName(), 0);
+
+    for (auto& d : toDel) {
+        // check if asset is in error list
+        auto it = std::find_if(errors.begin(), errors.end(), [&](const std::string& iname) {
+            return d.getInternalName() == iname;
+        });
+
+        if (it != errors.end()) {
+            std::cerr << "Asset " << *it << " cannot be deleted" << std::endl;
+        } else {
+            d.deactivate();
+            // d.remove(false);
+        }
+    }
+}
+
+
+void AssetImpl::deleteAll()
+{
+    deleteList(list());
 }
 
 } // namespace fty

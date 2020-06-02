@@ -558,7 +558,7 @@ std::vector<std::string> AssetImpl::DB::listAllAssets()
     for (const auto& row : res) {
         const std::string& assetName = row.getString("name");
         // discard rackcontroller 0
-        if (assetName != RC0_INAME) {
+        if (assetName != RC0) {
             assetList.emplace_back(assetName);
         }
     }

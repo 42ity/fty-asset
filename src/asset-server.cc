@@ -237,6 +237,8 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
 
     cxxtools::SerializationInfo si = AssetImpl::getSerializedData();
 
+    AssetImpl::deleteAll();
+
     AssetImpl::restoreDataFromSi(si);
 
     // using namespace dto;
@@ -525,7 +527,7 @@ void AssetServer::deleteAssetList(const messagebus::Message& msg)
         assetInames.push_back(elId);
     }
 
-    AssetImpl::massDelete(assetInames);
+    AssetImpl::deleteList(assetInames);
 }
 
 void AssetServer::getAsset(const messagebus::Message& msg)
