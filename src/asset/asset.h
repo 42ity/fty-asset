@@ -42,13 +42,15 @@ public:
     AssetImpl& operator=(const AssetImpl& a);
 
     // asset operations
-    void remove(bool recursive = false);
+    void remove(bool recursive = false, bool removeLastDC = false);
     bool hasLogicalAsset() const;
     void save();
     void reload();
     bool isActivable();
     void activate();
     void deactivate();
+    void linkTo(const std::string& assetName);
+    void unlinkFrom(const std::string& assetName);
 
     // serialize/deserialize data
     static cxxtools::SerializationInfo getSerializedData();

@@ -168,6 +168,8 @@ public:
     void setAssetTag(const std::string& assetTag);
     void setExt(const Asset::ExtMap& map);
     void setExtEntry(const std::string& key, const std::string& value, bool readOnly = false);
+    void addLinkedAsset(const std::string& dest);
+    void removeLinkedAsset(const std::string& dest);
     void setLinkedAssets(const std::vector<std::string>& assets);
     void setChildren(const std::vector<std::string>& assets);
     // dump

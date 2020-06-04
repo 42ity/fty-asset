@@ -309,7 +309,7 @@ void AssetImpl::DB::commitTransaction()
 void AssetImpl::DB::update(Asset& asset)
 {
     // clang-format off
-    int affected = m_conn.prepareCached(R"(
+    m_conn.prepareCached(R"(
         UPDATE
             t_bios_asset_element
         SET
@@ -331,10 +331,6 @@ void AssetImpl::DB::update(Asset& asset)
    .set("assetId", asset.getId())
    .execute();
     // clang-format on
-
-    if (affected == 0) {
-        throw std::runtime_error(TRANSLATE_ME("updating not existing asset %d", asset.getId()));
-    }
 }
 
 void AssetImpl::DB::insert(Asset& asset)

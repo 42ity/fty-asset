@@ -239,7 +239,7 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
 
     AssetImpl::deleteAll();
 
-    AssetImpl::restoreDataFromSi(si);
+    // AssetImpl::restoreDataFromSi(si);
 
     // using namespace dto;
     // using namespace dto::srr;
