@@ -37,7 +37,10 @@ public:
     virtual void loadChildren(Asset& asset);
     virtual void loadLinkedAssets(Asset& asset);
 
-    virtual void unlinkFrom(Asset& asset);
+    virtual bool hasLinkedAssets(const Asset& asset);
+    virtual void link(Asset& src, Asset& dest);
+    virtual void unlink(Asset& src, Asset& dest);
+    virtual void unlinkAll(Asset& dest);
     virtual void clearGroup(Asset& asset);
     virtual void removeAsset(Asset& asset);
     virtual void removeFromRelations(Asset& asset);

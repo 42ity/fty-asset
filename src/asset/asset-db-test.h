@@ -36,7 +36,10 @@ public:
     void loadChildren(Asset& asset) override;
     void loadLinkedAssets(Asset& asset) override;
 
-    void unlinkFrom(Asset& asset) override;
+    bool hasLinkedAssets(const Asset& asset) override;
+    void link(Asset& src, Asset& dest) override;
+    void unlink(Asset& src, Asset& dest) override;
+    void unlinkAll(Asset& dest) override;
     void clearGroup(Asset& asset) override;
     void removeAsset(Asset& asset) override;
     void removeFromRelations(Asset& asset) override;

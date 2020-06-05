@@ -112,9 +112,25 @@ void AssetImpl::DBTest::clearGroup(Asset& asset)
     std::cout << "DBTest::clearGroup" << std::endl;
 }
 
-void AssetImpl::DBTest::unlinkFrom(Asset& asset)
+bool AssetImpl::DBTest::hasLinkedAssets(const Asset& asset)
 {
-    std::cout << "DBTest::unlinkFrom" << std::endl;
+    std::cout << "DBTest::hasLinkedAssets" << std::endl;
+    return true;
+}
+
+void AssetImpl::DBTest::link(Asset& src, Asset& dest)
+{
+    std::cout << "DBTest::link" << std::endl;
+}
+
+void AssetImpl::DBTest::unlink(Asset& src, Asset& dest)
+{
+    std::cout << "DBTest::unlink" << std::endl;
+}
+
+void AssetImpl::DBTest::unlinkAll(Asset& dest)
+{
+    std::cout << "DBTest::unlinkAll" << std::endl;
 }
 
 void AssetImpl::DBTest::beginTransaction()

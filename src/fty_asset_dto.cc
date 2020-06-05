@@ -221,20 +221,6 @@ void Asset::setExtEntry(const std::string& key, const std::string& value, bool r
     m_ext[key] = std::make_pair(value, readOnly);
 }
 
-void Asset::addLinkedAsset(const std::string& dest)
-{
-    auto found = std::find(m_linkedAssets.begin(), m_linkedAssets.end(), dest);
-
-    if (found != m_linkedAssets.end()) {
-        m_linkedAssets.push_back(dest);
-    }
-}
-
-void Asset::removeLinkedAsset(const std::string& dest)
-{
-    m_linkedAssets.erase(std::remove(m_linkedAssets.begin(), m_linkedAssets.end(), dest));
-}
-
 void Asset::setLinkedAssets(const std::vector<std::string>& assets)
 {
     m_linkedAssets = assets;

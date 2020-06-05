@@ -115,7 +115,7 @@ AssetImpl::AssetImpl()
     m_db->init();
 }
 
-AssetImpl::AssetImpl(const std::string& nameId)
+AssetImpl::AssetImpl(const std::string& nameId, bool loadLinks)
     : m_db(g_testMode ? new DBTest : new DB)
 {
     m_db->init();
@@ -123,7 +123,9 @@ AssetImpl::AssetImpl(const std::string& nameId)
     m_db->loadAsset(nameId, *this);
     m_db->loadExtMap(*this);
     m_db->loadChildren(*this);
-    m_db->loadLinkedAssets(*this);
+    if (loadLinks) {
+        m_db->loadLinkedAssets(*this);
+    }
 }
 
 AssetImpl::~AssetImpl()
@@ -152,7 +154,12 @@ bool AssetImpl::hasLogicalAsset() const
     return getExt().find("logical_asset") != getExt().end();
 }
 
-void AssetImpl::remove(bool recursive, bool removeLastDC = false)
+bool AssetImpl::hasLinkedAssets() const
+{
+    return m_db->hasLinkedAssets(*this);
+}
+
+void AssetImpl::remove(bool recursive, bool removeLastDC)
 {
     if (RC0 == getInternalName()) {
         throw std::runtime_error("Prevented deleting RC-0");
@@ -162,8 +169,8 @@ void AssetImpl::remove(bool recursive, bool removeLastDC = false)
         throw std::runtime_error(TRANSLATE_ME("a logical_asset (sensor) refers to it"));
     }
 
-    if (!getLinkedAssets().empty()) {
-        throw std::runtime_error(TRANSLATE_ME("can't delete the asset because it is linked to others"));
+    if (hasLinkedAssets()) {
+        throw std::runtime_error(TRANSLATE_ME("can't delete asset because it has other assets connected"));
     }
 
     if (!recursive && !getChildren().empty()) {
@@ -193,7 +200,7 @@ void AssetImpl::remove(bool recursive, bool removeLastDC = false)
             m_db->removeAsset(*this);
         } else if (isAnyOf(getAssetType(), TYPE_DEVICE)) {
             m_db->removeFromGroups(*this);
-            m_db->unlinkFrom(*this);
+            m_db->unlinkAll(*this);
             m_db->removeFromRelations(*this);
             m_db->removeExtMap(*this);
             m_db->removeAsset(*this);
@@ -208,7 +215,7 @@ void AssetImpl::remove(bool recursive, bool removeLastDC = false)
     m_db->commitTransaction();
 }
 
-void AssetImpl::save()
+void AssetImpl::save(bool saveLinks)
 {
     m_db->beginTransaction();
     try {
@@ -222,7 +229,9 @@ void AssetImpl::save()
 
             m_db->insert(*this);
         }
-        m_db->saveLinkedAssets(*this);
+        if (saveLinks) {
+            m_db->saveLinkedAssets(*this);
+        }
         m_db->saveExtMap(*this);
     } catch (const std::exception& e) {
         m_db->rollbackTransaction();
@@ -272,27 +281,31 @@ void AssetImpl::deactivate()
         fty::FullAsset fa = fty::conversion::toFullAsset(*this);
 
         activationAccessor.deactivate(fa);
-        std::cerr << "Asset " << getInternalName() << " deactivated" << std::endl;
+        log_debug("Asset %s deactivated", getInternalName().c_str());
 
         setAssetStatus(fty::AssetStatus::Nonactive);
         m_db->update(*this);
     }
 }
 
-void AssetImpl::linkTo(const std::string& assetName)
+void AssetImpl::linkTo(const std::string& src)
 {
-    AssetImpl src = AssetImpl(assetName);
+    auto links        = getLinkedAssets();
+    auto existingLink = find(links.begin(), links.end(), src);
 
-    src.addLinkedAsset(getInternalName());
-    m_db->saveLinkedAssets(src);
+    if (existingLink == links.end()) {
+        AssetImpl s(src);
+        m_db->link(s, *this);
+    }
+    m_db->loadLinkedAssets(*this);
 }
 
-void AssetImpl::unlinkFrom(const std::string& assetName)
+void AssetImpl::unlinkFrom(const std::string& src)
 {
-    AssetImpl src = AssetImpl(assetName);
+    AssetImpl s(src);
+    m_db->unlink(s, *this);
 
-    src.removeLinkedAsset(getInternalName());
-    m_db->saveLinkedAssets(src);
+    m_db->loadLinkedAssets(*this);
 }
 
 cxxtools::SerializationInfo AssetImpl::getSerializedData()
@@ -324,6 +337,37 @@ cxxtools::SerializationInfo AssetImpl::getSerializedData()
 
     return si;
 }
+
+static void printAssetTreeRec(const std::string& iname, int level)
+{
+    for (int i = 0; i < level; i++) {
+        std::cout << "\t";
+    }
+    std::cout << iname << std::endl;
+
+    AssetImpl a(iname);
+    for (const auto& child : a.getChildren()) {
+        printAssetTreeRec(child, level + 1);
+    }
+}
+
+static void buildRestoreTree(
+    std::vector<AssetImpl>& list, const std::vector<AssetImpl> src, const AssetImpl& node)
+{
+    list.push_back(node);
+    std::vector<std::string> children = node.getChildren();
+    for (const auto& c : children) {
+        auto child = std::find_if(src.begin(), src.end(), [&](const AssetImpl& a) {
+            return a.getInternalName() == c;
+        });
+        if (child == src.end()) {
+            throw std::runtime_error("Cannot find asset " + child->getInternalName() + " to restore");
+        }
+
+        buildRestoreTree(list, src, *child);
+    }
+}
+
 void AssetImpl::restoreDataFromSi(cxxtools::SerializationInfo& si)
 {
     using namespace fty::conversion;
@@ -334,6 +378,10 @@ void AssetImpl::restoreDataFromSi(cxxtools::SerializationInfo& si)
 
     const cxxtools::SerializationInfo& assets = si.getMember("assets");
 
+    std::vector<AssetImpl> roots;
+    std::vector<AssetImpl> list;
+    std::vector<AssetImpl> assetsToRestore;
+
     for (auto it = assets.begin(); it != assets.end(); ++it) {
         AssetImpl a;
 
@@ -341,12 +389,31 @@ void AssetImpl::restoreDataFromSi(cxxtools::SerializationInfo& si)
 
         log_debug("Restoring asset %s...", a.getInternalName().c_str());
 
-        std::stringstream s;
-        a.dump(s);
+        if (a.getParentIname() == "") {
+            roots.push_back(a);
+        }
 
-        std::cout << s.str() << std::endl;
+        assetsToRestore.push_back(a);
+    }
 
-        a.save();
+    // build restore tree
+    for (const auto& r : roots) {
+        buildRestoreTree(list, assetsToRestore, r);
+    }
+
+    for (auto& a : list) {
+        a.save(false);
+        if (a.getAssetStatus() == AssetStatus::Active && a.isActivable()) {
+            a.activate();
+        }
+    }
+
+    // restore links
+    for (auto& a : list) {
+        auto links = a.getLinkedAssets();
+        for (const auto& l : links) {
+            a.linkTo(l);
+        }
     }
 }
 
@@ -362,24 +429,13 @@ std::vector<std::string> AssetImpl::list()
     return db->listAllAssets();
 }
 
-void AssetImpl::reload()
+void AssetImpl::load(bool loadLinks)
 {
     m_db->loadAsset(getInternalName(), *this);
     m_db->loadExtMap(*this);
     m_db->loadChildren(*this);
-    m_db->loadLinkedAssets(*this);
-}
-
-static void printAssetTreeRec(const std::string& iname, int level)
-{
-    for (int i = 0; i < level; i++) {
-        std::cout << "\t";
-    }
-    std::cout << iname << std::endl;
-
-    AssetImpl a(iname);
-    for (const auto& child : a.getChildren()) {
-        printAssetTreeRec(child, level + 1);
+    if (loadLinks) {
+        m_db->loadLinkedAssets(*this);
     }
 }
 
@@ -391,44 +447,6 @@ static void getChildrenList(const std::string& iname, std::vector<std::string>& 
         getChildrenList(child, tree);
     }
 }
-
-struct
-{
-    bool operator()(const AssetImpl& l, const AssetImpl& r)
-    {
-        std::cerr << "comparing " << l.getInternalName() << " and " << r.getInternalName() << std::endl;
-
-        std::vector<std::pair<std::string, int>> lTree;
-        auto                                     ptr = l;
-
-        // path to root of L
-        int distL = 0;
-        while (ptr.getParentIname() != "") {
-            lTree.push_back(std::make_pair(ptr.getInternalName(), distL));
-            std::string parentIname = ptr.getParentIname();
-            ptr                     = AssetImpl(parentIname);
-            distL++;
-        }
-
-        int distR = 0;
-        ptr       = r;
-        while (ptr.getParentIname() != "") {
-            // llok for LCA, if exists
-            auto found = std::find_if(lTree.begin(), lTree.end(), [&](const std::pair<std::string, int>& p) {
-                return p.first == ptr.getInternalName();
-            });
-            if (found != lTree.end()) {
-                distL = found->second; // distance of L from LCA
-                break;
-            }
-
-            ptr = AssetImpl(ptr.getParentIname());
-            distR++;
-        }
-        // farthest node from LCA gets deleted first
-        return distL >= distR;
-    }
-} sortByDepth;
 
 void AssetImpl::deleteList(const std::vector<std::string>& assets)
 {
@@ -480,29 +498,59 @@ void AssetImpl::deleteList(const std::vector<std::string>& assets)
     //     return false;
     // };
 
-    // remove links from all assets
-    for (auto& src : toDel) {
-        for (auto& linkName : src.getLinkedAssets()) {
-            AssetImpl dest(linkName);
-            dest.unlinkFrom(src.getInternalName());
-        }
+    for (auto& a : toDel) {
+        a.m_db->unlinkAll(a);
     }
 
+    auto isAnyParent = [&](const AssetImpl& l, const AssetImpl& r) {
+        std::vector<std::pair<std::string, int>> lTree;
+        auto                                     ptr = l;
+        // path to root of L
+        int distL = 0;
+        while (ptr.getParentIname() != "") {
+            lTree.push_back(std::make_pair(ptr.getInternalName(), distL));
+            std::string parentIname = ptr.getParentIname();
+            ptr                     = AssetImpl(parentIname);
+            distL++;
+        }
+
+        int distR = 0;
+        ptr       = r;
+        while (ptr.getParentIname() != "") {
+            // look for LCA, if exists
+            auto found = std::find_if(lTree.begin(), lTree.end(), [&](const std::pair<std::string, int>& p) {
+                return p.first == ptr.getInternalName();
+            });
+            if (found != lTree.end()) {
+                distL = found->second; // distance of L from LCA
+                break;
+            }
+
+            ptr = AssetImpl(ptr.getParentIname());
+            distR++;
+        }
+        // farthest node from LCA gets deleted first
+        return distL >= distR;
+    };
+
     // sort by deletion order
-    std::sort(toDel.begin(), toDel.end(), sortByDepth);
+    std::sort(toDel.begin(), toDel.end(), [&](const AssetImpl& l, const AssetImpl& r) {
+        return isAnyParent(l, r) /*  || isLinked(l, r) */;
+    });
 
     for (auto& d : toDel) {
         // after deleting assets, children list may change -> reload
-        d.reload();
+        d.load();
         auto it = std::find_if(errors.begin(), errors.end(), [&](const std::string& iname) {
             return d.getInternalName() == iname;
         });
 
         if (it != errors.end()) {
-            std::cerr << "Asset " << *it << " cannot be deleted" << std::endl;
+            log_error("Asset %s cannot be deleted", it->c_str());
         } else {
-            std::cerr << "Deleting asset " << d.getInternalName() << std::endl;
             d.deactivate();
+            // non recursive, force removal of last DC
+            log_debug("Deleting asset %s", d.getInternalName().c_str());
             d.remove(false, true);
         }
     }

@@ -275,9 +275,71 @@ void AssetImpl::DB::clearGroup(Asset& asset)
     // clang-format on
 }
 
-void AssetImpl::DB::unlinkFrom(Asset& asset)
+bool AssetImpl::DB::hasLinkedAssets(const Asset& asset)
 {
     assert(asset.getId());
+
+    // clang-format off
+    int linkedAssets = m_conn.prepare(R"(
+        SELECT
+            COUNT(id_link)
+        FROM
+            t_bios_asset_link
+        WHERE
+            id_asset_device_src = :src
+    )")
+    .set("src", asset.getId())
+    .selectValue()
+    .getInt();
+    // clang-format on
+
+    return linkedAssets != 0;
+}
+
+void AssetImpl::DB::link(Asset& src, Asset& dest)
+{
+    assert(src.getId());
+    assert(dest.getId());
+
+    // clang-format off
+    m_conn.prepareCached(R"(
+        INSERT INTO
+            t_bios_asset_link
+            (id_asset_device_src, id_asset_device_dest)
+        VALUES (
+            :src,
+            :dest
+        )
+    )")
+    .set("src", src.getId())
+    .set("dest", dest.getId())
+    .execute();
+    // clang-format on
+}
+
+void AssetImpl::DB::unlink(Asset& src, Asset& dest)
+{
+    assert(src.getId());
+    assert(dest.getId());
+
+    // clang-format off
+    m_conn.prepareCached(R"(
+        DELETE FROM
+            t_bios_asset_link
+        WHERE
+            id_asset_device_src = :src
+            AND
+            id_asset_device_dest = :dest
+    )")
+    .set("src", src.getId())
+    .set("dest", dest.getId())
+    .execute();
+    // clang-format on
+}
+
+void AssetImpl::DB::unlinkAll(Asset& dest)
+{
+    assert(dest.getId());
 
     // clang-format off
     m_conn.prepareCached(R"(
@@ -286,7 +348,7 @@ void AssetImpl::DB::unlinkFrom(Asset& asset)
         WHERE
             id_asset_device_dest = :dest
     )")
-    .set("dest", asset.getId())
+    .set("dest", dest.getId())
     .execute();
     // clang-format on
 }

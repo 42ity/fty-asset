@@ -34,7 +34,7 @@ class AssetImpl : public Asset
 {
 public:
     AssetImpl();
-    AssetImpl(const std::string& nameId);
+    AssetImpl(const std::string& nameId, bool loadLinks = true);
     ~AssetImpl() override;
 
     AssetImpl(const AssetImpl& a);
@@ -43,14 +43,15 @@ public:
 
     // asset operations
     void remove(bool recursive = false, bool removeLastDC = false);
+    bool hasLinkedAssets() const;
     bool hasLogicalAsset() const;
-    void save();
-    void reload();
+    void load(bool loadLinks = true);
+    void save(bool saveLinks = true);
     bool isActivable();
     void activate();
     void deactivate();
-    void linkTo(const std::string& assetName);
-    void unlinkFrom(const std::string& assetName);
+    void linkTo(const std::string& src);
+    void unlinkFrom(const std::string& src);
 
     // serialize/deserialize data
     static cxxtools::SerializationInfo getSerializedData();
