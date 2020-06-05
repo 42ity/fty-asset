@@ -55,7 +55,7 @@ public:
 
     // serialize/deserialize data
     static cxxtools::SerializationInfo getSerializedData();
-    static void                        restoreDataFromSi(cxxtools::SerializationInfo& si);
+    static std::vector<AssetImpl>      getDataFromSi(cxxtools::SerializationInfo& si);
 
     static std::vector<std::string> list();
     static void                     deleteList(const std::vector<std::string>& assets);

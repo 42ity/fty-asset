@@ -235,11 +235,71 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
 {
     log_debug("Handle SRR request");
 
-    cxxtools::SerializationInfo si = AssetImpl::getSerializedData();
+    const std::string& subject = msg.metaData().at(messagebus::Message::SUBJECT);
 
-    AssetImpl::deleteAll();
+    cxxtools::SerializationInfo si;
+    std::vector<AssetImpl>      assets;
 
-    AssetImpl::restoreDataFromSi(si);
+    if (subject == FTY_ASSET_SRR_SUBJECT_BACKUP) {
+        log_debug("BACKUP");
+        si = AssetImpl::getSerializedData();
+    } else if (subject == FTY_ASSET_SRR_SUBJECT_RESTORE) {
+        log_debug("RESTORE");
+        assets = AssetImpl::getDataFromSi(si);
+    } else if (subject == FTY_ASSET_SRR_SUBJECT_RESET) {
+        log_debug("RESET");
+        AssetImpl::deleteAll();
+    } else if (subject == "TEST") {
+        log_debug("TEST");
+
+        cxxtools::SerializationInfo si = AssetImpl::getSerializedData();
+        AssetImpl::deleteAll();
+        assets = AssetImpl::getDataFromSi(si);
+
+    } else {
+        log_error("Unkwnown subject %s", subject.c_str());
+    }
+
+    // TODO move to message header
+    bool tryActivate = true;
+
+    for (AssetImpl& a : assets) {
+        try {
+            bool requestActivation = (a.getAssetStatus() == AssetStatus::Active);
+
+            if (requestActivation && !a.isActivable()) {
+                if (tryActivate) {
+                    a.setAssetStatus(fty::AssetStatus::Nonactive);
+                    requestActivation = false;
+                } else {
+                    throw std::runtime_error(
+                        "Licensing limitation hit - maximum amount of active power devices allowed in "
+                        "license reached.");
+                }
+            }
+
+            // store asset to db
+            a.save();
+            // activate asset
+            if (requestActivation) {
+                try {
+                    a.activate();
+                } catch (std::exception& e) {
+                    // if activation fails, delete asset
+                    a.remove(false);
+                    throw std::runtime_error(e.what());
+                }
+            }
+
+            // send notification
+            messagebus::Message notification = createMessage(FTY_ASSET_SUBJECT_CREATED, "", m_srrAgentName,
+                "", messagebus::STATUS_OK, fty::conversion::toJson(a));
+            sendNotification(notification);
+        } catch (std::exception& e) {
+            log_error(e.what());
+        }
+    }
+
 
     // using namespace dto;
     // using namespace dto::srr;

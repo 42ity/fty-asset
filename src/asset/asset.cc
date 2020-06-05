@@ -368,7 +368,7 @@ static void buildRestoreTree(
     }
 }
 
-void AssetImpl::restoreDataFromSi(cxxtools::SerializationInfo& si)
+std::vector<AssetImpl> AssetImpl::getDataFromSi(cxxtools::SerializationInfo& si)
 {
     using namespace fty::conversion;
 
@@ -401,20 +401,22 @@ void AssetImpl::restoreDataFromSi(cxxtools::SerializationInfo& si)
         buildRestoreTree(list, assetsToRestore, r);
     }
 
-    for (auto& a : list) {
-        a.save(false);
-        if (a.getAssetStatus() == AssetStatus::Active && a.isActivable()) {
-            a.activate();
-        }
-    }
+    // for (auto& a : list) {
+    //     a.save(false);
+    //     if (a.getAssetStatus() == AssetStatus::Active && a.isActivable()) {
+    //         a.activate();
+    //     }
+    // }
 
     // restore links
-    for (auto& a : list) {
-        auto links = a.getLinkedAssets();
-        for (const auto& l : links) {
-            a.linkTo(l);
-        }
-    }
+    // for (auto& a : list) {
+    //     auto links = a.getLinkedAssets();
+    //     for (const auto& l : links) {
+    //         a.linkTo(l);
+    //     }
+    // }
+
+    return list;
 }
 
 std::vector<std::string> AssetImpl::list()

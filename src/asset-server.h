@@ -49,9 +49,12 @@ static constexpr const char* METADATA_TRY_ACTIVATE      = "TRY_ACTIVATE";
 static constexpr const char* METADATA_NO_ERROR_IF_EXIST = "NO_ERROR_IF_EXIST";
 
 // SRR
-static constexpr const char* ACTIVE_VERSION      = "1.0";
-static constexpr const char* FTY_ASSET_SRR_NAME  = "asset-agent-srr";
-static constexpr const char* FTY_ASSET_SRR_QUEUE = "FTY.Q.SRR";
+static constexpr const char* ACTIVE_VERSION                = "1.0";
+static constexpr const char* FTY_ASSET_SRR_NAME            = "asset-agent-srr";
+static constexpr const char* FTY_ASSET_SRR_QUEUE           = "FTY.Q.SRR";
+static constexpr const char* FTY_ASSET_SRR_SUBJECT_BACKUP  = "BACKUP";
+static constexpr const char* FTY_ASSET_SRR_SUBJECT_RESTORE = "RESTORE";
+static constexpr const char* FTY_ASSET_SRR_SUBJECT_RESET   = "RESET";
 
 typedef struct _mlm_client_t mlm_client_t;
 namespace messagebus {
