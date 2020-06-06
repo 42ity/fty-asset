@@ -263,6 +263,8 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
     // TODO move to message header
     bool tryActivate = true;
 
+    std::map<std::string, std::string> assetInames;
+
     for (AssetImpl& a : assets) {
         try {
             bool requestActivation = (a.getAssetStatus() == AssetStatus::Active);
@@ -277,9 +279,19 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
                         "license reached.");
                 }
             }
+            // update parent iname with new one
+            if (a.getParentIname() != "") {
+                a.setParentIname(assetInames[a.getParentIname()]);
+            }
+            // store previous iname
+            std::string oldIname = a.getInternalName();
 
             // store asset to db
             a.save();
+
+            // save new iname
+            assetInames[oldIname] = a.getInternalName();
+
             // activate asset
             if (requestActivation) {
                 try {
