@@ -148,14 +148,14 @@ void AssetImpl::DB::loadLinkedAssets(Asset& asset)
     // clang-format off
     auto result = m_conn.prepareCached(R"(
         SELECT
-            l.id_asset_element_dest AS id,
+            l.id_asset_element_src  AS id,
             e.name                  AS name
         FROM
             v_bios_asset_link AS l
         INNER JOIN
-            t_bios_asset_element AS e ON l.id_asset_element_dest = e.id_asset_element
+            t_bios_asset_element AS e ON l.id_asset_element_src = e.id_asset_element
         WHERE
-            l.id_asset_element_src = :asset_id
+            l.id_asset_element_dest = :asset_id
     )")
     .set("asset_id", asset.getId())
     .select();
@@ -302,13 +302,43 @@ void AssetImpl::DB::link(Asset& src, Asset& dest)
     assert(dest.getId());
 
     // clang-format off
+    auto res = m_conn.prepareCached(R"(
+        SELECT
+            e.id_asset_element AS srcId,
+            e.name             AS srcName
+        FROM t_bios_asset_link
+        INNER JOIN
+            t_bios_asset_element AS e
+            ON e.id_asset_element = id_asset_device_src
+        WHERE
+             id_asset_device_dest = :assetId
+    )")
+    .set("assetId", dest.getId())
+    .select();
+    // clang-format on
+
+    std::vector<std::string> existing;
+    for (const auto& row : res) {
+        existing.emplace_back(row.getString("srcName"));
+    }
+
+    const std::string& srcName = src.getInternalName();
+
+    auto found = std::find(existing.begin(), existing.end(), srcName);
+
+    if (found != existing.end()) {
+        throw std::runtime_error("Link to asset " + src.getInternalName() + " already exists");
+    }
+
+    // clang-format off
     m_conn.prepareCached(R"(
         INSERT INTO
             t_bios_asset_link
-            (id_asset_device_src, id_asset_device_dest)
+            (id_asset_device_src, id_asset_device_dest, id_asset_link_type)
         VALUES (
             :src,
-            :dest
+            :dest,
+            1
         )
     )")
     .set("src", src.getId())
@@ -471,14 +501,14 @@ void AssetImpl::DB::saveLinkedAssets(Asset& asset)
     // clang-format off
     auto res = m_conn.prepareCached(R"(
         SELECT
-            e.id_asset_element AS destId,
-            e.name             AS destName
+            e.id_asset_element AS srcId,
+            e.name             AS srcName
         FROM t_bios_asset_link
         INNER JOIN
             t_bios_asset_element AS e
-            ON e.id_asset_element = id_asset_device_dest
+            ON e.id_asset_element = id_asset_device_src
         WHERE
-             id_asset_device_src = : assetId
+             id_asset_device_dest = :assetId
     )")
     .set("assetId", asset.getId())
     .select();
@@ -488,12 +518,12 @@ void AssetImpl::DB::saveLinkedAssets(Asset& asset)
 
     std::vector<Existing> existing;
     for (const auto& row : res) {
-        existing.emplace_back(row.getUnsigned32("destId"), row.getString("destName"));
+        existing.emplace_back(row.getUnsigned32("srcId"), row.getString("srcName"));
     }
 
-    for (const std::string& dest : asset.getLinkedAssets()) {
+    for (const std::string& src : asset.getLinkedAssets()) {
         auto found = std::find_if(existing.begin(), existing.end(), [&](const Existing& e) {
-            return e.second == dest;
+            return e.second == src;
         });
 
         if (found == existing.end()) {
@@ -501,10 +531,10 @@ void AssetImpl::DB::saveLinkedAssets(Asset& asset)
             m_conn.prepareCached(R"(
                 INSERT INTO t_bios_asset_link
                     (id_asset_device_src, id_asset_device_dest, id_asset_link_type)
-                VALUES (:assetId, (SELECT id_asset_element FROM t_bios_asset_element WHERE name = :dest), 1)
+                VALUES ((SELECT id_asset_element FROM t_bios_asset_element WHERE name = :src), :assetId, 1)
             )")
+            .set("src", src)
             .set("assetId", asset.getId())
-            .set("dest", dest)
             .execute();
             // clang-format on
         } else {
@@ -516,11 +546,11 @@ void AssetImpl::DB::saveLinkedAssets(Asset& asset)
         // clang-format off
         m_conn.prepareCached(R"(
             DELETE FROM t_bios_asset_link
-            WHERE id_asset_device_src := assetId
-                AND id_asset_device_dest := destId
+            WHERE id_asset_device_src := srcId
+                AND id_asset_device_dest := assetId
         )")
+        .set("srcId", toRem.first)
         .set("assetId", asset.getId())
-        .set("destId", toRem.first)
         .execute();
         // clang-format on
     }

@@ -22,6 +22,7 @@
 #include "asset-server.h"
 #include "asset/conversion/json.h"
 #include "include/fty_asset_dto.h"
+#include <cxxtools/serializationinfo.h>
 #include <fty_common_messagebus.h>
 #include <functional>
 #include <malamute.h>
@@ -237,79 +238,25 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
 
     const std::string& subject = msg.metaData().at(messagebus::Message::SUBJECT);
 
-    cxxtools::SerializationInfo si;
-    std::vector<AssetImpl>      assets;
-
     if (subject == FTY_ASSET_SRR_SUBJECT_BACKUP) {
         log_debug("BACKUP");
-        si = AssetImpl::getSerializedData();
+        cxxtools::SerializationInfo si = saveAssets();
     } else if (subject == FTY_ASSET_SRR_SUBJECT_RESTORE) {
         log_debug("RESTORE");
-        assets = AssetImpl::getDataFromSi(si);
+        cxxtools::SerializationInfo si = saveAssets();
+        restoreAssets(si);
     } else if (subject == FTY_ASSET_SRR_SUBJECT_RESET) {
         log_debug("RESET");
         AssetImpl::deleteAll();
     } else if (subject == "TEST") {
         log_debug("TEST");
 
-        cxxtools::SerializationInfo si = AssetImpl::getSerializedData();
+        cxxtools::SerializationInfo si = saveAssets();
         AssetImpl::deleteAll();
-        assets = AssetImpl::getDataFromSi(si);
+        restoreAssets(si);
 
     } else {
         log_error("Unkwnown subject %s", subject.c_str());
-    }
-
-    // TODO move to message header
-    bool tryActivate = true;
-
-    std::map<std::string, std::string> assetInames;
-
-    for (AssetImpl& a : assets) {
-        try {
-            bool requestActivation = (a.getAssetStatus() == AssetStatus::Active);
-
-            if (requestActivation && !a.isActivable()) {
-                if (tryActivate) {
-                    a.setAssetStatus(fty::AssetStatus::Nonactive);
-                    requestActivation = false;
-                } else {
-                    throw std::runtime_error(
-                        "Licensing limitation hit - maximum amount of active power devices allowed in "
-                        "license reached.");
-                }
-            }
-            // update parent iname with new one
-            if (a.getParentIname() != "") {
-                a.setParentIname(assetInames[a.getParentIname()]);
-            }
-            // store previous iname
-            std::string oldIname = a.getInternalName();
-
-            // store asset to db
-            a.save();
-
-            // save new iname
-            assetInames[oldIname] = a.getInternalName();
-
-            // activate asset
-            if (requestActivation) {
-                try {
-                    a.activate();
-                } catch (std::exception& e) {
-                    // if activation fails, delete asset
-                    a.remove(false);
-                    throw std::runtime_error(e.what());
-                }
-            }
-
-            // send notification
-            messagebus::Message notification = createMessage(FTY_ASSET_SUBJECT_CREATED, "", m_srrAgentName,
-                "", messagebus::STATUS_OK, fty::conversion::toJson(a));
-            sendNotification(notification);
-        } catch (std::exception& e) {
-            log_error(e.what());
-        }
     }
 
 
@@ -600,6 +547,133 @@ void AssetServer::deleteAssetList(const messagebus::Message& msg)
     }
 
     AssetImpl::deleteList(assetInames);
+}
+
+cxxtools::SerializationInfo AssetServer::saveAssets()
+{
+    using namespace fty::conversion;
+
+    std::vector<std::string> assets = AssetImpl::list();
+
+    cxxtools::SerializationInfo si;
+
+    cxxtools::SerializationInfo& assetVector = si.addMember("assets");
+
+    for (const std::string assetName : assets) {
+        AssetImpl a(assetName);
+
+        log_debug("Saving asset %s...", a.getInternalName().c_str());
+
+        cxxtools::SerializationInfo& siAsset = assetVector.addMember("");
+        siAsset <<= a;
+    }
+
+    assetVector.setCategory(cxxtools::SerializationInfo::Array);
+
+    return si;
+}
+
+static void buildRestoreTree(
+    std::vector<AssetImpl>& dest, const std::vector<AssetImpl> src, const AssetImpl& node)
+{
+    dest.push_back(node);
+    std::vector<std::string> children = node.getChildren();
+    for (const auto& c : children) {
+        auto child = std::find_if(src.begin(), src.end(), [&](const AssetImpl& a) {
+            return a.getInternalName() == c;
+        });
+        if (child == src.end()) {
+            throw std::runtime_error("Cannot find asset " + child->getInternalName() + " to restore");
+        }
+
+        buildRestoreTree(dest, src, *child);
+    }
+}
+
+void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
+{
+    using namespace fty::conversion;
+
+    // if database is not empty, can't load assets
+    if (AssetImpl::list().size() != 0) {
+        throw std::runtime_error("Database already contains assets, impossible to restore from SRR");
+    }
+
+    const cxxtools::SerializationInfo& assets = si.getMember("assets");
+
+    std::vector<AssetImpl> roots;
+    std::vector<AssetImpl> list;
+    std::vector<AssetImpl> assetsToRestore;
+
+    for (auto it = assets.begin(); it != assets.end(); ++it) {
+        AssetImpl a;
+        *it >>= a;
+
+        if (a.getParentIname() == "") {
+            roots.push_back(a);
+        }
+        list.push_back(a);
+    }
+
+    // build restore tree
+    for (const auto& r : roots) {
+        buildRestoreTree(assetsToRestore, list, r);
+    }
+
+    // TODO move to message header
+    bool tryActivate = true;
+
+    std::map<std::string, std::string> assetInames;
+
+    for (AssetImpl& a : assetsToRestore) {
+        log_debug("Restoring asset %s...", a.getInternalName().c_str());
+
+        try {
+            bool requestActivation = (a.getAssetStatus() == AssetStatus::Active);
+
+            if (requestActivation && !a.isActivable()) {
+                if (tryActivate) {
+                    a.setAssetStatus(fty::AssetStatus::Nonactive);
+                    requestActivation = false;
+                } else {
+                    throw std::runtime_error(
+                        "Licensing limitation hit - maximum amount of active power devices allowed in "
+                        "license reached.");
+                }
+            }
+            // update parent iname with new one
+            if (a.getParentIname() != "") {
+                a.setParentIname(assetInames[a.getParentIname()]);
+            }
+            // store previous iname
+            std::string oldIname = a.getInternalName();
+
+            // store asset to db
+            a.save(false);
+
+            // save new iname
+            assetInames[oldIname] = a.getInternalName();
+
+            // activate asset
+            if (requestActivation) {
+                try {
+                    a.activate();
+                } catch (std::exception& e) {
+                    // if activation fails, delete asset
+                    a.remove(false);
+                    throw std::runtime_error(e.what());
+                }
+            }
+
+            // restore links
+            auto links = a.getLinkedAssets();
+            for (const auto& l : links) {
+                a.linkTo(assetInames[l]);
+            }
+        } catch (std::exception& e) {
+            log_error(e.what());
+        }
+    }
 }
 
 void AssetServer::getAsset(const messagebus::Message& msg)

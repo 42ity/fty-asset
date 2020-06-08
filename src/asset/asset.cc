@@ -23,7 +23,6 @@
 #include "asset-db-test.h"
 #include "asset-db.h"
 #include "conversion/full-asset.h"
-#include "conversion/json.h"
 #include <algorithm>
 #include <fty_asset_activator.h>
 #include <fty_common_db_dbpath.h>
@@ -290,12 +289,11 @@ void AssetImpl::deactivate()
 
 void AssetImpl::linkTo(const std::string& src)
 {
-    auto links        = getLinkedAssets();
-    auto existingLink = find(links.begin(), links.end(), src);
-
-    if (existingLink == links.end()) {
+    try {
         AssetImpl s(src);
         m_db->link(s, *this);
+    } catch (std::exception& ex) {
+        log_error("%s", ex.what());
     }
     m_db->loadLinkedAssets(*this);
 }
@@ -306,36 +304,6 @@ void AssetImpl::unlinkFrom(const std::string& src)
     m_db->unlink(s, *this);
 
     m_db->loadLinkedAssets(*this);
-}
-
-cxxtools::SerializationInfo AssetImpl::getSerializedData()
-{
-    using namespace fty::conversion;
-
-    std::unique_ptr<AssetImpl::DB> db;
-    if (g_testMode) {
-        db = std::unique_ptr<AssetImpl::DB>(new DBTest);
-    } else {
-        db = std::unique_ptr<AssetImpl::DB>(new DB);
-        db->init();
-    }
-
-    cxxtools::SerializationInfo si;
-
-    cxxtools::SerializationInfo& assets = si.addMember("assets");
-
-    for (const std::string assetName : db->listAllAssets()) {
-        AssetImpl a(assetName);
-
-        log_debug("Backing up asset %s...", a.getInternalName().c_str());
-
-        cxxtools::SerializationInfo& siAsset = assets.addMember("");
-        siAsset <<= a;
-    }
-
-    assets.setCategory(cxxtools::SerializationInfo::Array);
-
-    return si;
 }
 
 static void printAssetTreeRec(const std::string& iname, int level)
@@ -349,74 +317,6 @@ static void printAssetTreeRec(const std::string& iname, int level)
     for (const auto& child : a.getChildren()) {
         printAssetTreeRec(child, level + 1);
     }
-}
-
-static void buildRestoreTree(
-    std::vector<AssetImpl>& list, const std::vector<AssetImpl> src, const AssetImpl& node)
-{
-    list.push_back(node);
-    std::vector<std::string> children = node.getChildren();
-    for (const auto& c : children) {
-        auto child = std::find_if(src.begin(), src.end(), [&](const AssetImpl& a) {
-            return a.getInternalName() == c;
-        });
-        if (child == src.end()) {
-            throw std::runtime_error("Cannot find asset " + child->getInternalName() + " to restore");
-        }
-
-        buildRestoreTree(list, src, *child);
-    }
-}
-
-std::vector<AssetImpl> AssetImpl::getDataFromSi(cxxtools::SerializationInfo& si)
-{
-    using namespace fty::conversion;
-
-    if (list().size() != 0) {
-        throw std::runtime_error("Database already contains assets, impossible to restore from SRR");
-    }
-
-    const cxxtools::SerializationInfo& assets = si.getMember("assets");
-
-    std::vector<AssetImpl> roots;
-    std::vector<AssetImpl> list;
-    std::vector<AssetImpl> assetsToRestore;
-
-    for (auto it = assets.begin(); it != assets.end(); ++it) {
-        AssetImpl a;
-
-        *it >>= a;
-
-        log_debug("Restoring asset %s...", a.getInternalName().c_str());
-
-        if (a.getParentIname() == "") {
-            roots.push_back(a);
-        }
-
-        assetsToRestore.push_back(a);
-    }
-
-    // build restore tree
-    for (const auto& r : roots) {
-        buildRestoreTree(list, assetsToRestore, r);
-    }
-
-    // for (auto& a : list) {
-    //     a.save(false);
-    //     if (a.getAssetStatus() == AssetStatus::Active && a.isActivable()) {
-    //         a.activate();
-    //     }
-    // }
-
-    // restore links
-    // for (auto& a : list) {
-    //     auto links = a.getLinkedAssets();
-    //     for (const auto& l : links) {
-    //         a.linkTo(l);
-    //     }
-    // }
-
-    return list;
 }
 
 std::vector<std::string> AssetImpl::list()

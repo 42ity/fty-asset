@@ -22,7 +22,6 @@
 #pragma once
 
 #include "include/fty_asset_dto.h"
-#include <cxxtools/serializationinfo.h>
 
 extern bool g_testMode;
 
@@ -52,10 +51,6 @@ public:
     void deactivate();
     void linkTo(const std::string& src);
     void unlinkFrom(const std::string& src);
-
-    // serialize/deserialize data
-    static cxxtools::SerializationInfo getSerializedData();
-    static std::vector<AssetImpl>      getDataFromSi(cxxtools::SerializationInfo& si);
 
     static std::vector<std::string> list();
     static void                     deleteList(const std::vector<std::string>& assets);

@@ -187,6 +187,10 @@ private:
     void listAsset(const messagebus::Message& msg);
     void deleteAssetList(const messagebus::Message& msg);
 
+    // SRR
+    cxxtools::SerializationInfo saveAssets();
+    void                        restoreAssets(const cxxtools::SerializationInfo& si);
+
 private:
     static void destroyMlmClient(mlm_client_t* client);
 
