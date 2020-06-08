@@ -306,19 +306,6 @@ void AssetImpl::unlinkFrom(const std::string& src)
     m_db->loadLinkedAssets(*this);
 }
 
-static void printAssetTreeRec(const std::string& iname, int level)
-{
-    for (int i = 0; i < level; i++) {
-        std::cout << "\t";
-    }
-    std::cout << iname << std::endl;
-
-    AssetImpl a(iname);
-    for (const auto& child : a.getChildren()) {
-        printAssetTreeRec(child, level + 1);
-    }
-}
-
 std::vector<std::string> AssetImpl::list()
 {
     std::unique_ptr<AssetImpl::DB> db;

@@ -573,6 +573,19 @@ cxxtools::SerializationInfo AssetServer::saveAssets()
     return si;
 }
 
+static void printAssetTreeRec(const std::string& iname, int level)
+{
+    for (int i = 0; i < level; i++) {
+        std::cout << "\t";
+    }
+    std::cout << iname << std::endl;
+
+    AssetImpl a(iname);
+    for (const auto& child : a.getChildren()) {
+        printAssetTreeRec(child, level + 1);
+    }
+}
+
 static void buildRestoreTree(
     std::vector<AssetImpl>& dest, const std::vector<AssetImpl> src, const AssetImpl& node)
 {
@@ -664,8 +677,14 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
                     throw std::runtime_error(e.what());
                 }
             }
+        } catch (std::exception& e) {
+            log_error(e.what());
+        }
+    }
 
-            // restore links
+    // restore links
+    for (AssetImpl& a : assetsToRestore) {
+        try {
             auto links = a.getLinkedAssets();
             for (const auto& l : links) {
                 a.linkTo(assetInames[l]);
