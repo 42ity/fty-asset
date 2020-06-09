@@ -35,11 +35,6 @@ AssetImpl::DBTest::DBTest()
     std::cout << "DBTest::DBTest()" << std::endl;
 }
 
-void AssetImpl::DBTest::init()
-{
-    std::cout << "DBTest::init" << std::endl;
-}
-
 void AssetImpl::DBTest::loadAsset(const std::string& nameId, Asset& asset)
 {
     std::cout << "DBTest::loadAsset" << std::endl;

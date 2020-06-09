@@ -62,7 +62,7 @@ private:
     class Interface;
     class DB;
     class DBTest;
-    std::unique_ptr<DB> m_db;
+    DB& m_db;
 };
 
 } // namespace fty

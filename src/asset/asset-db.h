@@ -29,8 +29,12 @@ namespace fty {
 class AssetImpl::DB
 {
 public:
-    DB();
-    virtual void init();
+    static DB& getInstance()
+    {
+        static DB m_instance;
+        return m_instance;
+    }
+
     virtual void loadAsset(const std::string& nameId, Asset& asset);
 
     virtual void loadExtMap(Asset& asset);
@@ -60,6 +64,9 @@ public:
     virtual std::string unameById(uint32_t id);
 
     virtual std::vector<std::string> listAllAssets();
+
+protected:
+    DB(bool test = false);
 
 private:
     mutable tntdb::Connection m_conn;

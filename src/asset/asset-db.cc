@@ -44,14 +44,11 @@ static std::string createAssetName(const std::string& type, const std::string& s
 }
 
 // AssetImpl::DB
-
-AssetImpl::DB::DB()
+AssetImpl::DB::DB(bool test)
 {
-}
-
-void AssetImpl::DB::init()
-{
-    m_conn = tntdb::connectCached(DBConn::url);
+    if (!test) {
+        m_conn = tntdb::connectCached(DBConn::url);
+    }
 }
 
 void AssetImpl::DB::loadAsset(const std::string& nameId, Asset& asset)

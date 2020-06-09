@@ -109,21 +109,18 @@ static std::string generateUUID(
 //============================================================================================================
 
 AssetImpl::AssetImpl()
-    : m_db(g_testMode ? new DBTest : new DB)
+    : m_db(DB::getInstance())
 {
-    m_db->init();
 }
 
 AssetImpl::AssetImpl(const std::string& nameId, bool loadLinks)
-    : m_db(g_testMode ? new DBTest : new DB)
+    : m_db(DB::getInstance())
 {
-    m_db->init();
-
-    m_db->loadAsset(nameId, *this);
-    m_db->loadExtMap(*this);
-    m_db->loadChildren(*this);
+    m_db.loadAsset(nameId, *this);
+    m_db.loadExtMap(*this);
+    m_db.loadChildren(*this);
     if (loadLinks) {
-        m_db->loadLinkedAssets(*this);
+        m_db.loadLinkedAssets(*this);
     }
 }
 
@@ -133,9 +130,8 @@ AssetImpl::~AssetImpl()
 
 AssetImpl::AssetImpl(const AssetImpl& a)
     : Asset(a)
-    , m_db(g_testMode ? new DBTest : new DB)
+    , m_db(DB::getInstance())
 {
-    m_db->init();
 }
 
 AssetImpl& AssetImpl::operator=(const AssetImpl& a)
@@ -155,7 +151,7 @@ bool AssetImpl::hasLogicalAsset() const
 
 bool AssetImpl::hasLinkedAssets() const
 {
-    return m_db->hasLinkedAssets(*this);
+    return m_db.hasLinkedAssets(*this);
 }
 
 void AssetImpl::remove(bool recursive, bool removeLastDC)
@@ -183,60 +179,60 @@ void AssetImpl::remove(bool recursive, bool removeLastDC)
         }
     }
 
-    m_db->beginTransaction();
+    m_db.beginTransaction();
     try {
         if (isAnyOf(getAssetType(), TYPE_DATACENTER, TYPE_ROW, TYPE_ROOM, TYPE_RACK)) {
-            if (!removeLastDC && m_db->isLastDataCenter(*this)) {
+            if (!removeLastDC && m_db.isLastDataCenter(*this)) {
                 throw std::runtime_error(TRANSLATE_ME("will not allow last datacenter to be deleted"));
             }
-            m_db->removeExtMap(*this);
-            m_db->removeFromGroups(*this);
-            m_db->removeFromRelations(*this);
-            m_db->removeAsset(*this);
+            m_db.removeExtMap(*this);
+            m_db.removeFromGroups(*this);
+            m_db.removeFromRelations(*this);
+            m_db.removeAsset(*this);
         } else if (isAnyOf(getAssetType(), TYPE_GROUP)) {
-            m_db->clearGroup(*this);
-            m_db->removeExtMap(*this);
-            m_db->removeAsset(*this);
+            m_db.clearGroup(*this);
+            m_db.removeExtMap(*this);
+            m_db.removeAsset(*this);
         } else if (isAnyOf(getAssetType(), TYPE_DEVICE)) {
-            m_db->removeFromGroups(*this);
-            m_db->unlinkAll(*this);
-            m_db->removeFromRelations(*this);
-            m_db->removeExtMap(*this);
-            m_db->removeAsset(*this);
+            m_db.removeFromGroups(*this);
+            m_db.unlinkAll(*this);
+            m_db.removeFromRelations(*this);
+            m_db.removeExtMap(*this);
+            m_db.removeAsset(*this);
         } else {
-            m_db->removeExtMap(*this);
-            m_db->removeAsset(*this);
+            m_db.removeExtMap(*this);
+            m_db.removeAsset(*this);
         }
     } catch (const std::exception& e) {
-        m_db->rollbackTransaction();
+        m_db.rollbackTransaction();
         throw std::runtime_error(e.what());
     }
-    m_db->commitTransaction();
+    m_db.commitTransaction();
 }
 
 void AssetImpl::save(bool saveLinks)
 {
-    m_db->beginTransaction();
+    m_db.beginTransaction();
     try {
         if (getId()) {
-            m_db->update(*this);
+            m_db.update(*this);
         } else { // create
             // set creation timestamp
             setExtEntry(fty::EXT_CREATE_TS, generateCurrentTimestamp(), true);
             // set uuid
             setExtEntry(fty::EXT_UUID, generateUUID(getManufacturer(), getModel(), getSerialNo()), true);
 
-            m_db->insert(*this);
+            m_db.insert(*this);
         }
         if (saveLinks) {
-            m_db->saveLinkedAssets(*this);
+            m_db.saveLinkedAssets(*this);
         }
-        m_db->saveExtMap(*this);
+        m_db.saveExtMap(*this);
     } catch (const std::exception& e) {
-        m_db->rollbackTransaction();
+        m_db.rollbackTransaction();
         throw e.what();
     }
-    m_db->commitTransaction();
+    m_db.commitTransaction();
 }
 
 bool AssetImpl::isActivable()
@@ -266,7 +262,7 @@ void AssetImpl::activate()
         activationAccessor.activate(fa);
 
         setAssetStatus(fty::AssetStatus::Active);
-        m_db->update(*this);
+        m_db.update(*this);
     }
 }
 
@@ -283,7 +279,7 @@ void AssetImpl::deactivate()
         log_debug("Asset %s deactivated", getInternalName().c_str());
 
         setAssetStatus(fty::AssetStatus::Nonactive);
-        m_db->update(*this);
+        m_db.update(*this);
     }
 }
 
@@ -291,49 +287,43 @@ void AssetImpl::linkTo(const std::string& src)
 {
     try {
         AssetImpl s(src);
-        m_db->link(s, *this);
+        m_db.link(s, *this);
     } catch (std::exception& ex) {
         log_error("%s", ex.what());
     }
-    m_db->loadLinkedAssets(*this);
+    m_db.loadLinkedAssets(*this);
 }
 
 void AssetImpl::unlinkFrom(const std::string& src)
 {
     AssetImpl s(src);
-    m_db->unlink(s, *this);
+    m_db.unlink(s, *this);
 
-    m_db->loadLinkedAssets(*this);
+    m_db.loadLinkedAssets(*this);
 }
 
 std::vector<std::string> AssetImpl::list()
 {
-    std::unique_ptr<AssetImpl::DB> db;
-    if (g_testMode) {
-        db = std::unique_ptr<AssetImpl::DB>(new DBTest);
-    } else {
-        db = std::unique_ptr<AssetImpl::DB>(new DB);
-        db->init();
-    }
-    return db->listAllAssets();
+    return DB::getInstance().listAllAssets();
 }
 
 void AssetImpl::load(bool loadLinks)
 {
-    m_db->loadAsset(getInternalName(), *this);
-    m_db->loadExtMap(*this);
-    m_db->loadChildren(*this);
+    m_db.loadAsset(getInternalName(), *this);
+    m_db.loadExtMap(*this);
+    m_db.loadChildren(*this);
     if (loadLinks) {
-        m_db->loadLinkedAssets(*this);
+        m_db.loadLinkedAssets(*this);
     }
 }
 
-static void getChildrenList(const std::string& iname, std::vector<std::string>& tree)
+static void getChildrenList(const std::string& iname, std::vector<std::string>& tree, int level)
 {
+    std::cerr << "########################### " << level << std::endl;
     AssetImpl a(iname);
     for (const auto& child : a.getChildren()) {
         tree.push_back(child);
-        getChildrenList(child, tree);
+        getChildrenList(child, tree, level + 1);
     }
 }
 
@@ -349,7 +339,7 @@ void AssetImpl::deleteList(const std::vector<std::string>& assets)
         toDel.push_back(a);
 
         // get tree of children recursively
-        getChildrenList(iname, childrenList);
+        getChildrenList(iname, childrenList, 0);
 
         // remove assets already in the list
         for (const std::string& iname : assets) {
@@ -388,7 +378,7 @@ void AssetImpl::deleteList(const std::vector<std::string>& assets)
     // };
 
     for (auto& a : toDel) {
-        a.m_db->unlinkAll(a);
+        a.m_db.unlinkAll(a);
     }
 
     auto isAnyParent = [&](const AssetImpl& l, const AssetImpl& r) {
