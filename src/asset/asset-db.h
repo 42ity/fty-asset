@@ -22,6 +22,7 @@
 #pragma once
 #include "asset.h"
 #include <memory>
+#include <mutex>
 #include <tntdb.h>
 
 namespace fty {
@@ -69,6 +70,7 @@ protected:
     DB(bool test = false);
 
 private:
+    std::mutex                m_conn_lock;
     mutable tntdb::Connection m_conn;
 };
 

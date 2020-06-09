@@ -54,6 +54,7 @@ AssetImpl::DB::DB(bool test)
 void AssetImpl::DB::loadAsset(const std::string& nameId, Asset& asset)
 {
     // clang-format off
+    m_conn_lock.lock();
     tntdb::Row row = m_conn.prepareCached(R"(
         SELECT
             a.id_asset_element AS id,
@@ -75,6 +76,7 @@ void AssetImpl::DB::loadAsset(const std::string& nameId, Asset& asset)
     .set("asset_name", nameId)
     .selectRow();
     // clang-format on
+    m_conn_lock.unlock();
 
     asset.setId(row.getInt("id"));
     asset.setInternalName(row.getString("name"));
@@ -95,6 +97,7 @@ void AssetImpl::DB::loadExtMap(Asset& asset)
     assert(asset.getId());
 
     // clang-format off
+    m_conn_lock.lock();
     auto ext = m_conn.prepareCached(R"(
         SELECT
             keytag,
@@ -108,6 +111,7 @@ void AssetImpl::DB::loadExtMap(Asset& asset)
     .set("asset_id", asset.getId())
     .select();
     // clang-format on
+    m_conn_lock.unlock();
 
     for (const auto& row : ext) {
         asset.setExtEntry(row.getString("keytag"), row.getString("value"), row.getBool("read_only"));
@@ -118,6 +122,7 @@ void AssetImpl::DB::loadChildren(Asset& asset)
 {
     assert(asset.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     auto result = m_conn.prepareCached(R"(
         SELECT
@@ -130,6 +135,7 @@ void AssetImpl::DB::loadChildren(Asset& asset)
     .set("asset_id", asset.getId())
     .select();
     // clang-format on
+    m_conn_lock.unlock();
 
     std::vector<std::string> children;
     for (const auto& row : result) {
@@ -143,6 +149,7 @@ void AssetImpl::DB::loadLinkedAssets(Asset& asset)
     assert(asset.getId());
 
     // clang-format off
+    m_conn_lock.lock();
     auto result = m_conn.prepareCached(R"(
         SELECT
             l.id_asset_element_src  AS id,
@@ -157,6 +164,7 @@ void AssetImpl::DB::loadLinkedAssets(Asset& asset)
     .set("asset_id", asset.getId())
     .select();
     // clang-format on
+    m_conn_lock.unlock();
 
     std::vector<std::string> links;
     for (const auto& row : result) {
@@ -170,6 +178,7 @@ bool AssetImpl::DB::isLastDataCenter(Asset& asset)
 {
     assert(asset.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     int numDatacentersAfterDelete = m_conn.prepare(R"(
         SELECT
@@ -188,6 +197,7 @@ bool AssetImpl::DB::isLastDataCenter(Asset& asset)
     .selectValue()
     .getInt();
     // clang-format on
+    m_conn_lock.unlock();
 
     return numDatacentersAfterDelete == 0;
 }
@@ -196,6 +206,7 @@ void AssetImpl::DB::removeFromGroups(Asset& asset)
 {
     assert(asset.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     m_conn.prepareCached(R"(
         DELETE FROM
@@ -206,12 +217,14 @@ void AssetImpl::DB::removeFromGroups(Asset& asset)
     .set("asset_id", asset.getId())
     .execute();
     // clang-format on
+    m_conn_lock.unlock();
 }
 
 void AssetImpl::DB::removeFromRelations(Asset& asset)
 {
     assert(asset.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     m_conn.prepareCached(R"(
         DELETE FROM
@@ -222,12 +235,14 @@ void AssetImpl::DB::removeFromRelations(Asset& asset)
     .set("asset_id", asset.getId())
     .execute();
     // clang-format on
+    m_conn_lock.unlock();
 }
 
 void AssetImpl::DB::removeAsset(Asset& asset)
 {
     assert(asset.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     m_conn.prepareCached(R"(
         DELETE FROM
@@ -238,12 +253,14 @@ void AssetImpl::DB::removeAsset(Asset& asset)
     .set("asset_id", asset.getId())
     .execute();
     // clang-format on
+    m_conn_lock.unlock();
 }
 
 void AssetImpl::DB::removeExtMap(Asset& asset)
 {
     assert(asset.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     m_conn.prepareCached(R"(
         DELETE FROM
@@ -253,6 +270,7 @@ void AssetImpl::DB::removeExtMap(Asset& asset)
     )")
     .set("assetId", asset.getId())
     .execute();
+    m_conn_lock.unlock();
     // clang-format on
 }
 
@@ -260,6 +278,7 @@ void AssetImpl::DB::clearGroup(Asset& asset)
 {
     assert(asset.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     m_conn.prepareCached(R"(
         DELETE FROM
@@ -270,12 +289,14 @@ void AssetImpl::DB::clearGroup(Asset& asset)
     .set("grp", asset.getId())
     .execute();
     // clang-format on
+    m_conn_lock.unlock();
 }
 
 bool AssetImpl::DB::hasLinkedAssets(const Asset& asset)
 {
     assert(asset.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     int linkedAssets = m_conn.prepare(R"(
         SELECT
@@ -289,6 +310,7 @@ bool AssetImpl::DB::hasLinkedAssets(const Asset& asset)
     .selectValue()
     .getInt();
     // clang-format on
+    m_conn_lock.unlock();
 
     return linkedAssets != 0;
 }
@@ -298,6 +320,7 @@ void AssetImpl::DB::link(Asset& src, Asset& dest)
     assert(src.getId());
     assert(dest.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     auto res = m_conn.prepareCached(R"(
         SELECT
@@ -313,6 +336,7 @@ void AssetImpl::DB::link(Asset& src, Asset& dest)
     .set("assetId", dest.getId())
     .select();
     // clang-format on
+    m_conn_lock.unlock();
 
     std::vector<std::string> existing;
     for (const auto& row : res) {
@@ -327,6 +351,7 @@ void AssetImpl::DB::link(Asset& src, Asset& dest)
         throw std::runtime_error("Link to asset " + src.getInternalName() + " already exists");
     }
 
+    m_conn_lock.lock();
     // clang-format off
     m_conn.prepareCached(R"(
         INSERT INTO
@@ -342,6 +367,7 @@ void AssetImpl::DB::link(Asset& src, Asset& dest)
     .set("dest", dest.getId())
     .execute();
     // clang-format on
+    m_conn_lock.unlock();
 }
 
 void AssetImpl::DB::unlink(Asset& src, Asset& dest)
@@ -349,6 +375,7 @@ void AssetImpl::DB::unlink(Asset& src, Asset& dest)
     assert(src.getId());
     assert(dest.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     m_conn.prepareCached(R"(
         DELETE FROM
@@ -362,12 +389,14 @@ void AssetImpl::DB::unlink(Asset& src, Asset& dest)
     .set("dest", dest.getId())
     .execute();
     // clang-format on
+    m_conn_lock.unlock();
 }
 
 void AssetImpl::DB::unlinkAll(Asset& dest)
 {
     assert(dest.getId());
 
+    m_conn_lock.lock();
     // clang-format off
     m_conn.prepareCached(R"(
         DELETE FROM
@@ -378,25 +407,33 @@ void AssetImpl::DB::unlinkAll(Asset& dest)
     .set("dest", dest.getId())
     .execute();
     // clang-format on
+    m_conn_lock.unlock();
 }
 
 void AssetImpl::DB::beginTransaction()
 {
+    m_conn_lock.lock();
     m_conn.beginTransaction();
+    m_conn_lock.unlock();
 }
 
 void AssetImpl::DB::rollbackTransaction()
 {
+    m_conn_lock.lock();
     m_conn.rollbackTransaction();
+    m_conn_lock.unlock();
 }
 
 void AssetImpl::DB::commitTransaction()
 {
+    m_conn_lock.lock();
     m_conn.commitTransaction();
+    m_conn_lock.unlock();
 }
 
 void AssetImpl::DB::update(Asset& asset)
 {
+    m_conn_lock.lock();
     // clang-format off
     m_conn.prepareCached(R"(
         UPDATE
@@ -419,6 +456,7 @@ void AssetImpl::DB::update(Asset& asset)
    .set("assetTag", asset.getAssetTag())
    .set("assetId", asset.getId())
    .execute();
+   m_conn_lock.unlock();
     // clang-format on
 }
 
@@ -431,6 +469,7 @@ void AssetImpl::DB::insert(Asset& asset)
 
     asset.setInternalName(assetName);
 
+    m_conn_lock.lock();
     // clang-format off
     m_conn.prepareCached(R"(
         INSERT INTO
@@ -456,12 +495,14 @@ void AssetImpl::DB::insert(Asset& asset)
     .set("assetId", asset.getId())
     .execute();
     // clang-format on
+    m_conn_lock.unlock();
 
     asset.setId(m_conn.lastInsertId());
 
     // generate new asset name
     asset.setInternalName(createAssetName(asset.getAssetType(), asset.getAssetSubtype(), asset.getId()));
 
+    m_conn_lock.lock();
     // clang-format off
     int affected = m_conn.prepareCached(R"(
         UPDATE
@@ -475,6 +516,7 @@ void AssetImpl::DB::insert(Asset& asset)
    .set("assetId", asset.getId())
    .execute();
     // clang-format on
+    m_conn_lock.unlock();
 
     if (affected == 0) {
         throw std::runtime_error(TRANSLATE_ME("Asset name update failed"));
@@ -483,6 +525,7 @@ void AssetImpl::DB::insert(Asset& asset)
 
 std::string AssetImpl::DB::unameById(uint32_t id)
 {
+    m_conn_lock.lock();
     // clang-format off
     return m_conn.prepareCached(R"(
         SELECT name FROM t_bios_asset_element WHERE id_asset_element = :assetId
@@ -491,10 +534,12 @@ std::string AssetImpl::DB::unameById(uint32_t id)
     .selectRow()
     .getString("name");
     // clang-format on
+    m_conn_lock.unlock();
 }
 
 void AssetImpl::DB::saveLinkedAssets(Asset& asset)
 {
+    m_conn_lock.lock();
     // clang-format off
     auto res = m_conn.prepareCached(R"(
         SELECT
@@ -510,6 +555,7 @@ void AssetImpl::DB::saveLinkedAssets(Asset& asset)
     .set("assetId", asset.getId())
     .select();
     // clang-format on
+    m_conn_lock.unlock();
 
     using Existing = std::pair<uint32_t, std::string>;
 
@@ -525,6 +571,7 @@ void AssetImpl::DB::saveLinkedAssets(Asset& asset)
 
         if (found == existing.end()) {
             // clang-format off
+            m_conn_lock.lock();
             m_conn.prepareCached(R"(
                 INSERT INTO t_bios_asset_link
                     (id_asset_device_src, id_asset_device_dest, id_asset_link_type)
@@ -534,12 +581,14 @@ void AssetImpl::DB::saveLinkedAssets(Asset& asset)
             .set("assetId", asset.getId())
             .execute();
             // clang-format on
+            m_conn_lock.unlock();
         } else {
             existing.erase(found);
         }
     }
 
     for (const auto& toRem : existing) {
+        m_conn_lock.lock();
         // clang-format off
         m_conn.prepareCached(R"(
             DELETE FROM t_bios_asset_link
@@ -550,11 +599,13 @@ void AssetImpl::DB::saveLinkedAssets(Asset& asset)
         .set("assetId", asset.getId())
         .execute();
         // clang-format on
+        m_conn_lock.unlock();
     }
 }
 
 void AssetImpl::DB::saveExtMap(Asset& asset)
 {
+    m_conn_lock.lock();
     // clang-format off
     auto res = m_conn.prepareCached(R"(
         SELECT
@@ -569,6 +620,7 @@ void AssetImpl::DB::saveExtMap(Asset& asset)
     .set("assetId", asset.getId())
     .select();
     // clang-format on
+    m_conn_lock.unlock();
 
     using Existing = std::tuple<uint32_t, std::string, std::string, bool>;
 
@@ -584,6 +636,7 @@ void AssetImpl::DB::saveExtMap(Asset& asset)
         });
 
         if (found == existing.end()) {
+            m_conn_lock.lock();
             // clang-format off
             m_conn.prepareCached(R"(
                 INSERT INTO t_bios_asset_ext_attributes (keytag, value, id_asset_element, read_only)
@@ -595,8 +648,10 @@ void AssetImpl::DB::saveExtMap(Asset& asset)
             .set("assetId", asset.getId())
             .execute();
             // clang-format on
+            m_conn_lock.unlock();
         } else {
             if (std::get<2>(*found) != it.second.first || std::get<3>(*found) != it.second.second) {
+                m_conn_lock.lock();
                 // clang-format off
                 m_conn.prepareCached(R"(
                     UPDATE t_bios_asset_ext_attributes
@@ -610,12 +665,14 @@ void AssetImpl::DB::saveExtMap(Asset& asset)
                 .set("extId", std::get<0>(*found))
                 .execute();
                 // clang-format on
+                m_conn_lock.unlock();
             }
             existing.erase(found);
         }
     }
 
     for (const auto& toRem : existing) {
+        m_conn_lock.lock();
         // clang-format off
         m_conn.prepareCached(R"(
             DELETE FROM t_bios_asset_ext_attributes
@@ -624,6 +681,7 @@ void AssetImpl::DB::saveExtMap(Asset& asset)
         .set("extId", std::get<0>(toRem))
         .execute();
         // clang-format on
+        m_conn_lock.unlock();
     }
 }
 
@@ -631,6 +689,7 @@ std::vector<std::string> AssetImpl::DB::listAllAssets()
 {
     std::vector<std::string> assetList;
 
+    m_conn_lock.lock();
     // clang-format off
     auto res = m_conn.prepareCached(R"(
         SELECT
@@ -639,6 +698,7 @@ std::vector<std::string> AssetImpl::DB::listAllAssets()
     )")
     .select();
     // clang-format on
+    m_conn_lock.unlock();
 
     for (const auto& row : res) {
         const std::string& assetName = row.getString("name");
