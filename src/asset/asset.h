@@ -51,6 +51,7 @@ public:
     void deactivate();
     void linkTo(const std::string& src);
     void unlinkFrom(const std::string& src);
+    void unlinkAll();
 
     static std::vector<std::string> list();
     static void                     deleteList(const std::vector<std::string>& assets);

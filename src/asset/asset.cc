@@ -302,6 +302,11 @@ void AssetImpl::unlinkFrom(const std::string& src)
     m_db.loadLinkedAssets(*this);
 }
 
+void AssetImpl::unlinkAll()
+{
+    m_db.unlinkAll(*this);
+}
+
 std::vector<std::string> AssetImpl::list()
 {
     return DB::getInstance().listAllAssets();
@@ -317,15 +322,15 @@ void AssetImpl::load(bool loadLinks)
     }
 }
 
-static void getChildrenList(const std::string& iname, std::vector<std::string>& tree, int level)
-{
-    std::cerr << "########################### " << level << std::endl;
-    AssetImpl a(iname);
-    for (const auto& child : a.getChildren()) {
-        tree.push_back(child);
-        getChildrenList(child, tree, level + 1);
-    }
-}
+// static void getChildrenList(const std::string& iname, std::vector<std::string>& tree, int level)
+// {
+//     std::cerr << "########################### " << level << std::endl;
+//     AssetImpl a(iname);
+//     for (const auto& child : a.getChildren()) {
+//         tree.push_back(child);
+//         getChildrenList(child, tree, level + 1);
+//     }
+// }
 
 void AssetImpl::deleteList(const std::vector<std::string>& assets)
 {
@@ -333,13 +338,39 @@ void AssetImpl::deleteList(const std::vector<std::string>& assets)
     std::vector<std::string> errors;
 
     for (const std::string& iname : assets) {
-        std::vector<std::string> childrenList;
+        std::vector<std::pair<AssetImpl, int>> stack;
+        std::vector<std::string>               childrenList;
 
         AssetImpl a(iname);
         toDel.push_back(a);
 
         // get tree of children recursively
-        getChildrenList(iname, childrenList, 0);
+        // getChildrenList(iname, childrenList, 0);
+
+        AssetImpl& ref = a;
+        childrenList.push_back(ref.getInternalName());
+
+        bool         end  = false;
+        unsigned int next = 0;
+
+        while (!end) {
+            if (next < ref.getChildren().size()) {
+                stack.push_back(std::make_pair(ref, next + 1));
+
+                ref  = ref.getChildren()[next];
+                next = 0;
+
+                childrenList.push_back(ref.getInternalName());
+            } else {
+                if (stack.empty()) {
+                    end = true;
+                } else {
+                    ref  = stack.back().first;
+                    next = stack.back().second;
+                    stack.pop_back();
+                }
+            }
+        }
 
         // remove assets already in the list
         for (const std::string& iname : assets) {
@@ -378,7 +409,7 @@ void AssetImpl::deleteList(const std::vector<std::string>& assets)
     // };
 
     for (auto& a : toDel) {
-        a.m_db.unlinkAll(a);
+        a.unlinkAll();
     }
 
     auto isAnyParent = [&](const AssetImpl& l, const AssetImpl& r) {
@@ -409,7 +440,7 @@ void AssetImpl::deleteList(const std::vector<std::string>& assets)
             distR++;
         }
         // farthest node from LCA gets deleted first
-        return distL >= distR;
+        return distL > distR;
     };
 
     // sort by deletion order
