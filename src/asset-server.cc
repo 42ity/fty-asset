@@ -22,11 +22,14 @@
 #include "asset-server.h"
 #include "asset/conversion/json.h"
 #include "include/fty_asset_dto.h"
+#include <cxxtools/jsondeserializer.h>
+#include <cxxtools/jsonserializer.h>
 #include <cxxtools/serializationinfo.h>
 #include <fty_common_messagebus.h>
 #include <functional>
 #include <malamute.h>
 #include <mlm_client.h>
+#include <sstream>
 
 using namespace std::placeholders;
 
@@ -254,6 +257,26 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
         cxxtools::SerializationInfo si = saveAssets();
         AssetImpl::deleteAll();
         restoreAssets(si);
+
+        std::ostringstream       output;
+        cxxtools::JsonSerializer serializer(output);
+        serializer.serialize(si);
+
+        std::string json = output.str();
+
+        auto response = createMessage(FTY_ASSET_SRR_SUBJECT_BACKUP,
+            msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_srrAgentName,
+            msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_OK, json);
+
+        // send response
+        log_debug("sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
+        m_srrClient->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+
+        messagebus::Message notification =
+            createMessage(FTY_ASSET_SRR_SUBJECT_BACKUP, "", m_srrAgentName, "", messagebus::STATUS_OK, json);
+
+        m_srrClient->publish("BACKUP", notification);
+
 
     } else {
         log_error("Unkwnown subject %s", subject.c_str());
