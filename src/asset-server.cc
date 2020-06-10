@@ -255,8 +255,6 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
         log_debug("TEST");
 
         cxxtools::SerializationInfo si = saveAssets();
-        AssetImpl::deleteAll();
-        restoreAssets(si);
 
         std::ostringstream       output;
         cxxtools::JsonSerializer serializer(output);
@@ -277,6 +275,8 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
 
         m_srrClient->publish("BACKUP", notification);
 
+        AssetImpl::deleteAll();
+        restoreAssets(si);
 
     } else {
         log_error("Unkwnown subject %s", subject.c_str());
@@ -580,18 +580,20 @@ cxxtools::SerializationInfo AssetServer::saveAssets()
 
     cxxtools::SerializationInfo si;
 
-    cxxtools::SerializationInfo& assetVector = si.addMember("assets");
+    si.addMember("version") <<= ACTIVE_VERSION;
+
+    cxxtools::SerializationInfo& data = si.addMember("data");
 
     for (const std::string assetName : assets) {
         AssetImpl a(assetName);
 
         log_debug("Saving asset %s...", a.getInternalName().c_str());
 
-        cxxtools::SerializationInfo& siAsset = assetVector.addMember("");
+        cxxtools::SerializationInfo& siAsset = data.addMember("");
         siAsset <<= a;
     }
 
-    assetVector.setCategory(cxxtools::SerializationInfo::Array);
+    data.setCategory(cxxtools::SerializationInfo::Array);
 
     return si;
 }
@@ -635,7 +637,14 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
         throw std::runtime_error("Database already contains assets, impossible to restore from SRR");
     }
 
-    const cxxtools::SerializationInfo& assets = si.getMember("assets");
+    std::string srrVersion;
+    si.getMember("version") >>= srrVersion;
+
+    if (srrVersion != ACTIVE_VERSION) {
+        throw std::runtime_error("Version " + srrVersion + " is not supported");
+    }
+
+    const cxxtools::SerializationInfo& assets = si.getMember("data");
 
     std::vector<AssetImpl> roots;
     std::vector<AssetImpl> list;

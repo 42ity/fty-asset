@@ -765,17 +765,11 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
             zhash_insert(ext_new, "uuid", (void*)uuid_new);
             process_insert_inventory(asset_name.c_str(), ext_new, true, test_mode);
         } else {
-            if (streq(type, "device")) {
-                // it is device, put FFF... and wait for information
-                zhash_insert(ext, "uuid", (void*)fty_uuid_calculate(uuid, NULL, NULL, NULL));
-            } else {
-                // it is not device, we will probably not get more information
-                // lets generate random uuid and save it
-                const char* uuid_new = fty_uuid_generate(uuid);
-                zhash_insert(ext, "uuid", (void*)uuid_new);
-                zhash_insert(ext_new, "uuid", (void*)uuid_new);
-                process_insert_inventory(asset_name.c_str(), ext_new, true, test_mode);
-            }
+            // generate random uuid and save it
+            const char* uuid_new = fty_uuid_generate(uuid);
+            zhash_insert(ext, "uuid", (void*)uuid_new);
+            zhash_insert(ext_new, "uuid", (void*)uuid_new);
+            process_insert_inventory(asset_name.c_str(), ext_new, true, test_mode);
         }
         fty_uuid_destroy(&uuid);
         zhash_destroy(&ext_new);
