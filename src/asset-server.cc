@@ -606,7 +606,7 @@ static void printAssetTreeRec(const std::string& iname, int level)
     std::cout << iname << std::endl;
 
     AssetImpl a(iname);
-    for (const auto& child : a.getChildren()) {
+    for (const auto& child : getChildren(a)) {
         printAssetTreeRec(child, level + 1);
     }
 }
@@ -615,7 +615,7 @@ static void buildRestoreTree(
     std::vector<AssetImpl>& dest, const std::vector<AssetImpl> src, const AssetImpl& node)
 {
     dest.push_back(node);
-    std::vector<std::string> children = node.getChildren();
+    std::vector<std::string> children = getChildren(node);
     for (const auto& c : children) {
         auto child = std::find_if(src.begin(), src.end(), [&](const AssetImpl& a) {
             return a.getInternalName() == c;

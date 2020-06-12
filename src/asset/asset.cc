@@ -106,6 +106,12 @@ static std::string generateUUID(
     return uuid;
 }
 
+/// get children of Asset a
+std::vector<std::string> getChildren(const AssetImpl& a)
+{
+    return AssetImpl::DB::getInstance().getChildren(a);
+}
+
 //============================================================================================================
 
 AssetImpl::AssetImpl()
@@ -118,7 +124,6 @@ AssetImpl::AssetImpl(const std::string& nameId, bool loadLinks)
 {
     m_db.loadAsset(nameId, *this);
     m_db.loadExtMap(*this);
-    m_db.loadChildren(*this);
     if (loadLinks) {
         m_db.loadLinkedAssets(*this);
     }
@@ -168,12 +173,14 @@ void AssetImpl::remove(bool recursive, bool removeLastDC)
         throw std::runtime_error(TRANSLATE_ME("can't delete asset because it has other assets connected"));
     }
 
-    if (!recursive && !getChildren().empty()) {
+    std::vector<std::string> assetChildren = getChildren(*this);
+
+    if (!recursive && !assetChildren.empty()) {
         throw std::runtime_error(TRANSLATE_ME("can't delete the asset because it has at least one child"));
     }
 
     if (recursive) {
-        for (const std::string& id : getChildren()) {
+        for (const std::string& id : assetChildren) {
             AssetImpl asset(id);
             asset.remove(recursive);
         }
@@ -316,7 +323,6 @@ void AssetImpl::load(bool loadLinks)
 {
     m_db.loadAsset(getInternalName(), *this);
     m_db.loadExtMap(*this);
-    m_db.loadChildren(*this);
     if (loadLinks) {
         m_db.loadLinkedAssets(*this);
     }
@@ -354,10 +360,12 @@ void AssetImpl::deleteList(const std::vector<std::string>& assets)
         unsigned int next = 0;
 
         while (!end) {
-            if (next < ref.getChildren().size()) {
+            std::vector<std::string> children = getChildren(ref);
+
+            if (next < children.size()) {
                 stack.push_back(std::make_pair(ref, next + 1));
 
-                ref  = ref.getChildren()[next];
+                ref  = children[next];
                 next = 0;
 
                 childrenList.push_back(ref.getInternalName());

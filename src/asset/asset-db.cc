@@ -118,7 +118,7 @@ void AssetImpl::DB::loadExtMap(Asset& asset)
     }
 }
 
-void AssetImpl::DB::loadChildren(Asset& asset)
+std::vector<std::string> AssetImpl::DB::getChildren(const Asset& asset)
 {
     assert(asset.getId());
 
@@ -141,7 +141,8 @@ void AssetImpl::DB::loadChildren(Asset& asset)
     for (const auto& row : result) {
         children.push_back(row.getValue("name").getString());
     }
-    asset.setChildren(children);
+
+    return children;
 }
 
 void AssetImpl::DB::loadLinkedAssets(Asset& asset)

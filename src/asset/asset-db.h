@@ -38,9 +38,9 @@ public:
 
     virtual void loadAsset(const std::string& nameId, Asset& asset);
 
-    virtual void loadExtMap(Asset& asset);
-    virtual void loadChildren(Asset& asset);
-    virtual void loadLinkedAssets(Asset& asset);
+    virtual void                     loadExtMap(Asset& asset);
+    virtual void                     loadLinkedAssets(Asset& asset);
+    virtual std::vector<std::string> getChildren(const Asset& asset);
 
     virtual bool hasLinkedAssets(const Asset& asset);
     virtual void link(Asset& src, Asset& dest);

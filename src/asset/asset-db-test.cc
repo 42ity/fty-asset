@@ -53,15 +53,15 @@ void AssetImpl::DBTest::loadExtMap(Asset& asset)
     asset.setExtEntry("name", "My Asset", false);
 }
 
-void AssetImpl::DBTest::loadChildren(Asset& asset)
+std::vector<std::string> AssetImpl::DBTest::getChildren(const Asset& asset)
 {
-    std::cout << "DBTest::loadChildren" << std::endl;
+    std::cout << "DBTest::getChildren" << std::endl;
     std::vector<std::string> children;
 
     children.push_back("child-1");
     children.push_back("child-2");
 
-    asset.setChildren(children);
+    return children;
 }
 
 void AssetImpl::DBTest::loadLinkedAssets(Asset& asset)
