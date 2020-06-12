@@ -59,6 +59,8 @@ public:
 
     using Asset::operator==;
 
+    friend std::vector<std::string> getChildren(const AssetImpl& a);
+
 private:
     class Interface;
     class DB;

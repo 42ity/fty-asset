@@ -164,11 +164,6 @@ const std::vector<std::string>& Asset::getLinkedAssets() const
     return m_linkedAssets;
 }
 
-const std::vector<std::string>& Asset::getChildren() const
-{
-    return m_children;
-}
-
 // setters
 
 void Asset::setId(uint32_t id)
@@ -226,11 +221,6 @@ void Asset::setLinkedAssets(const std::vector<std::string>& assets)
     m_linkedAssets = assets;
 }
 
-void Asset::setChildren(const std::vector<std::string>& assets)
-{
-    m_children = assets;
-}
-
 void Asset::dump(std::ostream& os)
 {
     os << "iname    : " << m_internalName << std::endl;
@@ -246,10 +236,6 @@ void Asset::dump(std::ostream& os)
 
     for (const auto& l : m_linkedAssets) {
         os << "- linked to: " << l << std::endl;
-    }
-
-    for (const auto& c : m_children) {
-        os << "- parent of: " << c << std::endl;
     }
 }
 

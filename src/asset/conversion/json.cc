@@ -35,7 +35,6 @@ namespace fty { namespace conversion {
     static constexpr const char* SI_PARENT   = "parent";
     static constexpr const char* SI_EXT      = "ext";
     static constexpr const char* SI_LINKED   = "linked";
-    static constexpr const char* SI_CHILDREN = "children";
 
     void operator<<=(cxxtools::SerializationInfo& si, const Asset& asset)
     {
@@ -47,7 +46,6 @@ namespace fty { namespace conversion {
         si.addMember(SI_PRIORITY) <<= asset.getPriority();
         si.addMember(SI_PARENT) <<= asset.getParentIname();
         si.addMember(SI_LINKED) <<= asset.getLinkedAssets();
-        si.addMember(SI_CHILDREN) <<= asset.getChildren();
         // ext map
         cxxtools::SerializationInfo& ext = si.addMember("");
 
@@ -95,15 +93,9 @@ namespace fty { namespace conversion {
         si.getMember(SI_LINKED) >>= tmpVector;
         asset.setLinkedAssets(tmpVector);
 
-        // children
-        tmpVector.clear();
-        si.getMember(SI_CHILDREN) >>= tmpVector;
-        asset.setChildren(tmpVector);
-
         // ext map
         const cxxtools::SerializationInfo ext = si.getMember(SI_EXT);
-        for (const auto &si : ext)
-        {
+        for (const auto& si : ext) {
             std::string key = si.name();
             std::string val;
             si >>= val;

@@ -155,7 +155,6 @@ public:
     const std::string&              getModel() const;
     const std::string&              getSerialNo() const;
     const std::vector<std::string>& getLinkedAssets() const;
-    const std::vector<std::string>& getChildren() const;
 
     // setters
     void setId(uint32_t id);
@@ -169,7 +168,6 @@ public:
     void setExt(const Asset::ExtMap& map);
     void setExtEntry(const std::string& key, const std::string& value, bool readOnly = false);
     void setLinkedAssets(const std::vector<std::string>& assets);
-    void setChildren(const std::vector<std::string>& assets);
     // dump
     void dump(std::ostream& os);
 
@@ -195,7 +193,6 @@ private:
     // ext map storage (asset-specific values with readonly attribute)
     ExtMap                   m_ext;
     std::vector<std::string> m_linkedAssets;
-    std::vector<std::string> m_children;
 };
 
 } // namespace fty

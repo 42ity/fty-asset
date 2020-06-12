@@ -36,9 +36,9 @@ public:
 
     void loadAsset(const std::string& nameId, Asset& asset) override;
 
-    void loadExtMap(Asset& asset) override;
-    void loadChildren(Asset& asset) override;
-    void loadLinkedAssets(Asset& asset) override;
+    void                     loadExtMap(Asset& asset) override;
+    void                     loadLinkedAssets(Asset& asset) override;
+    std::vector<std::string> getChildren(const Asset& asset) override;
 
     bool hasLinkedAssets(const Asset& asset) override;
     void link(Asset& src, Asset& dest) override;
