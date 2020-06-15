@@ -153,9 +153,15 @@ void AssetImpl::DBTest::insert(Asset& asset)
     std::cout << "DBTest::insert" << std::endl;
 }
 
-std::string AssetImpl::DBTest::unameById(uint32_t id)
+std::string AssetImpl::DBTest::inameById(uint32_t id)
 {
-    std::cout << "DBTest::unameById" << std::endl;
+    std::cout << "DBTest::inameById" << std::endl;
+    return "DC-1";
+}
+
+std::string AssetImpl::DBTest::inameByUuid(const std::string& uuid)
+{
+    std::cout << "DBTest::inameByUuid" << std::endl;
     return "DC-1";
 }
 

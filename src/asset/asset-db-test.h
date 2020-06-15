@@ -60,7 +60,8 @@ public:
 
     void        saveLinkedAssets(Asset& asset) override;
     void        saveExtMap(Asset& asset) override;
-    std::string unameById(uint32_t id) override;
+    std::string inameById(uint32_t id) override;
+    std::string inameByUuid(const std::string& uuid) override;
 
     std::vector<std::string> listAllAssets() override;
 

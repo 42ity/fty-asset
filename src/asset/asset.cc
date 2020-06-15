@@ -314,6 +314,91 @@ void AssetImpl::unlinkAll()
     m_db.unlinkAll(*this);
 }
 
+void AssetImpl::assetToSrr(const AssetImpl& asset, cxxtools::SerializationInfo& si)
+{
+    AssetImpl parent(asset.getParentIname());
+
+    std::vector<std::string> linkUuid;
+
+    for (const auto& l : asset.getLinkedAssets()) {
+        AssetImpl link(l);
+        linkUuid.push_back(link.getUuid());
+    }
+    // basic
+    si.addMember("uuid") <<= asset.getUuid();
+    si.addMember("status") <<= int(asset.getAssetStatus());
+    si.addMember("type") <<= asset.getAssetType();
+    si.addMember("subtype") <<= asset.getAssetSubtype();
+    si.addMember("priority") <<= asset.getPriority();
+    si.addMember("parent") <<= parent.getUuid();
+    si.addMember("linked") <<= linkUuid;
+    // ext
+    cxxtools::SerializationInfo& ext = si.addMember("");
+
+    cxxtools::SerializationInfo data;
+    for (const auto& e : asset.getExt()) {
+        if (e.first != "uuid") {
+            cxxtools::SerializationInfo& entry = data.addMember(e.first);
+            entry <<= e.second.first;
+        }
+    }
+    data.setCategory(cxxtools::SerializationInfo::Category::Object);
+    ext = data;
+    ext.setName("ext");
+}
+
+void AssetImpl::srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& asset)
+{
+    int         tmpInt;
+    std::string tmpString;
+
+    // uuid
+    si.getMember("uuid") >>= tmpString;
+    asset.setInternalName(DB::getInstance().inameByUuid(tmpString));
+
+    // uuid currently stored in text map
+    asset.setExtEntry("uuid", tmpString);
+
+    // status
+    si.getMember("status") >>= tmpInt;
+    asset.setAssetStatus(AssetStatus(tmpInt));
+
+    // type
+    si.getMember("type") >>= tmpString;
+    asset.setAssetType(tmpString);
+
+    // subtype
+    si.getMember("subtype") >>= tmpString;
+    asset.setAssetSubtype(tmpString);
+
+    // priority
+    si.getMember("priority") >>= tmpInt;
+    asset.setPriority(tmpInt);
+
+    // parend id
+    si.getMember("parent") >>= tmpString;
+    asset.setParentIname(DB::getInstance().inameByUuid(tmpString));
+
+    // linked assets
+    std::vector<std::string> tmpVector;
+
+    si.getMember("linked") >>= tmpVector;
+    for (const auto& l : tmpVector) {
+        asset.linkTo(DB::getInstance().inameByUuid(l));
+    }
+
+    // ext map
+    const cxxtools::SerializationInfo ext = si.getMember("ext");
+    for (const auto& si : ext) {
+        std::string key = si.name();
+        if (key != "uuid") {
+            std::string val;
+            si >>= val;
+            asset.setExtEntry(key, val);
+        }
+    }
+}
+
 std::vector<std::string> AssetImpl::list()
 {
     return DB::getInstance().listAllAssets();
@@ -328,16 +413,6 @@ void AssetImpl::load(bool loadLinks)
     }
 }
 
-// static void getChildrenList(const std::string& iname, std::vector<std::string>& tree, int level)
-// {
-//     std::cerr << "########################### " << level << std::endl;
-//     AssetImpl a(iname);
-//     for (const auto& child : a.getChildren()) {
-//         tree.push_back(child);
-//         getChildrenList(child, tree, level + 1);
-//     }
-// }
-
 void AssetImpl::deleteList(const std::vector<std::string>& assets)
 {
     std::vector<AssetImpl>   toDel;
@@ -349,9 +424,6 @@ void AssetImpl::deleteList(const std::vector<std::string>& assets)
 
         AssetImpl a(iname);
         toDel.push_back(a);
-
-        // get tree of children recursively
-        // getChildrenList(iname, childrenList, 0);
 
         AssetImpl& ref = a;
         childrenList.push_back(ref.getInternalName());
