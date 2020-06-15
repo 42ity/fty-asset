@@ -44,8 +44,9 @@ public:
     void remove(bool recursive = false, bool removeLastDC = false);
     bool hasLinkedAssets() const;
     bool hasLogicalAsset() const;
-    void load(bool loadLinks = true);
-    void save(bool saveLinks = true);
+    void load();
+    void save();
+    void restore(bool restoreLinks = false);
     bool isActivable();
     void activate();
     void deactivate();

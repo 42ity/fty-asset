@@ -22,6 +22,7 @@
 #include "asset-server.h"
 #include "asset/conversion/json.h"
 #include "include/fty_asset_dto.h"
+#include <algorithm>
 #include <cxxtools/jsondeserializer.h>
 #include <cxxtools/jsonserializer.h>
 #include <cxxtools/serializationinfo.h>
@@ -186,6 +187,34 @@ messagebus::Message createMessage(const std::string& subject, const std::string&
     return msg;
 }
 
+// create response (data is messagebus::UserData)
+messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
+    const std::string& from, const std::string& to, const std::string& status,
+    const messagebus::UserData& data)
+{
+    messagebus::Message msg;
+
+    if (!subject.empty()) {
+        msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
+    }
+    if (!from.empty()) {
+        msg.metaData().emplace(messagebus::Message::FROM, from);
+    }
+    if (!to.empty()) {
+        msg.metaData().emplace(messagebus::Message::TO, to);
+    }
+    if (!correlationID.empty()) {
+        msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
+    }
+    if (!status.empty()) {
+        msg.metaData().emplace(messagebus::Message::STATUS, status);
+    }
+
+    msg.userData() = data;
+
+    return msg;
+}
+
 // new generation asset manipulation handler
 void AssetServer::handleAssetManipulationReq(const messagebus::Message& msg)
 {
@@ -214,95 +243,68 @@ void AssetServer::handleAssetManipulationReq(const messagebus::Message& msg)
     }
 }
 
-// static void sendResponse(std::unique_ptr<messagebus::MessageBus>& msgBus, const messagebus::Message& msg,
-//     const dto::UserData& userData)
-// {
-//     try {
-//         messagebus::Message resp;
-//         resp.userData() = userData;
-//         resp.metaData().emplace(
-//             messagebus::Message::SUBJECT, msg.metaData().find(messagebus::Message::SUBJECT)->second);
-//         resp.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_SRR_NAME);
-//         resp.metaData().emplace(
-//             messagebus::Message::TO, msg.metaData().find(messagebus::Message::FROM)->second);
-//         resp.metaData().emplace(messagebus::Message::CORRELATION_ID,
-//             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second);
-//         msgBus->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, resp);
-//     } catch (messagebus::MessageBusException& ex) {
-//         log_error("Message bus error: %s", ex.what());
-//     } catch (const std::exception& ex) {
-//         log_error("Unexpected error: %s", ex.what());
-//     }
-// }
-
 void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
 {
-    log_debug("Handle SRR request");
+    log_debug("Process SRR request");
 
-    const std::string& subject = msg.metaData().at(messagebus::Message::SUBJECT);
+    using namespace dto;
+    using namespace dto::srr;
 
-    if (subject == FTY_ASSET_SRR_SUBJECT_BACKUP) {
-        log_debug("BACKUP");
-        cxxtools::SerializationInfo si = saveAssets();
-    } else if (subject == FTY_ASSET_SRR_SUBJECT_RESTORE) {
-        log_debug("RESTORE");
-        cxxtools::SerializationInfo si = saveAssets();
-        restoreAssets(si);
-    } else if (subject == FTY_ASSET_SRR_SUBJECT_RESET) {
-        log_debug("RESET");
-        AssetImpl::deleteAll();
-    } else if (subject == "TEST") {
-        log_debug("TEST");
+    try {
+        // Get request
+        UserData data = msg.userData();
+        Query    query;
+        data >> query;
 
-        cxxtools::SerializationInfo si = saveAssets();
+        messagebus::UserData respData;
+        respData << (m_srrProcessor.processQuery(query));
 
-        std::ostringstream       output;
+        auto response = createMessage(msg.metaData().find(messagebus::Message::SUBJECT)->second,
+            msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_srrAgentName,
+            msg.metaData().find(messagebus::Message::REPLY_TO)->second, messagebus::STATUS_OK, respData);
+
+        log_debug(
+            "Sending response to: %s", msg.metaData().find(messagebus::Message::REPLY_TO)->second.c_str());
+        m_srrClient->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+
+    } catch (std::exception& e) {
+        log_error("Unexpected error: %s", e.what());
+    } catch (...) {
+        log_error("Unexpected error: unknown");
+    }
+}
+
+static std::string serialize(const cxxtools::SerializationInfo& si)
+{
+    std::string returnData("");
+
+    try {
+        std::stringstream        output;
         cxxtools::JsonSerializer serializer(output);
         serializer.serialize(si);
 
-        std::string json = output.str();
-
-        auto response = createMessage(FTY_ASSET_SRR_SUBJECT_BACKUP,
-            msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_srrAgentName,
-            msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_OK, json);
-
-        // send response
-        log_debug("sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
-        m_srrClient->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
-
-        messagebus::Message notification =
-            createMessage(FTY_ASSET_SRR_SUBJECT_BACKUP, "", m_srrAgentName, "", messagebus::STATUS_OK, json);
-
-        m_srrClient->publish("BACKUP", notification);
-
-        AssetImpl::deleteAll();
-        restoreAssets(si);
-
-    } else {
-        log_error("Unkwnown subject %s", subject.c_str());
+        returnData = output.str();
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Error while creating json " + std::string(e.what()));
     }
 
+    return returnData;
+}
 
-    // using namespace dto;
-    // using namespace dto::srr;
+static cxxtools::SerializationInfo deserialize(const std::string& json)
+{
+    cxxtools::SerializationInfo si;
 
-    // try {
-    //     messagebus::UserData response;
+    try {
+        std::stringstream input;
+        input << json;
+        cxxtools::JsonDeserializer deserializer(input);
+        deserializer.deserialize(si);
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Error in the json from server: " + std::string(e.what()));
+    }
 
-    //     // Get request
-    //     UserData data = msg.userData();
-    //     Query    query;
-    //     data >> query;
-
-    //     response << (m_srrProcessor.processQuery(query));
-
-    //     // Send response
-    //     sendResponse(m_srrClient, msg, response);
-    // } catch (std::exception& e) {
-    //     log_error("Unexpected error: %s", e.what());
-    // } catch (...) {
-    //     log_error("Unexpected error: unknown");
-    // }
+    return si;
 }
 
 dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)
@@ -313,8 +315,33 @@ dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)
     log_debug("Saving assets");
     std::map<FeatureName, FeatureAndStatus> mapFeaturesData;
 
-    return (createSaveResponse(mapFeaturesData, ACTIVE_VERSION)).save();
+    for (const auto& featureName : query.features()) {
+        FeatureAndStatus fs1;
+        Feature&         f1 = *(fs1.mutable_feature());
+
+
+        if (featureName == FTY_ASSET_SRR_NAME) {
+            f1.set_version(SRR_ACTIVE_VERSION);
+            try {
+                std::unique_lock<std::mutex>(m_srrLock);
+                f1.set_data(serialize(saveAssets()));
+                fs1.mutable_status()->set_status(Status::SUCCESS);
+            } catch (std::exception& e) {
+                fs1.mutable_status()->set_status(Status::FAILED);
+                fs1.mutable_status()->set_error(e.what());
+            }
+
+        } else {
+            fs1.mutable_status()->set_status(Status::FAILED);
+            fs1.mutable_status()->set_error("Feature is not supported!");
+        }
+
+        mapFeaturesData[featureName] = fs1;
+    }
+
+    return (createSaveResponse(mapFeaturesData, SRR_ACTIVE_VERSION)).save();
 }
+
 dto::srr::RestoreResponse AssetServer::handleRestore(const dto::srr::RestoreQuery& query)
 {
     using namespace dto;
@@ -323,7 +350,51 @@ dto::srr::RestoreResponse AssetServer::handleRestore(const dto::srr::RestoreQuer
     log_debug("Restoring assets");
     std::map<FeatureName, FeatureStatus> mapStatus;
 
+    for (const auto& item : query.map_features_data()) {
+        const FeatureName& featureName = item.first;
+        const Feature&     feature     = item.second;
+
+        FeatureStatus featureStatus;
+        if (featureName == FTY_ASSET_SRR_NAME) {
+            try {
+                std::unique_lock<std::mutex>(m_srrLock);
+
+                cxxtools::SerializationInfo si = deserialize(feature.data());
+                log_debug("Si=\n%s", feature.data().c_str());
+                restoreAssets(si);
+                featureStatus.set_status(Status::SUCCESS);
+            } catch (std::exception& e) {
+                featureStatus.set_status(Status::FAILED);
+                featureStatus.set_error(e.what());
+            }
+
+        } else {
+            featureStatus.set_status(Status::FAILED);
+            featureStatus.set_error("Feature is not supported!");
+        }
+
+        mapStatus[featureName] = featureStatus;
+    }
+
     return (createRestoreResponse(mapStatus)).restore();
+}
+
+dto::srr::ResetResponse AssetServer::handleReset(const dto::srr::ResetQuery& query)
+{
+    using namespace dto;
+    using namespace dto::srr;
+
+    log_debug("Reset assets");
+    std::map<FeatureName, FeatureStatus> mapStatus;
+
+    const FeatureName& featureName = FTY_ASSET_SRR_NAME;
+    FeatureStatus      featureStatus;
+    featureStatus.set_status(Status::FAILED);
+    featureStatus.set_error("Feature is not supported!");
+
+    mapStatus[featureName] = featureStatus;
+
+    return (createResetResponse(mapStatus)).reset();
 }
 
 // sends create/update/delete notification on both new and old interface
@@ -365,6 +436,7 @@ void AssetServer::initSrr(const std::string& query)
 
     m_srrProcessor.saveHandler    = std::bind(&AssetServer::handleSave, this, _1);
     m_srrProcessor.restoreHandler = std::bind(&AssetServer::handleRestore, this, _1);
+    m_srrProcessor.resetHandler   = std::bind(&AssetServer::handleReset, this, _1);
 
     m_srrClient->receive(query, [&](messagebus::Message m) {
         this->handleAssetSrrReq(m);
@@ -580,7 +652,7 @@ cxxtools::SerializationInfo AssetServer::saveAssets()
 
     cxxtools::SerializationInfo si;
 
-    si.addMember("version") <<= ACTIVE_VERSION;
+    si.addMember("version") <<= SRR_ACTIVE_VERSION;
 
     cxxtools::SerializationInfo& data = si.addMember("data");
 
@@ -598,34 +670,36 @@ cxxtools::SerializationInfo AssetServer::saveAssets()
     return si;
 }
 
-static void printAssetTreeRec(const std::string& iname, int level)
+static void buildRestoreTree(std::vector<AssetImpl>& v)
 {
-    for (int i = 0; i < level; i++) {
-        std::cout << "\t";
-    }
-    std::cout << iname << std::endl;
+    std::map<std::string, std::vector<std::string>> ancestorMatrix;
 
-    AssetImpl a(iname);
-    for (const auto& child : getChildren(a)) {
-        printAssetTreeRec(child, level + 1);
-    }
-}
-
-static void buildRestoreTree(
-    std::vector<AssetImpl>& dest, const std::vector<AssetImpl> src, const AssetImpl& node)
-{
-    dest.push_back(node);
-    std::vector<std::string> children = getChildren(node);
-    for (const auto& c : children) {
-        auto child = std::find_if(src.begin(), src.end(), [&](const AssetImpl& a) {
-            return a.getInternalName() == c;
-        });
-        if (child == src.end()) {
-            throw std::runtime_error("Cannot find asset " + child->getInternalName() + " to restore");
+    for (const AssetImpl& a : v) {
+        // create node if doesn't exist
+        ancestorMatrix[a.getUuid()];
+        if (a.getParentIname() != "") {
+            ancestorMatrix[a.getParentIname()].push_back(a.getUuid());
         }
-
-        buildRestoreTree(dest, src, *child);
     }
+
+    for (const auto& n : ancestorMatrix) {
+        std::string uuid     = n.first;
+        const auto& children = n.second;
+        for (auto& x : ancestorMatrix) {
+            auto& parentOf = x.second;
+
+            auto found = std::find(parentOf.begin(), parentOf.end(), uuid);
+            if (found != parentOf.end()) {
+                for (const auto& child : children) {
+                    parentOf.push_back(child);
+                }
+            }
+        }
+    }
+
+    std::sort(v.begin(), v.end(), [&](const AssetImpl& l, const AssetImpl& r) {
+        return ancestorMatrix[l.getUuid()].size() > ancestorMatrix[r.getUuid()].size();
+    });
 }
 
 void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
@@ -640,30 +714,21 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
     std::string srrVersion;
     si.getMember("version") >>= srrVersion;
 
-    if (srrVersion != ACTIVE_VERSION) {
+    if (srrVersion != SRR_ACTIVE_VERSION) {
         throw std::runtime_error("Version " + srrVersion + " is not supported");
     }
 
     const cxxtools::SerializationInfo& assets = si.getMember("data");
-
-    std::vector<AssetImpl> roots;
-    std::vector<AssetImpl> list;
-    std::vector<AssetImpl> assetsToRestore;
+    std::vector<AssetImpl>             assetsToRestore;
 
     for (auto it = assets.begin(); it != assets.end(); ++it) {
         AssetImpl a;
         AssetImpl::srrToAsset(*it, a);
 
-        if (a.getParentIname() == "") {
-            roots.push_back(a);
-        }
-        list.push_back(a);
+        assetsToRestore.push_back(a);
     }
 
-    // build restore tree
-    for (const auto& r : roots) {
-        buildRestoreTree(assetsToRestore, list, r);
-    }
+    buildRestoreTree(assetsToRestore);
 
     // TODO move to message header
     bool tryActivate = true;
@@ -690,11 +755,11 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
             if (a.getParentIname() != "") {
                 a.setParentIname(assetInames[a.getParentIname()]);
             }
-            // store previous iname
+            // store previous iname (UUID)
             std::string oldIname = a.getInternalName();
 
-            // store asset to db
-            a.save(false);
+            // restore asset to db
+            a.restore();
 
             // save new iname
             assetInames[oldIname] = a.getInternalName();
