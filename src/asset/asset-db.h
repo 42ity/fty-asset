@@ -62,7 +62,8 @@ public:
 
     virtual void        saveLinkedAssets(Asset& asset);
     virtual void        saveExtMap(Asset& asset);
-    virtual std::string unameById(uint32_t id);
+    virtual std::string inameById(uint32_t id);
+    virtual std::string inameByUuid(const std::string& uuid);
 
     virtual std::vector<std::string> listAllAssets();
 

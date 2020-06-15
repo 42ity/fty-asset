@@ -53,6 +53,9 @@ public:
     void unlinkFrom(const std::string& src);
     void unlinkAll();
 
+    static void assetToSrr(const AssetImpl& asset, cxxtools::SerializationInfo& si);
+    static void srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& asset);
+
     static std::vector<std::string> list();
     static void                     deleteList(const std::vector<std::string>& assets);
     static void                     deleteAll();

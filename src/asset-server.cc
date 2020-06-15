@@ -590,7 +590,7 @@ cxxtools::SerializationInfo AssetServer::saveAssets()
         log_debug("Saving asset %s...", a.getInternalName().c_str());
 
         cxxtools::SerializationInfo& siAsset = data.addMember("");
-        siAsset <<= a;
+        AssetImpl::assetToSrr(a, siAsset);
     }
 
     data.setCategory(cxxtools::SerializationInfo::Array);
@@ -652,7 +652,7 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
 
     for (auto it = assets.begin(); it != assets.end(); ++it) {
         AssetImpl a;
-        *it >>= a;
+        AssetImpl::srrToAsset(*it, a);
 
         if (a.getParentIname() == "") {
             roots.push_back(a);

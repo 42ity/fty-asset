@@ -524,11 +524,11 @@ void AssetImpl::DB::insert(Asset& asset)
     }
 }
 
-std::string AssetImpl::DB::unameById(uint32_t id)
+std::string AssetImpl::DB::inameById(uint32_t id)
 {
     m_conn_lock.lock();
     // clang-format off
-    return m_conn.prepareCached(R"(
+    std::string result = m_conn.prepareCached(R"(
         SELECT name FROM t_bios_asset_element WHERE id_asset_element = :assetId
     )")
     .set("assetId", id)
@@ -536,6 +536,36 @@ std::string AssetImpl::DB::unameById(uint32_t id)
     .getString("name");
     // clang-format on
     m_conn_lock.unlock();
+
+    return result;
+}
+
+std::string AssetImpl::DB::inameByUuid(const std::string& uuid)
+{
+    m_conn_lock.lock();
+    // clang-format off
+    std::string result = m_conn.prepareCached(R"(
+        SELECT
+            name
+        FROM
+            t_bios_asset_element
+        WHERE
+            id_asset_element = (
+                SELECT
+                    id_asset_element
+                FROM
+                    t_bios_asset_ext_attributes
+                WHERE
+                    keytag = "uuid" AND value = :uuid
+            )
+        )")
+    .set("uuid", uuid)
+    .selectRow()
+    .getString("name");
+    // clang-format on
+    m_conn_lock.unlock();
+
+    return result;
 }
 
 void AssetImpl::DB::saveLinkedAssets(Asset& asset)

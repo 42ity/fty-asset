@@ -76,7 +76,7 @@ namespace fty { namespace conversion {
         si.getMember(SI_SUB_TYPE) >>= tmpString;
         asset.setAssetSubtype(tmpString);
 
-        // external name
+        // internal name
         si.getMember(SI_NAME) >>= tmpString;
         asset.setInternalName(tmpString);
 
