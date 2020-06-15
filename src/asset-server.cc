@@ -611,23 +611,6 @@ static void printAssetTreeRec(const std::string& iname, int level)
     }
 }
 
-static void buildRestoreTree(
-    std::vector<AssetImpl>& dest, const std::vector<AssetImpl> src, const AssetImpl& node)
-{
-    dest.push_back(node);
-    std::vector<std::string> children = getChildren(node);
-    for (const auto& c : children) {
-        auto child = std::find_if(src.begin(), src.end(), [&](const AssetImpl& a) {
-            return a.getInternalName() == c;
-        });
-        if (child == src.end()) {
-            throw std::runtime_error("Cannot find asset " + child->getInternalName() + " to restore");
-        }
-
-        buildRestoreTree(dest, src, *child);
-    }
-}
-
 void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
 {
     using namespace fty::conversion;
@@ -654,15 +637,17 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
         AssetImpl a;
         AssetImpl::srrToAsset(*it, a);
 
-        if (a.getParentIname() == "") {
-            roots.push_back(a);
-        }
-        list.push_back(a);
+        assetsToRestore.push_back(a);
     }
 
-    // build restore tree
-    for (const auto& r : roots) {
-        buildRestoreTree(assetsToRestore, list, r);
+    // sort by creation order (during restore, parentIname stores UUID)
+    std::sort(assetsToRestore.begin(), assetsToRestore.end(), [&](const AssetImpl& l, const AssetImpl& r) {
+        return l.getUuid() == r.getParentIname();
+    });
+
+    std::cerr << "Restore order:\n";
+    for (const auto& a : assetsToRestore) {
+        std::cerr << a.getInternalName() << std::endl;
     }
 
     // TODO move to message header
@@ -693,8 +678,8 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
             // store previous iname
             std::string oldIname = a.getInternalName();
 
-            // store asset to db
-            a.save(false);
+            // restore asset to db
+            a.restore();
 
             // save new iname
             assetInames[oldIname] = a.getInternalName();
