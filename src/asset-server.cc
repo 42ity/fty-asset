@@ -645,11 +645,6 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
         return l.getUuid() == r.getParentIname();
     });
 
-    std::cerr << "Restore order:\n";
-    for (const auto& a : assetsToRestore) {
-        std::cerr << a.getInternalName() << std::endl;
-    }
-
     // TODO move to message header
     bool tryActivate = true;
 
