@@ -244,7 +244,7 @@ bool Asset::operator==(const Asset& asset) const
     return (m_internalName == asset.m_internalName && m_assetStatus == asset.m_assetStatus &&
             m_assetType == asset.m_assetType && m_assetSubtype == asset.m_assetSubtype &&
             m_parentIname == asset.m_parentIname && m_priority == asset.m_priority &&
-            m_assetTag == asset.m_assetTag && m_ext == asset.m_ext);
+            m_assetTag == asset.m_assetTag && m_ext == asset.m_ext && m_linkedAssets == asset.m_linkedAssets);
 }
 
 bool Asset::operator!=(const Asset& asset) const
