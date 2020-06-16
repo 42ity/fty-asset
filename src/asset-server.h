@@ -226,6 +226,7 @@ private:
     // SRR handlers
     dto::srr::SaveResponse    handleSave(const dto::srr::SaveQuery& query);
     dto::srr::RestoreResponse handleRestore(const dto::srr::RestoreQuery& query);
+    dto::srr::ResetResponse   handleReset(const dto::srr::ResetQuery& query);
 };
 
 messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,

@@ -187,6 +187,34 @@ messagebus::Message createMessage(const std::string& subject, const std::string&
     return msg;
 }
 
+// create response (data is messagebus::UserData)
+messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
+    const std::string& from, const std::string& to, const std::string& status,
+    const messagebus::UserData& data)
+{
+    messagebus::Message msg;
+
+    if (!subject.empty()) {
+        msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
+    }
+    if (!from.empty()) {
+        msg.metaData().emplace(messagebus::Message::FROM, from);
+    }
+    if (!to.empty()) {
+        msg.metaData().emplace(messagebus::Message::TO, to);
+    }
+    if (!correlationID.empty()) {
+        msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
+    }
+    if (!status.empty()) {
+        msg.metaData().emplace(messagebus::Message::STATUS, status);
+    }
+
+    msg.userData() = data;
+
+    return msg;
+}
+
 // new generation asset manipulation handler
 void AssetServer::handleAssetManipulationReq(const messagebus::Message& msg)
 {
@@ -215,91 +243,30 @@ void AssetServer::handleAssetManipulationReq(const messagebus::Message& msg)
     }
 }
 
-static void sendResponse(std::unique_ptr<messagebus::MessageBus>& msgBus, const messagebus::Message& msg,
-    const dto::UserData& userData)
-{
-    try {
-        messagebus::Message resp;
-        resp.userData() = userData;
-        resp.metaData().emplace(
-            messagebus::Message::SUBJECT, msg.metaData().find(messagebus::Message::SUBJECT)->second);
-        resp.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_SRR_AGENT);
-        resp.metaData().emplace(
-            messagebus::Message::TO, msg.metaData().find(messagebus::Message::FROM)->second);
-        resp.metaData().emplace(messagebus::Message::CORRELATION_ID,
-            msg.metaData().find(messagebus::Message::CORRELATION_ID)->second);
-        msgBus->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, resp);
-    } catch (messagebus::MessageBusException& ex) {
-        log_error("Message bus error: %s", ex.what());
-    } catch (const std::exception& ex) {
-        log_error("Unexpected error: %s", ex.what());
-    }
-}
-
 void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
 {
     log_debug("Process SRR request");
-
-    // const std::string& subject = msg.metaData().at(messagebus::Message::SUBJECT);
-
-    // if (subject == FTY_ASSET_SRR_SUBJECT_BACKUP) {
-    //     log_debug("BACKUP");
-    //     cxxtools::SerializationInfo si = saveAssets();
-    // } else if (subject == FTY_ASSET_SRR_SUBJECT_RESTORE) {
-    //     log_debug("RESTORE");
-    //     cxxtools::SerializationInfo si = saveAssets();
-    //     restoreAssets(si);
-    // } else if (subject == FTY_ASSET_SRR_SUBJECT_RESET) {
-    //     log_debug("RESET");
-    //     AssetImpl::deleteAll();
-    // } else if (subject == "TEST") {
-    //     log_debug("TEST");
-
-    //     cxxtools::SerializationInfo si = saveAssets();
-
-    //     std::ostringstream       output;
-    //     cxxtools::JsonSerializer serializer(output);
-    //     serializer.serialize(si);
-
-    //     std::string json = output.str();
-
-    //     auto response = createMessage(FTY_ASSET_SRR_SUBJECT_BACKUP,
-    //         msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_srrAgentName,
-    //         msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_OK, json);
-
-    //     // send response
-    //     log_debug("sending response to %s",
-    //     msg.metaData().find(messagebus::Message::FROM)->second.c_str());
-    //     m_srrClient->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
-
-    //     messagebus::Message notification =
-    //         createMessage(FTY_ASSET_SRR_SUBJECT_BACKUP, "", m_srrAgentName, "", messagebus::STATUS_OK,
-    //         json);
-
-    //     m_srrClient->publish("BACKUP", notification);
-
-    //     AssetImpl::deleteAll();
-    //     restoreAssets(si);
-
-    // } else {
-    //     log_error("Unkwnown subject %s", subject.c_str());
-    // }
 
     using namespace dto;
     using namespace dto::srr;
 
     try {
-        messagebus::UserData response;
-
         // Get request
         UserData data = msg.userData();
         Query    query;
         data >> query;
 
-        response << (m_srrProcessor.processQuery(query));
+        messagebus::UserData respData;
+        respData << (m_srrProcessor.processQuery(query));
 
-        // Send response
-        sendResponse(m_srrClient, msg, response);
+        auto response = createMessage(msg.metaData().find(messagebus::Message::SUBJECT)->second,
+            msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_srrAgentName,
+            msg.metaData().find(messagebus::Message::REPLY_TO)->second, messagebus::STATUS_OK, respData);
+
+        log_debug(
+            "Sending response to: %s", msg.metaData().find(messagebus::Message::REPLY_TO)->second.c_str());
+        m_srrClient->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
+
     } catch (std::exception& e) {
         log_error("Unexpected error: %s", e.what());
     } catch (...) {
@@ -374,6 +341,7 @@ dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)
 
     return (createSaveResponse(mapFeaturesData, SRR_ACTIVE_VERSION)).save();
 }
+
 dto::srr::RestoreResponse AssetServer::handleRestore(const dto::srr::RestoreQuery& query)
 {
     using namespace dto;
@@ -409,6 +377,24 @@ dto::srr::RestoreResponse AssetServer::handleRestore(const dto::srr::RestoreQuer
     }
 
     return (createRestoreResponse(mapStatus)).restore();
+}
+
+dto::srr::ResetResponse AssetServer::handleReset(const dto::srr::ResetQuery& query)
+{
+    using namespace dto;
+    using namespace dto::srr;
+
+    log_debug("Reset assets");
+    std::map<FeatureName, FeatureStatus> mapStatus;
+
+    const FeatureName& featureName = FTY_ASSET_SRR_NAME;
+    FeatureStatus      featureStatus;
+    featureStatus.set_status(Status::FAILED);
+    featureStatus.set_error("Feature is not supported!");
+
+    mapStatus[featureName] = featureStatus;
+
+    return (createResetResponse(mapStatus)).reset();
 }
 
 // sends create/update/delete notification on both new and old interface
@@ -450,6 +436,7 @@ void AssetServer::initSrr(const std::string& query)
 
     m_srrProcessor.saveHandler    = std::bind(&AssetServer::handleSave, this, _1);
     m_srrProcessor.restoreHandler = std::bind(&AssetServer::handleRestore, this, _1);
+    m_srrProcessor.resetHandler   = std::bind(&AssetServer::handleReset, this, _1);
 
     m_srrClient->receive(query, [&](messagebus::Message m) {
         this->handleAssetSrrReq(m);
