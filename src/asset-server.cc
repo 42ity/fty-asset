@@ -223,7 +223,7 @@ static void sendResponse(std::unique_ptr<messagebus::MessageBus>& msgBus, const 
         resp.userData() = userData;
         resp.metaData().emplace(
             messagebus::Message::SUBJECT, msg.metaData().find(messagebus::Message::SUBJECT)->second);
-        resp.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_SRR_NAME);
+        resp.metaData().emplace(messagebus::Message::FROM, FTY_ASSET_SRR_AGENT);
         resp.metaData().emplace(
             messagebus::Message::TO, msg.metaData().find(messagebus::Message::FROM)->second);
         resp.metaData().emplace(messagebus::Message::CORRELATION_ID,
@@ -354,7 +354,7 @@ dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)
 
 
         if (featureName == FTY_ASSET_SRR_NAME) {
-            f1.set_version(ACTIVE_VERSION);
+            f1.set_version(SRR_ACTIVE_VERSION);
             try {
                 std::unique_lock<std::mutex>(m_srrLock);
                 f1.set_data(serialize(saveAssets()));
@@ -372,7 +372,7 @@ dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)
         mapFeaturesData[featureName] = fs1;
     }
 
-    return (createSaveResponse(mapFeaturesData, ACTIVE_VERSION)).save();
+    return (createSaveResponse(mapFeaturesData, SRR_ACTIVE_VERSION)).save();
 }
 dto::srr::RestoreResponse AssetServer::handleRestore(const dto::srr::RestoreQuery& query)
 {
@@ -665,7 +665,7 @@ cxxtools::SerializationInfo AssetServer::saveAssets()
 
     cxxtools::SerializationInfo si;
 
-    si.addMember("version") <<= ACTIVE_VERSION;
+    si.addMember("version") <<= SRR_ACTIVE_VERSION;
 
     cxxtools::SerializationInfo& data = si.addMember("data");
 
@@ -727,7 +727,7 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
     std::string srrVersion;
     si.getMember("version") >>= srrVersion;
 
-    if (srrVersion != ACTIVE_VERSION) {
+    if (srrVersion != SRR_ACTIVE_VERSION) {
         throw std::runtime_error("Version " + srrVersion + " is not supported");
     }
 
