@@ -563,4 +563,10 @@ void AssetImpl::deleteAll()
     deleteList(list());
 }
 
+/// get internal name from UUID
+std::string AssetImpl::getInameFromUuid(const std::string& uuid)
+{
+    return AssetImpl::DB::getInstance().inameByUuid(uuid);
+}
+
 } // namespace fty

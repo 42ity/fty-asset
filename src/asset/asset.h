@@ -60,6 +60,7 @@ public:
     static std::vector<std::string> list();
     static void                     deleteList(const std::vector<std::string>& assets);
     static void                     deleteAll();
+    static std::string              getInameFromUuid(const std::string& uuid);
 
     using Asset::operator==;
 
