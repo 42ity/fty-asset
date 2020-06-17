@@ -27,12 +27,13 @@
 
 static constexpr const char* FTY_ASSET_MAILBOX = "FTY.Q.ASSET.QUERY";
 // new interface mailbox subjects
-static constexpr const char* FTY_ASSET_SUBJECT_CREATE      = "CREATE";
-static constexpr const char* FTY_ASSET_SUBJECT_UPDATE      = "UPDATE";
-static constexpr const char* FTY_ASSET_SUBJECT_DELETE      = "DELETE";
-static constexpr const char* FTY_ASSET_SUBJECT_DELETE_LIST = "DELETE_LIST";
-static constexpr const char* FTY_ASSET_SUBJECT_GET         = "GET";
-static constexpr const char* FTY_ASSET_SUBJECT_LIST        = "LIST";
+static constexpr const char* FTY_ASSET_SUBJECT_CREATE        = "CREATE";
+static constexpr const char* FTY_ASSET_SUBJECT_UPDATE        = "UPDATE";
+static constexpr const char* FTY_ASSET_SUBJECT_DELETE        = "DELETE";
+static constexpr const char* FTY_ASSET_SUBJECT_DELETE_LIST   = "DELETE_LIST";
+static constexpr const char* FTY_ASSET_SUBJECT_GET           = "GET";
+static constexpr const char* FTY_ASSET_SUBJECT_GET_FROM_UUID = "GET_FROM_UUID";
+static constexpr const char* FTY_ASSET_SUBJECT_LIST          = "LIST";
 
 // new interface topics
 static constexpr const char* FTY_ASSET_TOPIC_CREATED = "FTY.T.ASSET.CREATED";
@@ -181,7 +182,7 @@ private:
     void createAsset(const messagebus::Message& msg);
     void updateAsset(const messagebus::Message& msg);
     void deleteAsset(const messagebus::Message& msg);
-    void getAsset(const messagebus::Message& msg);
+    void getAsset(const messagebus::Message& msg, bool getFromUuid = false);
     void listAsset(const messagebus::Message& msg);
     void deleteAssetList(const messagebus::Message& msg);
 

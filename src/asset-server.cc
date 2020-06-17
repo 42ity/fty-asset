@@ -225,12 +225,13 @@ void AssetServer::handleAssetManipulationReq(const messagebus::Message& msg)
 
     // clang-format off
     static std::map<std::string, std::function<void(const messagebus::Message&)>> procMap = {
-        { FTY_ASSET_SUBJECT_CREATE,      [&](const messagebus::Message& msg){ createAsset(msg); } },
-        { FTY_ASSET_SUBJECT_UPDATE,      [&](const messagebus::Message& msg){ updateAsset(msg); } },
-        { FTY_ASSET_SUBJECT_DELETE,      [&](const messagebus::Message& msg){ deleteAsset(msg); } },
-        { FTY_ASSET_SUBJECT_DELETE_LIST, [&](const messagebus::Message& msg){ deleteAssetList(msg); } },
-        { FTY_ASSET_SUBJECT_GET,         [&](const messagebus::Message& msg){ getAsset(msg); } },
-        { FTY_ASSET_SUBJECT_LIST,        [&](const messagebus::Message& msg){ listAsset(msg); } },
+        { FTY_ASSET_SUBJECT_CREATE,       [&](const messagebus::Message& msg){ createAsset(msg); } },
+        { FTY_ASSET_SUBJECT_UPDATE,       [&](const messagebus::Message& msg){ updateAsset(msg); } },
+        { FTY_ASSET_SUBJECT_DELETE,       [&](const messagebus::Message& msg){ deleteAsset(msg); } },
+        { FTY_ASSET_SUBJECT_DELETE_LIST,  [&](const messagebus::Message& msg){ deleteAssetList(msg); } },
+        { FTY_ASSET_SUBJECT_GET,          [&](const messagebus::Message& msg){ getAsset(msg); } },
+        { FTY_ASSET_SUBJECT_GET_FROM_UUID,[&](const messagebus::Message& msg){ getAsset(msg, true); } },
+        { FTY_ASSET_SUBJECT_LIST,         [&](const messagebus::Message& msg){ listAsset(msg); } },
     };
     // clang-format on
 
@@ -792,13 +793,20 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
     }
 }
 
-void AssetServer::getAsset(const messagebus::Message& msg)
+void AssetServer::getAsset(const messagebus::Message& msg, bool getFromUuid)
 {
-    log_debug("subject GET");
+    log_debug("subject GET%s", (getFromUuid ? "" : "_FROM_UUID"));
 
     try {
-        std::string    assetIname = msg.userData().front();
-        fty::AssetImpl asset(assetIname);
+        std::string assetID = msg.userData().front();
+        if (getFromUuid) {
+            assetID = AssetImpl::getInameFromUuid(assetID);
+            if (assetID == "") {
+                throw std::runtime_error("requested UUID does not match any asset");
+            }
+        }
+
+        fty::AssetImpl asset(assetID);
 
         // create response (ok)
         auto response = createMessage(FTY_ASSET_SUBJECT_GET,
