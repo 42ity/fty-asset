@@ -26,41 +26,129 @@
 @end
 */
 
-#include "fty_asset_classes.h"
+#include "asset/asset-utils.h"
+#include <cxxtools/jsondeserializer.h>
+#include <cxxtools/jsonserializer.h>
+#include <sstream>
 
-//  Structure of our class
+namespace fty { namespace assetutils {
+    // create response (data is a single string)
+    messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
+        const std::string& from, const std::string& to, const std::string& status, const std::string& data)
+    {
+        messagebus::Message msg;
 
-struct _asset_asset_utils_t {
-    int filler;     //  Declare class properties here
-};
+        if (!subject.empty()) {
+            msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
+        }
+        if (!from.empty()) {
+            msg.metaData().emplace(messagebus::Message::FROM, from);
+        }
+        if (!to.empty()) {
+            msg.metaData().emplace(messagebus::Message::TO, to);
+        }
+        if (!correlationID.empty()) {
+            msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
+        }
+        if (!status.empty()) {
+            msg.metaData().emplace(messagebus::Message::STATUS, status);
+        }
 
+        msg.userData().push_back(data);
 
-//  --------------------------------------------------------------------------
-//  Create a new asset_asset_utils
-
-asset_asset_utils_t *
-asset_asset_utils_new (void)
-{
-    asset_asset_utils_t *self = (asset_asset_utils_t *) zmalloc (sizeof (asset_asset_utils_t));
-    assert (self);
-    //  Initialize class properties here
-    return self;
-}
-
-
-//  --------------------------------------------------------------------------
-//  Destroy the asset_asset_utils
-
-void
-asset_asset_utils_destroy (asset_asset_utils_t **self_p)
-{
-    assert (self_p);
-    if (*self_p) {
-        asset_asset_utils_t *self = *self_p;
-        //  Free class properties here
-        //  Free object itself
-        free (self);
-        *self_p = NULL;
+        return msg;
     }
-}
 
+    // create response (data is a vector of strings)
+    messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
+        const std::string& from, const std::string& to, const std::string& status,
+        const std::vector<std::string>& data)
+    {
+        messagebus::Message msg;
+
+        if (!subject.empty()) {
+            msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
+        }
+        if (!from.empty()) {
+            msg.metaData().emplace(messagebus::Message::FROM, from);
+        }
+        if (!to.empty()) {
+            msg.metaData().emplace(messagebus::Message::TO, to);
+        }
+        if (!correlationID.empty()) {
+            msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
+        }
+        if (!status.empty()) {
+            msg.metaData().emplace(messagebus::Message::STATUS, status);
+        }
+
+        for (const auto& e : data) {
+            msg.userData().push_back(e);
+        }
+
+        return msg;
+    }
+
+    // create response (data is messagebus::UserData)
+    messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
+        const std::string& from, const std::string& to, const std::string& status,
+        const messagebus::UserData& data)
+    {
+        messagebus::Message msg;
+
+        if (!subject.empty()) {
+            msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
+        }
+        if (!from.empty()) {
+            msg.metaData().emplace(messagebus::Message::FROM, from);
+        }
+        if (!to.empty()) {
+            msg.metaData().emplace(messagebus::Message::TO, to);
+        }
+        if (!correlationID.empty()) {
+            msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
+        }
+        if (!status.empty()) {
+            msg.metaData().emplace(messagebus::Message::STATUS, status);
+        }
+
+        msg.userData() = data;
+
+        return msg;
+    }
+
+
+    // JSON serialize/deserialize
+    std::string serialize(const cxxtools::SerializationInfo& si)
+    {
+        std::string returnData("");
+
+        try {
+            std::stringstream        output;
+            cxxtools::JsonSerializer serializer(output);
+            serializer.serialize(si);
+
+            returnData = output.str();
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Error while creating json " + std::string(e.what()));
+        }
+
+        return returnData;
+    }
+
+    cxxtools::SerializationInfo deserialize(const std::string& json)
+    {
+        cxxtools::SerializationInfo si;
+
+        try {
+            std::stringstream input;
+            input << json;
+            cxxtools::JsonDeserializer deserializer(input);
+            deserializer.deserialize(si);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Error in the json from server: " + std::string(e.what()));
+        }
+
+        return si;
+    }
+}} // namespace fty::assetutils

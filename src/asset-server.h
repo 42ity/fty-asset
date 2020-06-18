@@ -53,7 +53,7 @@ static constexpr const char* METADATA_NO_ERROR_IF_EXIST = "NO_ERROR_IF_EXIST";
 static constexpr const char* SRR_ACTIVE_VERSION  = "1.0";
 static constexpr const char* FTY_ASSET_SRR_AGENT = "asset-agent-srr";
 static constexpr const char* FTY_ASSET_SRR_NAME  = "asset-agent";
-static constexpr const char* FTY_ASSET_SRR_QUEUE = "FTY.Q.SRR";
+static constexpr const char* FTY_ASSET_SRR_QUEUE = "FTY.Q.ASSET.SRR";
 
 typedef struct _mlm_client_t mlm_client_t;
 namespace messagebus {
@@ -165,7 +165,7 @@ public:
     void createMailboxClientNg();
     void resetMailboxClientNg();
     void connectMailboxClientNg();
-    void receiveMailboxClientNg(const std::string& query);
+    void receiveMailboxClientNg(const std::string& queue);
 
     void createPublisherClientNg();
     void resetPublisherClientNg();
@@ -175,7 +175,7 @@ public:
     void sendNotification(const messagebus::Message&) const;
 
     // SRR
-    void initSrr(const std::string& query);
+    void initSrr(const std::string& queue);
     void resetSrrClient();
 
 private:
@@ -188,7 +188,7 @@ private:
 
     // SRR
     cxxtools::SerializationInfo saveAssets();
-    void                        restoreAssets(const cxxtools::SerializationInfo& si);
+    void                        restoreAssets(const cxxtools::SerializationInfo& si, bool tryActivate = true);
 
 private:
     static void destroyMlmClient(mlm_client_t* client);
@@ -229,11 +229,5 @@ private:
     dto::srr::RestoreResponse handleRestore(const dto::srr::RestoreQuery& query);
     dto::srr::ResetResponse   handleReset(const dto::srr::ResetQuery& query);
 };
-
-messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
-    const std::string& from, const std::string& to, const std::string& status, const std::string& data);
-messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
-    const std::string& from, const std::string& to, const std::string& status,
-    const std::vector<std::string>& data);
 
 } // namespace fty
