@@ -19,27 +19,25 @@
     =========================================================================
 */
 
-#ifndef ASSET_ASSET_UTILS_H_INCLUDED
-#define ASSET_ASSET_UTILS_H_INCLUDED
+#pragma once
+#include <cxxtools/serializationinfo.h>
+#include <fty_common_messagebus.h>
+#include <string>
+#include <vector>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace fty { namespace assetutils {
 
-//  @interface
-//  Create a new asset_asset_utils
-FTY_ASSET_PRIVATE asset_asset_utils_t *
-    asset_asset_utils_new (void);
+    // create messages
+    messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
+        const std::string& from, const std::string& to, const std::string& status, const std::string& data);
+    messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
+        const std::string& from, const std::string& to, const std::string& status,
+        const std::vector<std::string>& data);
+    messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
+        const std::string& from, const std::string& to, const std::string& status,
+        const messagebus::UserData& data);
 
-//  Destroy the asset_asset_utils
-FTY_ASSET_PRIVATE void
-    asset_asset_utils_destroy (asset_asset_utils_t **self_p);
-
-
-//  @end
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+    // JSON serialization/deserialization
+    std::string                 serialize(const cxxtools::SerializationInfo& si);
+    cxxtools::SerializationInfo deserialize(const std::string& json);
+}} // namespace fty::assetutils

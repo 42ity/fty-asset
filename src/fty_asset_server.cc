@@ -191,6 +191,7 @@
 */
 
 #include "asset-server.h"
+#include "asset/asset-utils.h"
 #include "fty_asset_classes.h"
 #include <ctime>
 #include <fty_common_db_uptime.h>
@@ -982,8 +983,8 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
             zmsg_addstr(reply, "OK");
             zmsg_addstr(reply, asset.getInternalName().c_str());
 
-            auto notification = fty::createMessage(FTY_ASSET_SUBJECT_CREATED, "", server.getAgentNameNg(), "",
-                messagebus::STATUS_OK, fty::conversion::toJson(asset));
+            auto notification = fty::assetutils::createMessage(FTY_ASSET_SUBJECT_CREATED, "",
+                server.getAgentNameNg(), "", messagebus::STATUS_OK, fty::conversion::toJson(asset));
             server.sendNotification(notification);
         } else if (streq(operation, "update")) {
             fty::AssetImpl currentAsset(asset.getInternalName());
@@ -1014,8 +1015,8 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
             zmsg_addstr(reply, "OK");
             zmsg_addstr(reply, asset.getInternalName().c_str());
 
-            auto notification = fty::createMessage(FTY_ASSET_SUBJECT_UPDATED, "", server.getAgentNameNg(), "",
-                messagebus::STATUS_OK, fty::conversion::toJson(asset));
+            auto notification = fty::assetutils::createMessage(FTY_ASSET_SUBJECT_UPDATED, "",
+                server.getAgentNameNg(), "", messagebus::STATUS_OK, fty::conversion::toJson(asset));
             server.sendNotification(notification);
         } else {
             // unknown op

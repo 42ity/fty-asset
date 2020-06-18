@@ -20,11 +20,10 @@
 */
 
 #include "asset-server.h"
+#include "asset/asset-utils.h"
 #include "asset/conversion/json.h"
 #include "include/fty_asset_dto.h"
 #include <algorithm>
-#include <cxxtools/jsondeserializer.h>
-#include <cxxtools/jsonserializer.h>
 #include <cxxtools/serializationinfo.h>
 #include <fty_common_messagebus.h>
 #include <functional>
@@ -40,7 +39,6 @@ void send_create_or_update_asset(
     const fty::AssetServer& config, const std::string& asset_name, const char* operation, bool read_only);
 
 namespace fty {
-
 // ===========================================================================================================
 
 template <typename T>
@@ -94,9 +92,9 @@ void AssetServer::connectMailboxClientNg()
     m_assetMsgQueue->connect();
 }
 
-void AssetServer::receiveMailboxClientNg(const std::string& query)
+void AssetServer::receiveMailboxClientNg(const std::string& queue)
 {
-    m_assetMsgQueue->receive(query, [&](messagebus::Message m) {
+    m_assetMsgQueue->receive(queue, [&](messagebus::Message m) {
         this->handleAssetManipulationReq(m);
     });
 }
@@ -128,91 +126,6 @@ void AssetServer::connectPublisherClientNg()
     m_publisherCreate->connect();
     m_publisherUpdate->connect();
     m_publisherDelete->connect();
-}
-
-// create response (data is a single string)
-messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
-    const std::string& from, const std::string& to, const std::string& status, const std::string& data)
-{
-    messagebus::Message msg;
-
-    if (!subject.empty()) {
-        msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
-    }
-    if (!from.empty()) {
-        msg.metaData().emplace(messagebus::Message::FROM, from);
-    }
-    if (!to.empty()) {
-        msg.metaData().emplace(messagebus::Message::TO, to);
-    }
-    if (!correlationID.empty()) {
-        msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
-    }
-    if (!status.empty()) {
-        msg.metaData().emplace(messagebus::Message::STATUS, status);
-    }
-
-    msg.userData().push_back(data);
-
-    return msg;
-}
-
-// create response (data is a vector of strings)
-messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
-    const std::string& from, const std::string& to, const std::string& status,
-    const std::vector<std::string>& data)
-{
-    messagebus::Message msg;
-
-    if (!subject.empty()) {
-        msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
-    }
-    if (!from.empty()) {
-        msg.metaData().emplace(messagebus::Message::FROM, from);
-    }
-    if (!to.empty()) {
-        msg.metaData().emplace(messagebus::Message::TO, to);
-    }
-    if (!correlationID.empty()) {
-        msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
-    }
-    if (!status.empty()) {
-        msg.metaData().emplace(messagebus::Message::STATUS, status);
-    }
-
-    for (const auto& e : data) {
-        msg.userData().push_back(e);
-    }
-
-    return msg;
-}
-
-// create response (data is messagebus::UserData)
-messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
-    const std::string& from, const std::string& to, const std::string& status,
-    const messagebus::UserData& data)
-{
-    messagebus::Message msg;
-
-    if (!subject.empty()) {
-        msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
-    }
-    if (!from.empty()) {
-        msg.metaData().emplace(messagebus::Message::FROM, from);
-    }
-    if (!to.empty()) {
-        msg.metaData().emplace(messagebus::Message::TO, to);
-    }
-    if (!correlationID.empty()) {
-        msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
-    }
-    if (!status.empty()) {
-        msg.metaData().emplace(messagebus::Message::STATUS, status);
-    }
-
-    msg.userData() = data;
-
-    return msg;
 }
 
 // new generation asset manipulation handler
@@ -260,7 +173,7 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
         messagebus::UserData respData;
         respData << (m_srrProcessor.processQuery(query));
 
-        auto response = createMessage(msg.metaData().find(messagebus::Message::SUBJECT)->second,
+        auto response = assetutils::createMessage(msg.metaData().find(messagebus::Message::SUBJECT)->second,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_srrAgentName,
             msg.metaData().find(messagebus::Message::REPLY_TO)->second, messagebus::STATUS_OK, respData);
 
@@ -273,39 +186,6 @@ void AssetServer::handleAssetSrrReq(const messagebus::Message& msg)
     } catch (...) {
         log_error("Unexpected error: unknown");
     }
-}
-
-static std::string serialize(const cxxtools::SerializationInfo& si)
-{
-    std::string returnData("");
-
-    try {
-        std::stringstream        output;
-        cxxtools::JsonSerializer serializer(output);
-        serializer.serialize(si);
-
-        returnData = output.str();
-    } catch (const std::exception& e) {
-        throw std::runtime_error("Error while creating json " + std::string(e.what()));
-    }
-
-    return returnData;
-}
-
-static cxxtools::SerializationInfo deserialize(const std::string& json)
-{
-    cxxtools::SerializationInfo si;
-
-    try {
-        std::stringstream input;
-        input << json;
-        cxxtools::JsonDeserializer deserializer(input);
-        deserializer.deserialize(si);
-    } catch (const std::exception& e) {
-        throw std::runtime_error("Error in the json from server: " + std::string(e.what()));
-    }
-
-    return si;
 }
 
 dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)
@@ -325,7 +205,7 @@ dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)
             f1.set_version(SRR_ACTIVE_VERSION);
             try {
                 std::unique_lock<std::mutex>(m_srrLock);
-                f1.set_data(serialize(saveAssets()));
+                f1.set_data(assetutils::serialize(saveAssets()));
                 fs1.mutable_status()->set_status(Status::SUCCESS);
             } catch (std::exception& e) {
                 fs1.mutable_status()->set_status(Status::FAILED);
@@ -356,15 +236,25 @@ dto::srr::RestoreResponse AssetServer::handleRestore(const dto::srr::RestoreQuer
         const Feature&     feature     = item.second;
 
         FeatureStatus featureStatus;
+        // backup current assets
+        cxxtools::SerializationInfo assetBackup = saveAssets();
+
         if (featureName == FTY_ASSET_SRR_NAME) {
             try {
                 std::unique_lock<std::mutex>(m_srrLock);
 
-                cxxtools::SerializationInfo si = deserialize(feature.data());
+                cxxtools::SerializationInfo si = assetutils::deserialize(feature.data());
                 log_debug("Si=\n%s", feature.data().c_str());
+                // clear database
+                AssetImpl::deleteAll();
                 restoreAssets(si);
+
                 featureStatus.set_status(Status::SUCCESS);
             } catch (std::exception& e) {
+                // if restore fails, recover previous status
+                AssetImpl::deleteAll();
+                restoreAssets(assetBackup);
+
                 featureStatus.set_status(Status::FAILED);
                 featureStatus.set_error(e.what());
             }
@@ -427,7 +317,7 @@ void AssetServer::sendNotification(const messagebus::Message& msg) const
     }
 }
 
-void AssetServer::initSrr(const std::string& query)
+void AssetServer::initSrr(const std::string& queue)
 {
     m_srrClient.reset(messagebus::MlmMessageBus(m_srrEndpoint, m_srrAgentName));
     log_debug("New publisher client registered to endpoint %s with name %s", m_srrEndpoint.c_str(),
@@ -439,7 +329,7 @@ void AssetServer::initSrr(const std::string& query)
     m_srrProcessor.restoreHandler = std::bind(&AssetServer::handleRestore, this, _1);
     m_srrProcessor.resetHandler   = std::bind(&AssetServer::handleReset, this, _1);
 
-    m_srrClient->receive(query, [&](messagebus::Message m) {
+    m_srrClient->receive(queue, [&](messagebus::Message m) {
         this->handleAssetSrrReq(m);
     });
 }
@@ -486,7 +376,7 @@ void AssetServer::createAsset(const messagebus::Message& msg)
             }
         }
 
-        auto response = createMessage(FTY_ASSET_SUBJECT_CREATE,
+        auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_CREATE,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
             msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_OK,
             fty::conversion::toJson(asset));
@@ -496,13 +386,13 @@ void AssetServer::createAsset(const messagebus::Message& msg)
         m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
 
         // send notification
-        messagebus::Message notification = createMessage(FTY_ASSET_SUBJECT_CREATED, "", m_agentNameNg, "",
-            messagebus::STATUS_OK, fty::conversion::toJson(asset));
+        messagebus::Message notification = assetutils::createMessage(FTY_ASSET_SUBJECT_CREATED, "",
+            m_agentNameNg, "", messagebus::STATUS_OK, fty::conversion::toJson(asset));
         sendNotification(notification);
     } catch (std::exception& e) {
         log_error(e.what());
         // create response (error)
-        auto response = createMessage(FTY_ASSET_SUBJECT_CREATE,
+        auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_CREATE,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
             msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_KO,
             TRANSLATE_ME(e.what()));
@@ -568,7 +458,7 @@ void AssetServer::updateAsset(const messagebus::Message& msg)
         assetJsonVector.push_back(fty::conversion::toJson(asset));
 
         // create response (ok)
-        auto response = createMessage(FTY_ASSET_SUBJECT_UPDATE,
+        auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_UPDATE,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
             msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_OK,
             fty::conversion::toJson(asset));
@@ -578,13 +468,13 @@ void AssetServer::updateAsset(const messagebus::Message& msg)
         m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
 
         // send notification
-        messagebus::Message notification = createMessage(
+        messagebus::Message notification = assetutils::createMessage(
             FTY_ASSET_SUBJECT_UPDATED, "", m_agentNameNg, "", messagebus::STATUS_OK, assetJsonVector);
         sendNotification(notification);
     } catch (const std::exception& e) {
         log_error(e.what());
         // create response (error)
-        auto response = createMessage(FTY_ASSET_SUBJECT_UPDATE,
+        auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_UPDATE,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
             msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_KO,
             TRANSLATE_ME(e.what()));
@@ -607,16 +497,16 @@ void AssetServer::deleteAsset(const messagebus::Message& msg)
 
         asset.remove(value(msg.metaData(), "RECURSIVE") == "YES");
 
-        response = createMessage(value(msg.metaData(), messagebus::Message::SUBJECT),
+        response = assetutils::createMessage(value(msg.metaData(), messagebus::Message::SUBJECT),
             value(msg.metaData(), messagebus::Message::CORRELATION_ID), m_agentNameNg,
             value(msg.metaData(), messagebus::Message::FROM), messagebus::STATUS_OK, "");
 
         // send notification
-        messagebus::Message notification = createMessage(FTY_ASSET_SUBJECT_DELETED, "", m_agentNameNg, "",
-            messagebus::STATUS_OK, fty::conversion::toJson(asset));
+        messagebus::Message notification = assetutils::createMessage(FTY_ASSET_SUBJECT_DELETED, "",
+            m_agentNameNg, "", messagebus::STATUS_OK, fty::conversion::toJson(asset));
         sendNotification(notification);
     } catch (const std::exception& e) {
-        response = createMessage(value(msg.metaData(), messagebus::Message::SUBJECT),
+        response = assetutils::createMessage(value(msg.metaData(), messagebus::Message::SUBJECT),
             value(msg.metaData(), messagebus::Message::CORRELATION_ID), m_agentNameNg,
             value(msg.metaData(), messagebus::Message::FROM), messagebus::STATUS_KO, e.what());
     }
@@ -628,12 +518,7 @@ void AssetServer::deleteAssetList(const messagebus::Message& msg)
 {
     log_debug("subject DELETE_LIST");
 
-    std::istringstream input(msg.userData().front());
-
-    cxxtools::SerializationInfo si;
-    cxxtools::JsonDeserializer  deserializer(input);
-
-    deserializer.deserialize(si);
+    cxxtools::SerializationInfo si = assetutils::deserialize(msg.userData().front());
 
     std::vector<std::string> assetInames;
     for (const auto& el : si.getMember("id")) {
@@ -683,13 +568,17 @@ static void buildRestoreTree(std::vector<AssetImpl>& v)
         }
     }
 
-    for (const auto& n : ancestorMatrix) {
-        std::string uuid     = n.first;
-        const auto& children = n.second;
+    // iterate on each asset
+    for (const auto& a : ancestorMatrix) {
+        std::string uuid     = a.first;
+        const auto& children = a.second;
+
+        // find ancestors of asset a
         for (auto& x : ancestorMatrix) {
             auto& parentOf = x.second;
 
             auto found = std::find(parentOf.begin(), parentOf.end(), uuid);
+            // if x is parent of a, x inherits all children of a
             if (found != parentOf.end()) {
                 for (const auto& child : children) {
                     parentOf.push_back(child);
@@ -703,7 +592,7 @@ static void buildRestoreTree(std::vector<AssetImpl>& v)
     });
 }
 
-void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
+void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si, bool tryActivate)
 {
     using namespace fty::conversion;
 
@@ -730,9 +619,6 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si)
     }
 
     buildRestoreTree(assetsToRestore);
-
-    // TODO move to message header
-    bool tryActivate = true;
 
     std::map<std::string, std::string> assetInames;
 
@@ -809,7 +695,7 @@ void AssetServer::getAsset(const messagebus::Message& msg, bool getFromUuid)
         fty::AssetImpl asset(assetID);
 
         // create response (ok)
-        auto response = createMessage(FTY_ASSET_SUBJECT_GET,
+        auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_GET,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
             msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_OK,
             fty::conversion::toJson(asset));
@@ -820,7 +706,7 @@ void AssetServer::getAsset(const messagebus::Message& msg, bool getFromUuid)
     } catch (std::exception& e) {
         log_error(e.what());
         // create response (error)
-        auto response = createMessage(FTY_ASSET_SUBJECT_GET,
+        auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_GET,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
             msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_KO,
             TRANSLATE_ME(e.what()));
@@ -839,7 +725,7 @@ void AssetServer::listAsset(const messagebus::Message& msg)
         std::vector<std::string> assetList = fty::AssetImpl::list();
 
         // create response (ok)
-        auto response = createMessage(FTY_ASSET_SUBJECT_LIST,
+        auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_LIST,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
             msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_OK, assetList);
 
@@ -849,7 +735,7 @@ void AssetServer::listAsset(const messagebus::Message& msg)
     } catch (std::exception& e) {
         log_error(e.what());
         // create response (error)
-        auto response = createMessage(FTY_ASSET_SUBJECT_LIST,
+        auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_LIST,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
             msg.metaData().find(messagebus::Message::FROM)->second, messagebus::STATUS_KO,
             TRANSLATE_ME(e.what()));
