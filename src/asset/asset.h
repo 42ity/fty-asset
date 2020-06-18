@@ -29,6 +29,8 @@ namespace fty {
 
 static constexpr const char* RC0 = "rackcontroller-0";
 
+class AssetStorage;
+
 class AssetImpl : public Asset
 {
 public:
@@ -67,10 +69,7 @@ public:
     friend std::vector<std::string> getChildren(const AssetImpl& a);
 
 private:
-    class Interface;
-    class DB;
-    class DBTest;
-    DB& m_db;
+    AssetStorage& m_storage;
 };
 
 } // namespace fty
