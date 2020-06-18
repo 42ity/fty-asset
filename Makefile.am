@@ -97,6 +97,8 @@ EXTRA_DIST += \
     src/fty_asset_manipulation.h \
     src/asset-server.h \
     src/asset/asset.h \
+    src/asset/asset-utils.h \
+    src/asset/asset-storage.h \
     src/asset/asset-db.h \
     src/asset/asset-db-test.h \
     src/asset/conversion/json.h \
