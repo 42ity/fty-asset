@@ -131,6 +131,14 @@ typedef struct _asset_server_t asset_server_t;
 typedef struct _asset_asset_t asset_asset_t;
 #define ASSET_ASSET_T_DEFINED
 #endif
+#ifndef ASSET_ASSET_UTILS_T_DEFINED
+typedef struct _asset_asset_utils_t asset_asset_utils_t;
+#define ASSET_ASSET_UTILS_T_DEFINED
+#endif
+#ifndef ASSET_ASSET_STORAGE_T_DEFINED
+typedef struct _asset_asset_storage_t asset_asset_storage_t;
+#define ASSET_ASSET_STORAGE_T_DEFINED
+#endif
 #ifndef ASSET_ASSET_DB_T_DEFINED
 typedef struct _asset_asset_db_t asset_asset_db_t;
 #define ASSET_ASSET_DB_T_DEFINED
@@ -180,6 +188,8 @@ typedef struct _asset_conversion_full_asset_t asset_conversion_full_asset_t;
 #include "fty_asset_manipulation.h"
 #include "asset-server.h"
 #include "asset/asset.h"
+#include "asset/asset-utils.h"
+#include "asset/asset-storage.h"
 #include "asset/asset-db.h"
 #include "asset/asset-db-test.h"
 #include "asset/conversion/json.h"
