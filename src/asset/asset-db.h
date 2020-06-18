@@ -20,14 +20,16 @@
 */
 
 #pragma once
-#include "asset.h"
+#include "asset-storage.h"
 #include <memory>
 #include <mutex>
+#include <string>
 #include <tntdb.h>
+#include <vector>
 
 namespace fty {
 
-class AssetImpl::DB
+class DB : public AssetStorage
 {
 public:
     static DB& getInstance()
@@ -36,41 +38,39 @@ public:
         return m_instance;
     }
 
-    virtual void loadAsset(const std::string& nameId, Asset& asset);
+    void loadAsset(const std::string& nameId, Asset& asset);
 
-    virtual void                     loadExtMap(Asset& asset);
-    virtual void                     loadLinkedAssets(Asset& asset);
-    virtual std::vector<std::string> getChildren(const Asset& asset);
+    void                     loadExtMap(Asset& asset);
+    void                     loadLinkedAssets(Asset& asset);
+    std::vector<std::string> getChildren(const Asset& asset);
 
-    virtual bool hasLinkedAssets(const Asset& asset);
-    virtual void link(Asset& src, Asset& dest);
-    virtual void unlink(Asset& src, Asset& dest);
-    virtual void unlinkAll(Asset& dest);
-    virtual void clearGroup(Asset& asset);
-    virtual void removeAsset(Asset& asset);
-    virtual void removeFromRelations(Asset& asset);
-    virtual void removeFromGroups(Asset& asset);
-    virtual void removeExtMap(Asset& asset);
-    virtual bool isLastDataCenter(Asset& asset);
+    bool hasLinkedAssets(const Asset& asset);
+    void link(Asset& src, Asset& dest);
+    void unlink(Asset& src, Asset& dest);
+    void unlinkAll(Asset& dest);
+    void clearGroup(Asset& asset);
+    void removeAsset(Asset& asset);
+    void removeFromRelations(Asset& asset);
+    void removeFromGroups(Asset& asset);
+    void removeExtMap(Asset& asset);
+    bool isLastDataCenter(Asset& asset);
 
-    virtual void beginTransaction();
-    virtual void rollbackTransaction();
-    virtual void commitTransaction();
+    void beginTransaction();
+    void rollbackTransaction();
+    void commitTransaction();
 
-    virtual void update(Asset& asset);
-    virtual void insert(Asset& asset);
+    void update(Asset& asset);
+    void insert(Asset& asset);
 
-    virtual void        saveLinkedAssets(Asset& asset);
-    virtual void        saveExtMap(Asset& asset);
-    virtual std::string inameById(uint32_t id);
-    virtual std::string inameByUuid(const std::string& uuid);
+    void        saveLinkedAssets(Asset& asset);
+    void        saveExtMap(Asset& asset);
+    std::string inameById(uint32_t id);
+    std::string inameByUuid(const std::string& uuid);
 
-    virtual std::vector<std::string> listAllAssets();
-
-protected:
-    DB(bool test = false);
+    std::vector<std::string> listAllAssets();
 
 private:
+    DB(bool test = false);
     std::mutex                m_conn_lock;
     mutable tntdb::Connection m_conn;
 };

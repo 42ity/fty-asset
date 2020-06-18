@@ -19,27 +19,53 @@
     =========================================================================
 */
 
-#ifndef ASSET_ASSET_STORAGE_H_INCLUDED
-#define ASSET_ASSET_STORAGE_H_INCLUDED
+#pragma once
+#include <string>
+#include <vector>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace fty {
 
-//  @interface
-//  Create a new asset_asset_storage
-FTY_ASSET_PRIVATE asset_asset_storage_t *
-    asset_asset_storage_new (void);
+class Asset;
 
-//  Destroy the asset_asset_storage
-FTY_ASSET_PRIVATE void
-    asset_asset_storage_destroy (asset_asset_storage_t **self_p);
+class AssetStorage
+{
+public:
+    enum class StorageType
+    {
+        StorageDB,
+        StorageDBTest
+    };
 
+    virtual void loadAsset(const std::string& nameId, Asset& asset) = 0;
 
-//  @end
+    virtual void                     loadExtMap(Asset& asset)        = 0;
+    virtual void                     loadLinkedAssets(Asset& asset)  = 0;
+    virtual std::vector<std::string> getChildren(const Asset& asset) = 0;
 
-#ifdef __cplusplus
-}
-#endif
+    virtual bool hasLinkedAssets(const Asset& asset) = 0;
+    virtual void link(Asset& src, Asset& dest)       = 0;
+    virtual void unlink(Asset& src, Asset& dest)     = 0;
+    virtual void unlinkAll(Asset& dest)              = 0;
+    virtual void clearGroup(Asset& asset)            = 0;
+    virtual void removeAsset(Asset& asset)           = 0;
+    virtual void removeFromRelations(Asset& asset)   = 0;
+    virtual void removeFromGroups(Asset& asset)      = 0;
+    virtual void removeExtMap(Asset& asset)          = 0;
+    virtual bool isLastDataCenter(Asset& asset)      = 0;
 
-#endif
+    virtual void beginTransaction()    = 0;
+    virtual void rollbackTransaction() = 0;
+    virtual void commitTransaction()   = 0;
+
+    virtual void update(Asset& asset) = 0;
+    virtual void insert(Asset& asset) = 0;
+
+    virtual void        saveLinkedAssets(Asset& asset)       = 0;
+    virtual void        saveExtMap(Asset& asset)             = 0;
+    virtual std::string inameById(uint32_t id)               = 0;
+    virtual std::string inameByUuid(const std::string& uuid) = 0;
+
+    virtual std::vector<std::string> listAllAssets() = 0;
+};
+
+} // namespace fty

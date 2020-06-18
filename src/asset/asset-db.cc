@@ -20,9 +20,9 @@
 */
 
 #include "asset-db.h"
+#include "asset.h"
 #include <cstdlib>
 #include <fty_common_db_dbpath.h>
-#include <string>
 #include <tntdb.h>
 
 namespace fty {
@@ -43,15 +43,15 @@ static std::string createAssetName(const std::string& type, const std::string& s
     return assetName;
 }
 
-// AssetImpl::DB
-AssetImpl::DB::DB(bool test)
+// DB
+DB::DB(bool test)
 {
     if (!test) {
         m_conn = tntdb::connectCached(DBConn::url);
     }
 }
 
-void AssetImpl::DB::loadAsset(const std::string& nameId, Asset& asset)
+void DB::loadAsset(const std::string& nameId, Asset& asset)
 {
     // clang-format off
     m_conn_lock.lock();
@@ -92,7 +92,7 @@ void AssetImpl::DB::loadAsset(const std::string& nameId, Asset& asset)
     }
 }
 
-void AssetImpl::DB::loadExtMap(Asset& asset)
+void DB::loadExtMap(Asset& asset)
 {
     assert(asset.getId());
 
@@ -118,7 +118,7 @@ void AssetImpl::DB::loadExtMap(Asset& asset)
     }
 }
 
-std::vector<std::string> AssetImpl::DB::getChildren(const Asset& asset)
+std::vector<std::string> DB::getChildren(const Asset& asset)
 {
     assert(asset.getId());
 
@@ -145,7 +145,7 @@ std::vector<std::string> AssetImpl::DB::getChildren(const Asset& asset)
     return children;
 }
 
-void AssetImpl::DB::loadLinkedAssets(Asset& asset)
+void DB::loadLinkedAssets(Asset& asset)
 {
     assert(asset.getId());
 
@@ -175,7 +175,7 @@ void AssetImpl::DB::loadLinkedAssets(Asset& asset)
 }
 
 
-bool AssetImpl::DB::isLastDataCenter(Asset& asset)
+bool DB::isLastDataCenter(Asset& asset)
 {
     assert(asset.getId());
 
@@ -203,7 +203,7 @@ bool AssetImpl::DB::isLastDataCenter(Asset& asset)
     return numDatacentersAfterDelete == 0;
 }
 
-void AssetImpl::DB::removeFromGroups(Asset& asset)
+void DB::removeFromGroups(Asset& asset)
 {
     assert(asset.getId());
 
@@ -221,7 +221,7 @@ void AssetImpl::DB::removeFromGroups(Asset& asset)
     m_conn_lock.unlock();
 }
 
-void AssetImpl::DB::removeFromRelations(Asset& asset)
+void DB::removeFromRelations(Asset& asset)
 {
     assert(asset.getId());
 
@@ -239,7 +239,7 @@ void AssetImpl::DB::removeFromRelations(Asset& asset)
     m_conn_lock.unlock();
 }
 
-void AssetImpl::DB::removeAsset(Asset& asset)
+void DB::removeAsset(Asset& asset)
 {
     assert(asset.getId());
 
@@ -257,7 +257,7 @@ void AssetImpl::DB::removeAsset(Asset& asset)
     m_conn_lock.unlock();
 }
 
-void AssetImpl::DB::removeExtMap(Asset& asset)
+void DB::removeExtMap(Asset& asset)
 {
     assert(asset.getId());
 
@@ -275,7 +275,7 @@ void AssetImpl::DB::removeExtMap(Asset& asset)
     // clang-format on
 }
 
-void AssetImpl::DB::clearGroup(Asset& asset)
+void DB::clearGroup(Asset& asset)
 {
     assert(asset.getId());
 
@@ -293,7 +293,7 @@ void AssetImpl::DB::clearGroup(Asset& asset)
     m_conn_lock.unlock();
 }
 
-bool AssetImpl::DB::hasLinkedAssets(const Asset& asset)
+bool DB::hasLinkedAssets(const Asset& asset)
 {
     assert(asset.getId());
 
@@ -316,7 +316,7 @@ bool AssetImpl::DB::hasLinkedAssets(const Asset& asset)
     return linkedAssets != 0;
 }
 
-void AssetImpl::DB::link(Asset& src, Asset& dest)
+void DB::link(Asset& src, Asset& dest)
 {
     assert(src.getId());
     assert(dest.getId());
@@ -371,7 +371,7 @@ void AssetImpl::DB::link(Asset& src, Asset& dest)
     m_conn_lock.unlock();
 }
 
-void AssetImpl::DB::unlink(Asset& src, Asset& dest)
+void DB::unlink(Asset& src, Asset& dest)
 {
     assert(src.getId());
     assert(dest.getId());
@@ -393,7 +393,7 @@ void AssetImpl::DB::unlink(Asset& src, Asset& dest)
     m_conn_lock.unlock();
 }
 
-void AssetImpl::DB::unlinkAll(Asset& dest)
+void DB::unlinkAll(Asset& dest)
 {
     assert(dest.getId());
 
@@ -411,28 +411,28 @@ void AssetImpl::DB::unlinkAll(Asset& dest)
     m_conn_lock.unlock();
 }
 
-void AssetImpl::DB::beginTransaction()
+void DB::beginTransaction()
 {
     m_conn_lock.lock();
     m_conn.beginTransaction();
     m_conn_lock.unlock();
 }
 
-void AssetImpl::DB::rollbackTransaction()
+void DB::rollbackTransaction()
 {
     m_conn_lock.lock();
     m_conn.rollbackTransaction();
     m_conn_lock.unlock();
 }
 
-void AssetImpl::DB::commitTransaction()
+void DB::commitTransaction()
 {
     m_conn_lock.lock();
     m_conn.commitTransaction();
     m_conn_lock.unlock();
 }
 
-void AssetImpl::DB::update(Asset& asset)
+void DB::update(Asset& asset)
 {
     m_conn_lock.lock();
     // clang-format off
@@ -461,7 +461,7 @@ void AssetImpl::DB::update(Asset& asset)
     // clang-format on
 }
 
-void AssetImpl::DB::insert(Asset& asset)
+void DB::insert(Asset& asset)
 {
     // temporary asset name
     std::string assetName =
@@ -524,7 +524,7 @@ void AssetImpl::DB::insert(Asset& asset)
     }
 }
 
-std::string AssetImpl::DB::inameById(uint32_t id)
+std::string DB::inameById(uint32_t id)
 {
     m_conn_lock.lock();
     // clang-format off
@@ -540,7 +540,7 @@ std::string AssetImpl::DB::inameById(uint32_t id)
     return result;
 }
 
-std::string AssetImpl::DB::inameByUuid(const std::string& uuid)
+std::string DB::inameByUuid(const std::string& uuid)
 {
     m_conn_lock.lock();
     // clang-format off
@@ -568,7 +568,7 @@ std::string AssetImpl::DB::inameByUuid(const std::string& uuid)
     return result;
 }
 
-void AssetImpl::DB::saveLinkedAssets(Asset& asset)
+void DB::saveLinkedAssets(Asset& asset)
 {
     m_conn_lock.lock();
     // clang-format off
@@ -634,7 +634,7 @@ void AssetImpl::DB::saveLinkedAssets(Asset& asset)
     }
 }
 
-void AssetImpl::DB::saveExtMap(Asset& asset)
+void DB::saveExtMap(Asset& asset)
 {
     m_conn_lock.lock();
     // clang-format off
@@ -716,7 +716,7 @@ void AssetImpl::DB::saveExtMap(Asset& asset)
     }
 }
 
-std::vector<std::string> AssetImpl::DB::listAllAssets()
+std::vector<std::string> DB::listAllAssets()
 {
     std::vector<std::string> assetList;
 

@@ -20,12 +20,14 @@
 */
 
 #pragma once
-#include "asset-db.h"
+#include "asset-storage.h"
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace fty {
 
-class AssetImpl::DBTest : public AssetImpl::DB
+class DBTest : public AssetStorage
 {
 public:
     static DBTest& getInstance()
