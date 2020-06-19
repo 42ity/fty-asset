@@ -26,7 +26,7 @@
 @end
 */
 
-#include "asset/asset-utils.h"
+#include "asset-utils.h"
 #include <cxxtools/jsondeserializer.h>
 #include <cxxtools/jsonserializer.h>
 #include <sstream>
