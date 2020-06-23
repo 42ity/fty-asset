@@ -207,7 +207,7 @@ s_topology2_devices_in_groups (
         "   ON rel.id_asset_group=el2.id_asset_element "
         " JOIN t_bios_asset_ext_attributes AS ext "
         "   ON el.id_asset_element=ext.id_asset_element "
-        " LEFT JOIN t_bios_asset_ext_attributes AS torder ON (el.id_asset_element=torder.id_asset_element AND torder.keytag=\"asset_order\") "
+        " LEFT JOIN t_bios_asset_ext_attributes AS torder ON (el.id_asset_element=torder.id_asset_element AND torder.keytag=\"name\") "
         " WHERE ext.keytag=\"name\" AND el2.name=:id "
         " ORDER BY "
         "   asset_order ASC ";
