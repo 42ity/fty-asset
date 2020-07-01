@@ -52,8 +52,10 @@ public:
     bool isActivable();
     void activate();
     void deactivate();
-    void linkTo(const std::string& src);
-    void unlinkFrom(const std::string& src);
+    void linkTo(
+        const std::string& src, const std::string& srcOut, const std::string& destIn, int linkType = 1);
+    void unlinkFrom(
+        const std::string& src, const std::string& srcOut, const std::string& destIn, int linkType = 1);
     void unlinkAll();
 
     static void assetToSrr(const AssetImpl& asset, cxxtools::SerializationInfo& si);

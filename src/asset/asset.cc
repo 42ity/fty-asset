@@ -323,21 +323,23 @@ void AssetImpl::deactivate()
     }
 }
 
-void AssetImpl::linkTo(const std::string& src)
+void AssetImpl::linkTo(
+    const std::string& src, const std::string& srcOut, const std::string& destIn, int linkType)
 {
     try {
         AssetImpl s(src);
-        m_storage.link(s, *this);
+        m_storage.link(s, srcOut, *this, destIn, linkType);
     } catch (std::exception& ex) {
         log_error("%s", ex.what());
     }
     m_storage.loadLinkedAssets(*this);
 }
 
-void AssetImpl::unlinkFrom(const std::string& src)
+void AssetImpl::unlinkFrom(
+    const std::string& src, const std::string& srcOut, const std::string& destIn, int linkType)
 {
     AssetImpl s(src);
-    m_storage.unlink(s, *this);
+    m_storage.unlink(s, srcOut, *this, destIn, linkType);
 
     m_storage.loadLinkedAssets(*this);
 }
@@ -349,11 +351,12 @@ void AssetImpl::unlinkAll()
 
 void AssetImpl::assetToSrr(const AssetImpl& asset, cxxtools::SerializationInfo& si)
 {
-    std::vector<std::string> linkUuid;
+    std::vector<AssetLink> linkUuid;
 
     for (const auto& l : asset.getLinkedAssets()) {
-        AssetImpl link(l);
-        linkUuid.push_back(link.getUuid());
+        AssetImpl link(l.sourceId);
+        AssetLink x(link.getUuid(), l.srcOut, l.destIn, l.linkType);
+        linkUuid.push_back(x);
     }
     // basic
     si.addMember("uuid") <<= asset.getUuid();
@@ -417,7 +420,7 @@ void AssetImpl::srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& ass
     asset.setParentIname(tmpString);
 
     // linked assets
-    std::vector<std::string> tmpVector;
+    std::vector<AssetLink> tmpVector;
 
     si.getMember("linked") >>= tmpVector;
     for (const auto& l : tmpVector) {
@@ -495,12 +498,15 @@ void AssetImpl::deleteList(const std::vector<std::string>& assets)
         }
 
         // get linked assets
-        std::vector<std::string> linkedAssets = a.getLinkedAssets();
+        std::vector<AssetLink> linkedAssets = a.getLinkedAssets();
 
         // remove assets already in the list
         for (const std::string& iname : assets) {
-            linkedAssets.erase(
-                std::remove(linkedAssets.begin(), linkedAssets.end(), iname), linkedAssets.end());
+            linkedAssets.erase(std::remove_if(linkedAssets.begin(), linkedAssets.end(),
+                                   [&](const AssetLink& l) {
+                                       return iname == l.sourceId;
+                                   }),
+                linkedAssets.end());
         }
 
         if (!childrenList.empty() || !linkedAssets.empty()) {

@@ -68,10 +68,10 @@ std::vector<std::string> DBTest::getChildren(const Asset& asset)
 void DBTest::loadLinkedAssets(Asset& asset)
 {
     std::cout << "DBTest::loadLinkedAssets" << std::endl;
-    std::vector<std::string> links;
+    std::vector<AssetLink> links;
 
-    links.push_back("asset-1");
-    links.push_back("asset-2");
+    links.push_back(AssetLink("asset-1", "1", "2", 1));
+    links.push_back(AssetLink("asset-2", "1", "2", 1));
 
     asset.setLinkedAssets(links);
 }
@@ -114,12 +114,13 @@ bool DBTest::hasLinkedAssets(const Asset& asset)
     return true;
 }
 
-void DBTest::link(Asset& src, Asset& dest)
+void DBTest::link(Asset& src, const std::string& srcOut, Asset& dest, const std::string& destIn, int linkType)
 {
     std::cout << "DBTest::link" << std::endl;
 }
 
-void DBTest::unlink(Asset& src, Asset& dest)
+void DBTest::unlink(
+    Asset& src, const std::string& srcOut, Asset& dest, const std::string& destIn, int linkType)
 {
     std::cout << "DBTest::unlink" << std::endl;
 }

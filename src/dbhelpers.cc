@@ -28,6 +28,7 @@
 
 
 #include "fty_asset_classes.h"
+#include "include/fty_asset_dto.h"
 #include <cxxtools/jsonserializer.h>
 
 #define INPUT_POWER_CHAIN     1
@@ -504,9 +505,11 @@ void updateAssetExtProperties(const fty::Asset& asset)
 
 static fty::Asset readAssetFromRow(tntdb::Connection& conn, const tntdb::Row& row)
 {
+    using namespace fty;
+
     tntdb::Statement statement;
 
-    fty::Asset asset;
+    Asset asset;
 
     int         assetId;
     std::string assetName;
@@ -563,16 +566,26 @@ static fty::Asset readAssetFromRow(tntdb::Connection& conn, const tntdb::Row& ro
 
     // Linked assets
     {
+        // clang-format off
         auto sql = conn.prepareCached(
-            " SELECT l.id_asset_element_dest, e.name "
+            " SELECT l.id_asset_element_dest, e.name as assetId, l.src_out as srcOut, l.dest_in as destIn, l.id_asset_link_type as linkType "
             " FROM v_bios_asset_link as l"
-            "   INNER JOIN t_bios_asset_element as e ON l.id_asset_element_dest = e.id_asset_element"
+            "   INNER JOIN t_bios_asset_element as e "
+            " ON l.id_asset_element_dest = e.id_asset_element"
             " WHERE l.id_asset_element_src = :asset_id ");
         tntdb::Result res = sql.set("asset_id", assetId).select();
-
-        std::vector<std::string> links;
+        // clang-format on
+        std::vector<AssetLink> links;
         for (const auto& row : result) {
-            links.push_back(row.getValue("name").getString());
+            std::string srcOut, destIn;
+            if (!row.isNull("srcOut")) {
+                row.getString("srcOut", srcOut);
+            }
+            if (!row.isNull("destIn")) {
+                row.getString("destIn", destIn);
+            }
+
+            links.push_back(AssetLink(row.getString("assetId"), srcOut, destIn, row.getInt("linkType")));
         }
 
         asset.setLinkedAssets(links);

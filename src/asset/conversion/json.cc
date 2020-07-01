@@ -89,7 +89,7 @@ namespace fty { namespace conversion {
         asset.setParentIname(tmpString);
 
         // linked assets
-        std::vector<std::string> tmpVector;
+        std::vector<AssetLink> tmpVector;
         si.getMember(SI_LINKED) >>= tmpVector;
         asset.setLinkedAssets(tmpVector);
 

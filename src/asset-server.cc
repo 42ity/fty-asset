@@ -671,7 +671,7 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si, bool tryA
         try {
             auto links = a.getLinkedAssets();
             for (const auto& l : links) {
-                a.linkTo(assetInames[l]);
+                a.linkTo(assetInames[l.sourceId], l.srcOut, l.destIn);
             }
         } catch (std::exception& e) {
             log_error(e.what());

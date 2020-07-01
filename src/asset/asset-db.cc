@@ -23,6 +23,7 @@
 #include "asset.h"
 #include <cstdlib>
 #include <fty_common_db_dbpath.h>
+#include <sstream>
 #include <tntdb.h>
 
 namespace fty {
@@ -154,7 +155,10 @@ void DB::loadLinkedAssets(Asset& asset)
     auto result = m_conn.prepareCached(R"(
         SELECT
             l.id_asset_element_src  AS id,
-            e.name                  AS name
+            e.name                  AS name,
+            l.src_out               AS srcOut,
+            l.dest_in               AS destIn,
+            l.id_asset_link_type    AS linkType
         FROM
             v_bios_asset_link AS l
         INNER JOIN
@@ -167,9 +171,18 @@ void DB::loadLinkedAssets(Asset& asset)
     // clang-format on
     m_conn_lock.unlock();
 
-    std::vector<std::string> links;
+    std::vector<AssetLink> links;
     for (const auto& row : result) {
-        links.push_back(row.getString("name"));
+        std::string srcOut, destIn;
+        // may be NULL
+        if (!row.isNull("srcOut")) {
+            row.getString("srcOut", srcOut);
+        }
+        if (!row.isNull("destIn")) {
+            row.getString("destIn", destIn);
+        }
+
+        links.push_back(AssetLink(row.getString("name"), srcOut, destIn, row.getInt("linkType")));
     }
     asset.setLinkedAssets(links);
 }
@@ -316,7 +329,7 @@ bool DB::hasLinkedAssets(const Asset& asset)
     return linkedAssets != 0;
 }
 
-void DB::link(Asset& src, Asset& dest)
+void DB::link(Asset& src, const std::string& srcOut, Asset& dest, const std::string& destIn, int linkType)
 {
     assert(src.getId());
     assert(dest.getId());
@@ -325,12 +338,17 @@ void DB::link(Asset& src, Asset& dest)
     // clang-format off
     auto res = m_conn.prepareCached(R"(
         SELECT
-            e.id_asset_element AS srcId,
-            e.name             AS srcName
-        FROM t_bios_asset_link
-        INNER JOIN
+            e.id_asset_element   AS srcId,
+            e.name               AS srcName,
+            l.src_out            AS srcOut,
+            l.dest_in            AS destIn,
+            l.id_asset_link_type AS linkType
+        FROM
             t_bios_asset_element AS e
-            ON e.id_asset_element = id_asset_device_src
+        INNER JOIN
+            t_bios_asset_link AS l
+        ON
+            e.id_asset_element = l.id_asset_device_src
         WHERE
              id_asset_device_dest = :assetId
     )")
@@ -339,57 +357,106 @@ void DB::link(Asset& src, Asset& dest)
     // clang-format on
     m_conn_lock.unlock();
 
-    std::vector<std::string> existing;
+    std::vector<AssetLink> existing;
     for (const auto& row : res) {
-        existing.emplace_back(row.getString("srcName"));
+        std::string tmpOut, tmpIn;
+
+        // may be NULL
+        if (!row.isNull("srcOut")) {
+            row.getString("srcOut", tmpOut);
+        }
+        if (!row.isNull("destIn")) {
+            row.getString("destIn", tmpIn);
+        }
+
+        existing.push_back(AssetLink(row.getString("srcName"), tmpOut, tmpIn, row.getInt("linkType")));
     }
 
-    const std::string& srcName = src.getInternalName();
+    // new link to insert
+    const AssetLink l(src.getInternalName(), srcOut, destIn, linkType);
 
-    auto found = std::find(existing.begin(), existing.end(), srcName);
+    auto found = std::find(existing.begin(), existing.end(), l);
 
     if (found != existing.end()) {
         throw std::runtime_error("Link to asset " + src.getInternalName() + " already exists");
     }
 
-    m_conn_lock.lock();
     // clang-format off
-    m_conn.prepareCached(R"(
+    auto q = m_conn.prepareCached(R"(
         INSERT INTO
             t_bios_asset_link
-            (id_asset_device_src, id_asset_device_dest, id_asset_link_type)
+            (id_asset_device_src, src_out, id_asset_device_dest, dest_in, id_asset_link_type)
         VALUES (
             :src,
+            :srcOut,
             :dest,
-            1
+            :destIn,
+            :linkType
         )
-    )")
-    .set("src", src.getId())
-    .set("dest", dest.getId())
-    .execute();
+    )");
+
     // clang-format on
+
+    q.set("src", src.getId());
+    q.set("dest", dest.getId());
+
+    srcOut.empty() ? q.setNull("srcOut") : q.set("srcOut", srcOut);
+    destIn.empty() ? q.setNull("destIn") : q.set("destIn", destIn);
+
+    q.set("linkType", linkType);
+
+    m_conn_lock.lock();
+    q.execute();
     m_conn_lock.unlock();
 }
 
-void DB::unlink(Asset& src, Asset& dest)
+void DB::unlink(Asset& src, const std::string& srcOut, Asset& dest, const std::string& destIn, int linkType)
 {
     assert(src.getId());
     assert(dest.getId());
 
-    m_conn_lock.lock();
+    tntdb::Statement q;
+
+    std::stringstream qs;
+
     // clang-format off
-    m_conn.prepareCached(R"(
-        DELETE FROM
-            t_bios_asset_link
-        WHERE
-            id_asset_device_src = :src
-            AND
-            id_asset_device_dest = :dest
-    )")
-    .set("src", src.getId())
-    .set("dest", dest.getId())
-    .execute();
+    qs << 
+        " DELETE FROM "                     \
+        "    t_bios_asset_link"             \
+        " WHERE"                            \
+        "    id_asset_device_src = :src"    \
+        "    AND"                           \
+        "    id_asset_device_dest = :dest";
+    if(!srcOut.empty()) {
+        qs <<
+        "    AND"                   \
+        "    src_out = :srcOut";
+    }
+    if(!destIn.empty()) {
+        qs <<
+        "    AND"                   \
+        "    dest_in = :destIn";
+    }
+    qs <<
+        "    AND" \
+        "    id_asset_link_type = :linkType";
+    qs << ")";
     // clang-format on
+
+    q = m_conn.prepareCached(qs.str().c_str());
+
+    q.set("src", src.getId());
+    q.set("dest", dest.getId());
+
+    if (!srcOut.empty())
+        q.set("srcOut", srcOut);
+    if (!destIn.empty())
+        q.set("destIn", destIn);
+
+    q.set("linkType", linkType);
+
+    m_conn_lock.lock();
+    q.execute();
     m_conn_lock.unlock();
 }
 
@@ -574,12 +641,15 @@ void DB::saveLinkedAssets(Asset& asset)
     // clang-format off
     auto res = m_conn.prepareCached(R"(
         SELECT
-            e.id_asset_element AS srcId,
-            e.name             AS srcName
-        FROM t_bios_asset_link
+            e.id_asset_element   AS srcId,
+            e.name               AS srcName,
+            l.src_out            AS srcOut,
+            l.dest_in            AS destIn,
+            l.id_asset_link_type AS linkType
+        FROM t_bios_asset_link   AS l
         INNER JOIN
             t_bios_asset_element AS e
-            ON e.id_asset_element = id_asset_device_src
+            ON e.id_asset_element = l.id_asset_device_src
         WHERE
              id_asset_device_dest = :assetId
     )")
@@ -588,49 +658,45 @@ void DB::saveLinkedAssets(Asset& asset)
     // clang-format on
     m_conn_lock.unlock();
 
-    using Existing = std::pair<uint32_t, std::string>;
+    using Existing = std::pair<uint32_t, AssetLink>;
 
     std::vector<Existing> existing;
     for (const auto& row : res) {
-        existing.emplace_back(row.getUnsigned32("srcId"), row.getString("srcName"));
+        std::string tmpOut, tmpIn;
+
+        // may be NULL
+        if (!row.isNull("srcOut")) {
+            row.getString("srcOut", tmpOut);
+        }
+        if (!row.isNull("destIn")) {
+            row.getString("destIn", tmpIn);
+        }
+
+        existing.emplace_back(row.getUnsigned32("srcId"),
+            AssetLink(row.getString("srcName"), tmpOut, tmpIn, row.getInt("linkType")));
     }
 
-    for (const std::string& src : asset.getLinkedAssets()) {
-        auto found = std::find_if(existing.begin(), existing.end(), [&](const Existing& e) {
-            return e.second == src;
-        });
+    // add new links
+    for (const AssetLink l : asset.getLinkedAssets()) {
 
-        if (found == existing.end()) {
-            // clang-format off
-            m_conn_lock.lock();
-            m_conn.prepareCached(R"(
-                INSERT INTO t_bios_asset_link
-                    (id_asset_device_src, id_asset_device_dest, id_asset_link_type)
-                VALUES ((SELECT id_asset_element FROM t_bios_asset_element WHERE name = :src), :assetId, 1)
-            )")
-            .set("src", src)
-            .set("assetId", asset.getId())
-            .execute();
-            // clang-format on
-            m_conn_lock.unlock();
-        } else {
+        try {
+            AssetImpl src(l.sourceId);
+            link(src, l.srcOut, asset, l.destIn);
+        } catch (std::runtime_error) {
+            auto found = std::find_if(existing.begin(), existing.end(), [&](const Existing& e) {
+                return e.second == l;
+            });
+
             existing.erase(found);
         }
     }
 
+    // remove links not present in DTO
     for (const auto& toRem : existing) {
-        m_conn_lock.lock();
-        // clang-format off
-        m_conn.prepareCached(R"(
-            DELETE FROM t_bios_asset_link
-            WHERE id_asset_device_src := srcId
-                AND id_asset_device_dest := assetId
-        )")
-        .set("srcId", toRem.first)
-        .set("assetId", asset.getId())
-        .execute();
-        // clang-format on
-        m_conn_lock.unlock();
+        const AssetLink& l = toRem.second;
+
+        AssetImpl src(l.sourceId);
+        unlink(src, l.srcOut, asset, l.destIn);
     }
 }
 
@@ -660,6 +726,7 @@ void DB::saveExtMap(Asset& asset)
         existing.emplace_back(
             row.getUnsigned32("id"), row.getString("akey"), row.getString("avalue"), row.getBool("readOnly"));
     }
+
 
     for (const auto& it : asset.getExt()) {
         auto found = std::find_if(existing.begin(), existing.end(), [&](const Existing& e) {

@@ -45,8 +45,10 @@ public:
     std::vector<std::string> getChildren(const Asset& asset);
 
     bool hasLinkedAssets(const Asset& asset);
-    void link(Asset& src, Asset& dest);
-    void unlink(Asset& src, Asset& dest);
+    void link(
+        Asset& src, const std::string& srcOut, Asset& dest, const std::string& destIn, int linkType = 1);
+    void unlink(
+        Asset& src, const std::string& srcOut, Asset& dest, const std::string& destIn, int linkType = 1);
     void unlinkAll(Asset& dest);
     void clearGroup(Asset& asset);
     void removeAsset(Asset& asset);

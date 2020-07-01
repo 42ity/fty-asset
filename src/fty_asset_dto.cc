@@ -34,6 +34,48 @@
 
 namespace fty {
 
+AssetLink::AssetLink(const std::string& s, std::string o, std::string i, int t)
+    : sourceId(s)
+    , srcOut(o)
+    , destIn(i)
+    , linkType(t)
+{
+}
+
+bool operator==(const AssetLink& l, const AssetLink& r)
+{
+    return (
+        l.sourceId == r.sourceId && l.srcOut == r.srcOut && l.destIn == r.destIn && r.linkType == l.linkType);
+}
+
+void operator<<=(cxxtools::SerializationInfo& si, const AssetLink& l)
+{
+    si.addMember("source") <<= l.sourceId;
+    si.addMember("link_type") <<= l.linkType;
+    if (!l.srcOut.empty()) {
+        si.addMember("src_out") <<= l.srcOut;
+    }
+    if (!l.destIn.empty()) {
+        si.addMember("dest_in") <<= l.destIn;
+    }
+}
+
+void operator>>=(const cxxtools::SerializationInfo& si, AssetLink& l)
+{
+    si.getMember("source") >>= l.sourceId;
+    si.getMember("link_type") >>= l.linkType;
+
+    std::string tmpStr;
+    if (si.getMember("src_out", tmpStr)) {
+        l.srcOut = tmpStr;
+    }
+
+    if (si.getMember("dest_in", tmpStr)) {
+        l.destIn = tmpStr;
+    }
+} // namespace fty
+
+
 const std::string assetStatusToString(AssetStatus status)
 {
     std::string retVal;
@@ -159,7 +201,7 @@ const std::string& Asset::getSerialNo() const
     return getExtEntry(EXT_SERIAL_NO);
 }
 
-const std::vector<std::string>& Asset::getLinkedAssets() const
+const std::vector<AssetLink>& Asset::getLinkedAssets() const
 {
     return m_linkedAssets;
 }
@@ -216,7 +258,7 @@ void Asset::setExtEntry(const std::string& key, const std::string& value, bool r
     m_ext[key] = std::make_pair(value, readOnly);
 }
 
-void Asset::setLinkedAssets(const std::vector<std::string>& assets)
+void Asset::setLinkedAssets(const std::vector<AssetLink>& assets)
 {
     m_linkedAssets = assets;
 }
@@ -235,7 +277,8 @@ void Asset::dump(std::ostream& os)
     }
 
     for (const auto& l : m_linkedAssets) {
-        os << "- linked to: " << l << std::endl;
+        os << "- linked to: " << l.sourceId << " on port: " << l.srcOut << " from port " << l.destIn
+           << std::endl;
     }
 }
 

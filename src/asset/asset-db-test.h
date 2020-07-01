@@ -43,8 +43,10 @@ public:
     std::vector<std::string> getChildren(const Asset& asset) override;
 
     bool hasLinkedAssets(const Asset& asset) override;
-    void link(Asset& src, Asset& dest) override;
-    void unlink(Asset& src, Asset& dest) override;
+    void link(Asset& src, const std::string& srcOut, Asset& dest, const std::string& destIn,
+        int linkType = 1) override;
+    void unlink(Asset& src, const std::string& srcOut, Asset& dest, const std::string& destIn,
+        int linkType = 1) override;
     void unlinkAll(Asset& dest) override;
     void clearGroup(Asset& asset) override;
     void removeAsset(Asset& asset) override;
