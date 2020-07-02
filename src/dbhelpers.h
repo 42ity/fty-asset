@@ -19,6 +19,8 @@
     =========================================================================
 */
 
+// clang-format off
+
 #ifndef DBHELPERS_H_INCLUDED
 #define DBHELPERS_H_INCLUDED
 
@@ -113,17 +115,6 @@ FTY_ASSET_PRIVATE int
         (bool test = false);
 
 ////////////////////////////////////////////////////////////////////////////////
-
-/// insert fty::Asset to database (only main properties)
-long insertAssetToDB(const fty::Asset& asset);
-/// update fty::Asset in database (only main properties)
-long updateAssetToDB(const fty::Asset& asset);
-/// insert or update external properties of asset into database
-void updateAssetExtProperties(const fty::Asset& asset);
-/// select asset from the database that matches the given internal name
-fty::Asset getAssetFromDB(const std::string& assetInternalName);
-/// select all assets in the database
-std::vector<fty::Asset> getAllAssetsFromDB();
 
 /// select one field of an asset from the database
 /// SELECT <column> from asset_table where <keyColumn> = <keyValue>
