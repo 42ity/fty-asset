@@ -36,7 +36,6 @@ src_libfty_asset_la_SOURCES = \
     src/fty_asset_autoupdate.cc \
     src/fty_asset_inventory.cc \
     src/fty_asset_dto.cc \
-    src/fty_asset_manipulation.cc \
     src/asset-server.cc \
     src/asset/asset.cc \
     src/asset/asset-utils.cc \
@@ -346,13 +345,6 @@ check-fty_asset_dto: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $
 	$(MAKE) check-empty-selftest-rw
 check-fty_asset_dto-verbose: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute $(builddir)/src/fty_asset_selftest -v -t fty_asset_dto
-	$(MAKE) check-empty-selftest-rw
-
-check-fty_asset_manipulation: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
-	$(LIBTOOL) --mode=execute $(builddir)/src/fty_asset_selftest -t fty_asset_manipulation
-	$(MAKE) check-empty-selftest-rw
-check-fty_asset_manipulation-verbose: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
-	$(LIBTOOL) --mode=execute $(builddir)/src/fty_asset_selftest -v -t fty_asset_manipulation
 	$(MAKE) check-empty-selftest-rw
 
 check-asset_server: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
@@ -758,20 +750,6 @@ memcheck-fty_asset_dto-verbose: src/fty_asset_selftest $(top_builddir)/$(SELFTES
 		$(VALGRIND_OPTIONS) \
 		$(builddir)/src/fty_asset_selftest -v -t fty_asset_dto
 	$(MAKE) check-empty-selftest-rw
-memcheck-fty_asset_manipulation: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
-	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
-		--leak-check=full --show-reachable=yes --error-exitcode=1 \
-		--suppressions=$(srcdir)/src/.valgrind.supp \
-		$(VALGRIND_OPTIONS) \
-		$(builddir)/src/fty_asset_selftest -t fty_asset_manipulation
-	$(MAKE) check-empty-selftest-rw
-memcheck-fty_asset_manipulation-verbose: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
-	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
-		--leak-check=full --show-reachable=yes --error-exitcode=1 \
-		--suppressions=$(srcdir)/src/.valgrind.supp \
-		$(VALGRIND_OPTIONS) \
-		$(builddir)/src/fty_asset_selftest -v -t fty_asset_manipulation
-	$(MAKE) check-empty-selftest-rw
 memcheck-asset_server: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
 		--leak-check=full --show-reachable=yes --error-exitcode=1 \
@@ -1142,16 +1120,6 @@ callcheck-fty_asset_dto-verbose: src/fty_asset_selftest $(top_builddir)/$(SELFTE
 		$(VALGRIND_OPTIONS) \
 		$(builddir)/src/fty_asset_selftest -v -t fty_asset_dto
 	$(MAKE) check-empty-selftest-rw
-callcheck-fty_asset_manipulation: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
-	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
-		$(VALGRIND_OPTIONS) \
-		$(builddir)/src/fty_asset_selftest -t fty_asset_manipulation
-	$(MAKE) check-empty-selftest-rw
-callcheck-fty_asset_manipulation-verbose: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
-	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
-		$(VALGRIND_OPTIONS) \
-		$(builddir)/src/fty_asset_selftest -v -t fty_asset_manipulation
-	$(MAKE) check-empty-selftest-rw
 callcheck-asset_server: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
 		$(VALGRIND_OPTIONS) \
@@ -1437,14 +1405,6 @@ debug-fty_asset_dto: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $
 debug-fty_asset_dto-verbose: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute gdb -q \
 		--args $(builddir)/src/fty_asset_selftest -v -t fty_asset_dto
-	$(MAKE) check-empty-selftest-rw
-debug-fty_asset_manipulation: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
-	$(LIBTOOL) --mode=execute gdb -q \
-		--args $(builddir)/src/fty_asset_selftest -t fty_asset_manipulation
-	$(MAKE) check-empty-selftest-rw
-debug-fty_asset_manipulation-verbose: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
-	$(LIBTOOL) --mode=execute gdb -q \
-		--args $(builddir)/src/fty_asset_selftest -v -t fty_asset_manipulation
 	$(MAKE) check-empty-selftest-rw
 debug-asset_server: src/fty_asset_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute gdb -q \

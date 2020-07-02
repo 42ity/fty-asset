@@ -94,7 +94,6 @@ EXTRA_DIST += \
     src/dbhelpers.h \
     src/total_power.h \
     src/dns.h \
-    src/fty_asset_manipulation.h \
     src/asset-server.h \
     src/asset/asset.h \
     src/asset/asset-utils.h \

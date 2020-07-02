@@ -144,7 +144,6 @@
     <class name = "fty_asset_inventory" state = "stable" >Inventory server: process inventory ASSET messages and update extended attributes</class>
 
     <class name = "fty_asset_dto" state = "stable" >Asset DTO: defines ASSET attributes for data exchange</class>
-    <class name = "fty_asset_manipulation" state = "stable" private = "1" selftest = "0" >Helper functions to perform asset manipulation</class>
 
     <class name = "asset-server" state = "stable" private = "1" selftest = "0" >asset-server</class>
     <class name = "asset/asset" state = "stable" private = "1" selftest = "0" >asset/asset</class>

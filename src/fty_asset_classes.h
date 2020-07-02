@@ -119,10 +119,6 @@ typedef struct _total_power_t total_power_t;
 typedef struct _dns_t dns_t;
 #define DNS_T_DEFINED
 #endif
-#ifndef FTY_ASSET_MANIPULATION_T_DEFINED
-typedef struct _fty_asset_manipulation_t fty_asset_manipulation_t;
-#define FTY_ASSET_MANIPULATION_T_DEFINED
-#endif
 #ifndef ASSET_SERVER_T_DEFINED
 typedef struct _asset_server_t asset_server_t;
 #define ASSET_SERVER_T_DEFINED
@@ -185,7 +181,6 @@ typedef struct _asset_conversion_full_asset_t asset_conversion_full_asset_t;
 #include "dbhelpers.h"
 #include "total_power.h"
 #include "dns.h"
-#include "fty_asset_manipulation.h"
 #include "asset-server.h"
 #include "asset/asset.h"
 #include "asset/asset-utils.h"
