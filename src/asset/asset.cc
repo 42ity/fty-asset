@@ -107,6 +107,24 @@ static std::string generateUUID(
     return uuid;
 }
 
+// generate asset name
+static std::string createAssetName(const std::string& type, const std::string& subtype)
+{
+    std::string assetName;
+
+    srand(time(NULL));
+    // generate 8 digit random integer
+    unsigned long index = rand() % 100000000;
+
+    if (type == fty::TYPE_DEVICE) {
+        assetName = subtype + "-" + std::to_string(index);
+    } else {
+        assetName = type + "-" + std::to_string(index);
+    }
+
+    return assetName;
+}
+
 static AssetStorage& getStorage()
 {
     if (g_testMode) {
@@ -234,6 +252,8 @@ void AssetImpl::save()
         if (getId()) {
             m_storage.update(*this);
         } else { // create
+            // set internal name (type/subtype-<random id>)
+            setInternalName(createAssetName(getAssetType(), getAssetSubtype()));
             // set creation timestamp
             setExtEntry(fty::EXT_CREATE_TS, generateCurrentTimestamp(), true);
             // set uuid
@@ -254,8 +274,8 @@ void AssetImpl::save()
 void AssetImpl::restore(bool restoreLinks)
 {
     m_storage.beginTransaction();
-    // restore only if asset is not already in db and if it has uuid
-    if (getId() || (getUuid() == "")) {
+    // restore only if asset is not already in db
+    if (getId()) {
         throw std::runtime_error("Asset " + getInternalName() + " already exists, restore is not possible");
     }
     try {
@@ -351,36 +371,22 @@ void AssetImpl::unlinkAll()
 
 void AssetImpl::assetToSrr(const AssetImpl& asset, cxxtools::SerializationInfo& si)
 {
-    std::vector<AssetLink> linkUuid;
-
-    for (const auto& l : asset.getLinkedAssets()) {
-        AssetImpl link(l.sourceId);
-        AssetLink x(link.getUuid(), l.srcOut, l.destIn, l.linkType);
-        linkUuid.push_back(x);
-    }
     // basic
-    si.addMember("uuid") <<= asset.getUuid();
+    si.addMember("id") <<= asset.getInternalName();
     si.addMember("status") <<= int(asset.getAssetStatus());
     si.addMember("type") <<= asset.getAssetType();
     si.addMember("subtype") <<= asset.getAssetSubtype();
     si.addMember("priority") <<= asset.getPriority();
-    const std::string& parentIname = asset.getParentIname();
-    if (parentIname != "") {
-        AssetImpl parent(parentIname);
-        si.addMember("parent") <<= parent.getUuid();
-    } else {
-        si.addMember("parent") <<= "";
-    }
-    si.addMember("linked") <<= linkUuid;
+    si.addMember("parent") <<= asset.getParentIname();
+    si.addMember("linked") <<= asset.getLinkedAssets();
+
     // ext
     cxxtools::SerializationInfo& ext = si.addMember("");
 
     cxxtools::SerializationInfo data;
     for (const auto& e : asset.getExt()) {
-        if (e.first != "uuid") {
-            cxxtools::SerializationInfo& entry = data.addMember(e.first);
-            entry <<= e.second.first;
-        }
+        cxxtools::SerializationInfo& entry = data.addMember(e.first);
+        entry <<= e.second.first;
     }
     data.setCategory(cxxtools::SerializationInfo::Category::Object);
     ext = data;
@@ -393,10 +399,8 @@ void AssetImpl::srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& ass
     std::string tmpString;
 
     // uuid
-    si.getMember("uuid") >>= tmpString;
-    // WARNING iname is set to UUID, will be changed during restore
+    si.getMember("id") >>= tmpString;
     asset.setInternalName(tmpString);
-    asset.setExtEntry("uuid", tmpString);
 
     // status
     si.getMember("status") >>= tmpInt;
@@ -416,27 +420,21 @@ void AssetImpl::srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& ass
 
     // parend id
     si.getMember("parent") >>= tmpString;
-    // WARNING parent iname is set to UUID, will be changed during restore
     asset.setParentIname(tmpString);
 
     // linked assets
     std::vector<AssetLink> tmpVector;
-
     si.getMember("linked") >>= tmpVector;
-    for (const auto& l : tmpVector) {
-        // WARNING link iname is set to UUID, will be changed during restore
-        asset.setLinkedAssets(tmpVector);
-    }
+    asset.setLinkedAssets(tmpVector);
 
     // ext map
     const cxxtools::SerializationInfo ext = si.getMember("ext");
     for (const auto& si : ext) {
         std::string key = si.name();
-        if (key != "uuid") {
-            std::string val;
-            si >>= val;
-            asset.setExtEntry(key, val);
-        }
+        std::string val;
+        si >>= val;
+
+        asset.setExtEntry(key, val);
     }
 }
 

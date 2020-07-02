@@ -30,20 +30,6 @@ namespace fty {
 
 // static helpers
 
-// generate asset name
-static std::string createAssetName(const std::string& type, const std::string& subtype, long index)
-{
-    std::string assetName;
-
-    if (type == fty::TYPE_DEVICE) {
-        assetName = subtype + "-" + std::to_string(index);
-    } else {
-        assetName = type + "-" + std::to_string(index);
-    }
-
-    return assetName;
-}
-
 // DB
 DB::DB(bool test)
 {
@@ -140,7 +126,7 @@ std::vector<std::string> DB::getChildren(const Asset& asset)
 
     std::vector<std::string> children;
     for (const auto& row : result) {
-        children.push_back(row.getValue("name").getString());
+        children.push_back(row.getString("name"));
     }
 
     return children;
@@ -501,50 +487,44 @@ void DB::commitTransaction()
 
 void DB::update(Asset& asset)
 {
-    m_conn_lock.lock();
     // clang-format off
-    m_conn.prepareCached(R"(
+    auto q = m_conn.prepareCached(R"(
         UPDATE
             t_bios_asset_element
         SET
-           id_type = (SELECT id_asset_element_type FROM t_bios_asset_element_type WHERE name = :type),
-           id_subtype = (SELECT id_asset_device_type FROM t_bios_asset_device_type WHERE name = :subtype),
-           id_parent = (SELECT id_asset_element from (SELECT * FROM t_bios_asset_element) AS e where e.name = :parent),
+            id_type = (SELECT id_asset_element_type FROM t_bios_asset_element_type WHERE name = :type),
+            id_subtype = (SELECT id_asset_device_type FROM t_bios_asset_device_type WHERE name = :subtype),
+            id_parent = (SELECT id_asset_element from (SELECT * FROM t_bios_asset_element) AS e where e.name = :parent),
             status = :status,
             priority = :priority,
             asset_tag = :assetTag
         WHERE
             id_asset_element = :assetId
-    )")
-   .set("type", asset.getAssetType())
-   .set("subtype", asset.getAssetSubtype())
-   .set("parent", asset.getParentIname())
-   .set("status", assetStatusToString(asset.getAssetStatus()))
-   .set("priority", asset.getPriority())
-   .set("assetTag", asset.getAssetTag())
-   .set("assetId", asset.getId())
-   .execute();
-   m_conn_lock.unlock();
+    )");
     // clang-format on
+
+    q.set("type", asset.getAssetType());
+    q.set("subtype", asset.getAssetSubtype());
+    // name field can't be null, parent id is set to NULL if parentIname is empty
+    asset.getParentIname().empty() ? q.setNull("parent") : q.set("parent", asset.getParentIname());
+    q.set("status", assetStatusToString(asset.getAssetStatus()));
+    q.set("priority", asset.getPriority());
+    asset.getAssetTag().empty() ? q.setNull("assetTag") : q.set("assetTag", asset.getAssetTag());
+
+    m_conn_lock.lock();
+    q.execute();
+    m_conn_lock.unlock();
 }
 
 void DB::insert(Asset& asset)
 {
-    // temporary asset name
-    std::string assetName =
-        (asset.getAssetType() == TYPE_DEVICE ? asset.getAssetSubtype() : asset.getAssetType()) + "-@@-" +
-        std::to_string(rand());
-
-    asset.setInternalName(assetName);
-
-    m_conn_lock.lock();
     // clang-format off
-    m_conn.prepareCached(R"(
+    auto q = m_conn.prepareCached(R"(
         INSERT INTO
             t_bios_asset_element
             (name, id_type, id_subtype, id_parent, status, priority, asset_tag)
         VALUES (
-            CONCAT(:name, "-", COALESCE((SELECT MAX(e.id_asset_element)+1 FROM t_bios_asset_element as e), '1')),
+            :name,
             (SELECT id_asset_element_type FROM t_bios_asset_element_type WHERE name = :type),
             (SELECT id_asset_device_type FROM t_bios_asset_device_type WHERE name = :subtype),
             (SELECT p.id_asset_element FROM t_bios_asset_element AS p WHERE p.name = :parent),
@@ -552,43 +532,24 @@ void DB::insert(Asset& asset)
             :priority,
             :asset_tag
         )
-    )")
-    .set("name", asset.getInternalName())
-    .set("type", asset.getAssetType())
-    .set("subtype", asset.getAssetSubtype())
-    .set("parent", asset.getParentIname())
-    .set("status", assetStatusToString(fty::AssetStatus::Nonactive))    // always insert as non active, update after activation
-    .set("priority", asset.getPriority())
-    .set("assetTag", asset.getAssetTag())
-    .set("assetId", asset.getId())
-    .execute();
+    )");
     // clang-format on
-    m_conn_lock.unlock();
-
-    asset.setId(m_conn.lastInsertId());
-
-    // generate new asset name
-    asset.setInternalName(createAssetName(asset.getAssetType(), asset.getAssetSubtype(), asset.getId()));
+    q.set("name", asset.getInternalName());
+    q.set("type", asset.getAssetType());
+    q.set("subtype", asset.getAssetSubtype());
+    // name field can't be null, parent id is set to NULL if parentIname is empty
+    asset.getParentIname().empty() ? q.setNull("parent") : q.set("parent", asset.getParentIname());
+    // always insert as non active, update after activation
+    q.set("status", assetStatusToString(fty::AssetStatus::Nonactive));
+    q.set("priority", asset.getPriority());
+    asset.getAssetTag().empty() ? q.setNull("assetTag") : q.set("assetTag", asset.getAssetTag());
 
     m_conn_lock.lock();
-    // clang-format off
-    int affected = m_conn.prepareCached(R"(
-        UPDATE
-            t_bios_asset_element
-        SET
-            name = :name
-        WHERE
-            id_asset_element = :assetId
-    )")
-   .set("name", asset.getInternalName())
-   .set("assetId", asset.getId())
-   .execute();
-    // clang-format on
+    q.execute();
     m_conn_lock.unlock();
 
-    if (affected == 0) {
-        throw std::runtime_error(TRANSLATE_ME("Asset name update failed"));
-    }
+    // update ID after insertion
+    asset.setId(m_conn.lastInsertId());
 }
 
 std::string DB::inameById(uint32_t id)
@@ -681,7 +642,7 @@ void DB::saveLinkedAssets(Asset& asset)
 
         try {
             AssetImpl src(l.sourceId);
-            link(src, l.srcOut, asset, l.destIn);
+            link(src, l.srcOut, asset, l.destIn, l.linkType);
         } catch (std::runtime_error) {
             auto found = std::find_if(existing.begin(), existing.end(), [&](const Existing& e) {
                 return e.second == l;
@@ -696,7 +657,7 @@ void DB::saveLinkedAssets(Asset& asset)
         const AssetLink& l = toRem.second;
 
         AssetImpl src(l.sourceId);
-        unlink(src, l.srcOut, asset, l.destIn);
+        unlink(src, l.srcOut, asset, l.destIn, l.linkType);
     }
 }
 

@@ -562,22 +562,22 @@ static void buildRestoreTree(std::vector<AssetImpl>& v)
 
     for (const AssetImpl& a : v) {
         // create node if doesn't exist
-        ancestorMatrix[a.getUuid()];
-        if (a.getParentIname() != "") {
-            ancestorMatrix[a.getParentIname()].push_back(a.getUuid());
+        ancestorMatrix[a.getInternalName()];
+        if (!a.getParentIname().empty()) {
+            ancestorMatrix[a.getParentIname()].push_back(a.getInternalName());
         }
     }
 
     // iterate on each asset
     for (const auto& a : ancestorMatrix) {
-        std::string uuid     = a.first;
+        std::string id       = a.first;
         const auto& children = a.second;
 
         // find ancestors of asset a
         for (auto& x : ancestorMatrix) {
             auto& parentOf = x.second;
 
-            auto found = std::find(parentOf.begin(), parentOf.end(), uuid);
+            auto found = std::find(parentOf.begin(), parentOf.end(), id);
             // if x is parent of a, x inherits all children of a
             if (found != parentOf.end()) {
                 for (const auto& child : children) {
@@ -588,7 +588,7 @@ static void buildRestoreTree(std::vector<AssetImpl>& v)
     }
 
     std::sort(v.begin(), v.end(), [&](const AssetImpl& l, const AssetImpl& r) {
-        return ancestorMatrix[l.getUuid()].size() > ancestorMatrix[r.getUuid()].size();
+        return ancestorMatrix[l.getInternalName()].size() > ancestorMatrix[r.getInternalName()].size();
     });
 }
 
@@ -620,8 +620,6 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si, bool tryA
 
     buildRestoreTree(assetsToRestore);
 
-    std::map<std::string, std::string> assetInames;
-
     for (AssetImpl& a : assetsToRestore) {
         log_debug("Restoring asset %s...", a.getInternalName().c_str());
 
@@ -638,18 +636,9 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si, bool tryA
                         "license reached.");
                 }
             }
-            // update parent iname with new one
-            if (a.getParentIname() != "") {
-                a.setParentIname(assetInames[a.getParentIname()]);
-            }
-            // store previous iname (UUID)
-            std::string oldIname = a.getInternalName();
 
             // restore asset to db
             a.restore();
-
-            // save new iname
-            assetInames[oldIname] = a.getInternalName();
 
             // activate asset
             if (requestActivation) {
@@ -671,7 +660,7 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si, bool tryA
         try {
             auto links = a.getLinkedAssets();
             for (const auto& l : links) {
-                a.linkTo(assetInames[l.sourceId], l.srcOut, l.destIn);
+                a.linkTo(l.sourceId, l.srcOut, l.destIn, l.linkType);
             }
         } catch (std::exception& e) {
             log_error(e.what());
@@ -687,7 +676,7 @@ void AssetServer::getAsset(const messagebus::Message& msg, bool getFromUuid)
         std::string assetID = msg.userData().front();
         if (getFromUuid) {
             assetID = AssetImpl::getInameFromUuid(assetID);
-            if (assetID == "") {
+            if (assetID.empty()) {
                 throw std::runtime_error("requested UUID does not match any asset");
             }
         }
