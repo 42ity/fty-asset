@@ -474,11 +474,9 @@ s_should_filter (int filter_type, int type)
 }
 
 static bool
-s_order13 (const Item &i1, const Item &i2)
+fctOrderByName (const Item &i1, const Item &i2)
 {
-    if (i1.asset_order < i2.asset_order)
-        return true;
-    return false;
+    return (i1.name < i2.name);
 }
 
 // MVY: TODO - it turns out that topology call is way more simpler than this
@@ -546,7 +544,7 @@ topology2_from_json (
 
             processed.emplace (id);
         }
-        topo.sort (s_order13);
+        topo.sort (fctOrderByName);
         topo.groups.insert (topo.groups.end (), groups.begin (), groups.end ());
     }
 
@@ -589,7 +587,7 @@ s_topo_recursive (
             s_topo_recursive (it.contains, kids, nm, im);
         }
         topo.push_back (it);
-        topo.sort (s_order13);
+        topo.sort (fctOrderByName);
     }
 }
 
