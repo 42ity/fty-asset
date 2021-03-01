@@ -1013,6 +1013,12 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
             server.sendNotification(notification);
         } else if (streq(operation, "update")) {
             fty::AssetImpl currentAsset(asset.getInternalName());
+            // on update, add link info from current asset:
+            //    as fty-proto does not carry link info, they would be deleted on update
+            for(const auto& l : currentAsset.getLinkedAssets()) {
+                asset.addLink(l.sourceId(), l.srcOut(), l.destIn(), l.linkType(), l.ext());
+            }
+
             // force ID of asset to update
             log_debug("s_handle_subject_asset_manipulation(): Updating asset with internal name %s",
                 asset.getInternalName().c_str());
