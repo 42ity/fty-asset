@@ -6,110 +6,78 @@
 
 TEST_CASE("Asset names")
 {
-    fty::SampleDb db("");
+    fty::SampleDb db(R"(
+        items:
+          - type     : Ups
+            name     : ups
+            ext-name : Ups
+    )");
 
     tnt::Connection conn;
 
-    fty::asset::db::AssetElement el;
-    el.name      = "device";
-    el.status    = "active";
-    el.priority  = 1;
-    el.subtypeId = persist::subtype_to_subtypeid("ups");
-    el.typeId    = persist::type_to_typeid("device");
-
-    auto ret = fty::asset::db::insertIntoAssetElement(conn, el, true);
-    if (!ret) {
-        FAIL(ret.error());
-    }
-    REQUIRE(*ret > 0);
-
-    auto ret1 = fty::asset::db::insertIntoAssetExtAttributes(conn, *ret, {{"name", "Device name"}}, true);
-    if (!ret1) {
-        FAIL(ret1.error());
-    }
-    REQUIRE(*ret1 > 0);
-
     // Tests
-    SECTION("nameToAssetId")
+    // nameToAssetId
     {
-        auto id = fty::asset::db::nameToAssetId("device");
+        auto id = fty::asset::db::nameToAssetId("ups");
         if (!id) {
             FAIL(id.error());
         }
-        REQUIRE(*id == *ret);
+        REQUIRE(*id == db.idByName("ups"));
     }
 
-    SECTION("nameToAssetId/not found")
+    // nameToAssetId/not found
     {
         auto id = fty::asset::db::nameToAssetId("_device");
         CHECK(!id);
         REQUIRE(id.error() == "Element '_device' not found.");
     }
 
-    SECTION("idToNameExtName")
+    // idToNameExtName
     {
-        auto id = fty::asset::db::idToNameExtName(*ret);
+        auto id = fty::asset::db::idToNameExtName(db.idByName("ups"));
         if (!id) {
             FAIL(id.error());
         }
-        REQUIRE(id->first == "device");
-        REQUIRE(id->second == "Device name");
+        REQUIRE(id->first == "ups");
+        REQUIRE(id->second == "Ups");
     }
 
-    SECTION("idToNameExtName/not found")
+    // idToNameExtName/not found
     {
         auto id = fty::asset::db::idToNameExtName(uint32_t(-1));
         CHECK(!id);
         REQUIRE(id.error() == fmt::format("Element '{}' not found.", uint32_t(-1)));
     }
 
-    SECTION("extNameToAssetName")
+    // extNameToAssetName
     {
-        auto id = fty::asset::db::extNameToAssetName("Device name");
+        auto id = fty::asset::db::extNameToAssetName("Ups");
         if (!id) {
             FAIL(id.error());
         }
-        REQUIRE(*id == "device");
+        REQUIRE(*id == "ups");
     }
 
-    SECTION("extNameToAssetName/not found")
+    // extNameToAssetName/not found
     {
         auto id = fty::asset::db::extNameToAssetName("Some shit");
         CHECK(!id);
         REQUIRE(id.error() == "Element 'Some shit' not found.");
     }
 
-    SECTION("extNameToAssetId")
+    // extNameToAssetId
     {
-        auto id = fty::asset::db::extNameToAssetId("Device name");
+        auto id = fty::asset::db::extNameToAssetId("Ups");
         if (!id) {
             FAIL(id.error());
         }
-        REQUIRE(*id == *ret);
+        REQUIRE(*id == db.idByName("ups"));
     }
 
-    SECTION("extNameToAssetId/not found")
+    // extNameToAssetId/not found
     {
         auto id = fty::asset::db::extNameToAssetId("Some shit");
         CHECK(!id);
         REQUIRE(id.error() == "Element 'Some shit' not found.");
-    }
-
-    // Clean up
-    {
-        auto res = fty::asset::db::deleteAssetExtAttributesWithRo(conn, *ret, true);
-        if (!res) {
-            FAIL(res.error());
-        }
-        CHECK(res);
-        CHECK(res > 0);
-    }
-
-    {
-        auto res = fty::asset::db::deleteAssetElement(conn, *ret);
-        if (!res) {
-            FAIL(res.error());
-        }
-        REQUIRE(*res > 0);
     }
 }

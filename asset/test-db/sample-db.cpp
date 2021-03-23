@@ -23,7 +23,10 @@ struct DBData : pack::Node
         Hypervisor,
         VirtualMachine,
         Feed,
-        Rack
+        Rack,
+        Ups,
+        Row,
+        Room
     };
 
     struct Item : pack::Node
@@ -75,6 +78,12 @@ std::istream& operator>>(std::istream& ss, DBData::Types& value)
         value = DBData::Types::Feed;
     } else if (strval == "Rack") {
         value = DBData::Types::Rack;
+    } else if (strval == "Ups") {
+        value = DBData::Types::Ups;
+    } else if (strval == "Row") {
+        value = DBData::Types::Row;
+    } else if (strval == "Room") {
+        value = DBData::Types::Room;
     } else {
         value = DBData::Types::Unknown;
     }
@@ -110,6 +119,12 @@ static void createItem(tnt::Connection& conn, const DBData::Item& item, std::vec
                 return persist::DEVICE;
             case DBData::Types::Rack:
                 return persist::RACK;
+            case DBData::Types::Row:
+                return persist::ROW;
+            case DBData::Types::Room:
+                return persist::ROOM;
+            case DBData::Types::Ups:
+                return persist::DEVICE;
             case DBData::Types::Unknown:
                 return persist::TUNKNOWN;
         }
@@ -134,6 +149,12 @@ static void createItem(tnt::Connection& conn, const DBData::Item& item, std::vec
                 return persist::FEED;
             case DBData::Types::Rack:
                 return persist::SUNKNOWN;
+            case DBData::Types::Row:
+                return persist::SUNKNOWN;
+            case DBData::Types::Room:
+                return persist::SUNKNOWN;
+            case DBData::Types::Ups:
+                return persist::UPS;
             case DBData::Types::Unknown:
                 return persist::SUNKNOWN;
         }

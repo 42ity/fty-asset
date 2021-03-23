@@ -6,33 +6,16 @@
 
 TEST_CASE("Select asset")
 {
-    fty::SampleDb db("");
+    fty::SampleDb db(R"(
+        items:
+          - type     : Ups
+            name     : device
+            ext-name : Device name
+    )");
+
+    auto devId = db.idByName("device");
 
     tnt::Connection conn;
-
-    fty::asset::db::AssetElement el;
-    el.name      = "device";
-    el.status    = "active";
-    el.priority  = 1;
-    el.subtypeId = persist::subtype_to_subtypeid("ups");
-    el.typeId    = persist::type_to_typeid("device");
-
-    {
-        auto ret = fty::asset::db::insertIntoAssetElement(conn, el, true);
-        if (!ret) {
-            FAIL(ret.error());
-        }
-        REQUIRE(*ret > 0);
-        el.id = *ret;
-    }
-
-    {
-        auto ret = fty::asset::db::insertIntoAssetExtAttributes(conn, el.id, {{"name", "Device name"}}, true);
-        if (!ret) {
-            FAIL(ret.error());
-        }
-        REQUIRE(*ret > 0);
-    }
 
     fty::asset::db::AssetElement gr;
     gr.name      = "MyGroup";
@@ -50,7 +33,7 @@ TEST_CASE("Select asset")
     }
 
     {
-        auto ret = fty::asset::db::insertElementIntoGroups(conn, {gr.id}, el.id);
+        auto ret = fty::asset::db::insertElementIntoGroups(conn, {gr.id}, devId);
         if (!ret) {
             FAIL(ret.error());
         }
@@ -58,14 +41,14 @@ TEST_CASE("Select asset")
     }
 
 
-    SECTION("selectAssetElementByName")
+    // selectAssetElementByName
     {
         auto res = fty::asset::db::selectAssetElementByName("device");
         if (!res) {
             FAIL(res.error());
         }
         REQUIRE(res);
-        CHECK(res->id == el.id);
+        CHECK(res->id == devId);
         CHECK(res->name == "device");
         CHECK(res->status == "active");
         CHECK(res->priority == 1);
@@ -73,21 +56,21 @@ TEST_CASE("Select asset")
         CHECK(res->typeId == persist::type_to_typeid("device"));
     }
 
-    SECTION("selectAssetElementByName/wrong")
+    // selectAssetElementByName/wrong
     {
         auto res = fty::asset::db::selectAssetElementByName("mydevice");
         CHECK(!res);
         CHECK(res.error() == "Element 'mydevice' not found.");
     }
 
-    SECTION("selectAssetElementWebById")
+    // selectAssetElementWebById
     {
-        auto res = fty::asset::db::selectAssetElementWebById(el.id);
+        auto res = fty::asset::db::selectAssetElementWebById(devId);
         if (!res) {
             FAIL(res.error());
         }
         REQUIRE(res);
-        CHECK(res->id == el.id);
+        CHECK(res->id == devId);
         CHECK(res->name == "device");
         CHECK(res->status == "active");
         CHECK(res->priority == 1);
@@ -95,16 +78,16 @@ TEST_CASE("Select asset")
         CHECK(res->typeId == persist::type_to_typeid("device"));
     }
 
-    SECTION("selectAssetElementWebById/wrong")
+    // selectAssetElementWebById/wrong
     {
         auto res = fty::asset::db::selectAssetElementWebById(uint32_t(-1));
         CHECK(!res);
         CHECK(res.error() == fmt::format("Element '{}' not found.", uint32_t(-1)));
     }
 
-    SECTION("selectExtAttributes")
+    // selectExtAttributes
     {
-        auto res = fty::asset::db::selectExtAttributes(el.id);
+        auto res = fty::asset::db::selectExtAttributes(devId);
         if (!res) {
             FAIL(res.error());
         }
@@ -114,9 +97,9 @@ TEST_CASE("Select asset")
         CHECK((*res)["name"].readOnly == true);
     }
 
-    SECTION("selectAssetElementGroups")
+    // selectAssetElementGroups
     {
-        auto res = fty::asset::db::selectAssetElementGroups(el.id);
+        auto res = fty::asset::db::selectAssetElementGroups(devId);
         if (!res) {
             FAIL(res.error());
         }
@@ -125,7 +108,7 @@ TEST_CASE("Select asset")
         CHECK((*res)[gr.id] == "MyGroup");
     }
 
-    SECTION("selectAssetElementGroups/wrong")
+    // selectAssetElementGroups/wrong
     {
         auto res = fty::asset::db::selectAssetElementGroups(uint32_t(-1));
         if (!res) {
@@ -135,16 +118,16 @@ TEST_CASE("Select asset")
         CHECK(res->size() == 0);
     }
 
-    SECTION("selectAssetElementSuperParent")
+    // selectAssetElementSuperParent
     {
-        auto res = fty::asset::db::selectAssetElementSuperParent(el.id, [](const auto& /*row*/){});
+        auto res = fty::asset::db::selectAssetElementSuperParent(devId, [](const auto& /*row*/){});
         if (!res) {
             FAIL(res.error());
         }
         REQUIRE(res);
     }
 
-    SECTION("countKeytag")
+    // countKeytag
     {
         auto res = fty::asset::db::countKeytag("name", "Device name");
         if (!res) {
@@ -154,7 +137,7 @@ TEST_CASE("Select asset")
         CHECK(*res == 1);
     }
 
-    SECTION("selectShortElements")
+    // selectShortElements
     {
         auto res = fty::asset::db::selectShortElements(persist::type_to_typeid("device"), persist::subtype_to_subtypeid("ups"));
         if (!res) {
@@ -172,23 +155,6 @@ TEST_CASE("Select asset")
         }
         CHECK(res);
         CHECK(res > 0);
-    }
-
-    {
-        auto res = fty::asset::db::deleteAssetExtAttributesWithRo(conn, el.id, true);
-        if (!res) {
-            FAIL(res.error());
-        }
-        CHECK(res);
-        CHECK(res > 0);
-    }
-
-    {
-        auto res = fty::asset::db::deleteAssetElement(conn, el.id);
-        if (!res) {
-            FAIL(res.error());
-        }
-        REQUIRE(*res > 0);
     }
 
     {
