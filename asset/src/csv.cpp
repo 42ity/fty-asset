@@ -27,8 +27,15 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <type_traits>
 
 namespace fty::asset {
+
+template <typename T, typename = void>
+struct HasRead : std::false_type { };
+
+template <typename T>
+struct HasRead<T, decltype(std::declval<T>().read, void())> : std::true_type { };
 
 /* Workaround for a fact a) std::transform to do a strip and lower is weird, b) it breaks the map somehow*/
 static const std::string _ci_strip(const std::string& str)
@@ -205,11 +212,17 @@ bool hasApostrof(std::istream& i)
     i.seekg(0);
     return false;
 }
+
 CsvMap CsvMap_from_istream(std::istream& in)
 {
-    std::vector<std::vector<cxxtools::String>> data;
-    cxxtools::CsvDeserializer                  deserializer;
+#if CXXTOOLS_ATOMICITY
+    cxxtools::CsvDeserializer deserializer(in);
+#else
+    cxxtools::CsvDeserializer deserializer;
     deserializer.read(in);
+#endif
+
+    std::vector<std::vector<cxxtools::String>> data;
     char                                       delimiter = findDelimiter(in);
     if (delimiter == '\x0') {
         std::string msg = TRANSLATE_ME("Cannot detect the delimiter, use comma (,) semicolon (;) or tabulator");

@@ -26,6 +26,7 @@
 #include <fty_common_db_asset.h>
 #include <fty_common_rest.h>
 #include <fty_shm.h>
+#include <cxxtools/regex.h>
 
 namespace fty::asset {
 

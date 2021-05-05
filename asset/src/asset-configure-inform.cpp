@@ -24,6 +24,7 @@
 #include <fty_common_db.h>
 #include <fty_common_mlm_utils.h>
 #include <fty_proto.h>
+#include <thread>
 #include <malamute.h>
 #include <thread>
 #include "asset/logger.h"

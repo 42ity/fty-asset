@@ -40,6 +40,7 @@
 #include <time.h>
 #include <utility>
 #include <uuid/uuid.h>
+#include <fty_common_agents.h>
 
 #define AGENT_ASSET_ACTIVATOR "etn-licensing-credits"
 
