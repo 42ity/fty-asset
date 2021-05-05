@@ -25,6 +25,7 @@
 #include <fty_common_mlm_utils.h>
 #include <fty_proto.h>
 #include <malamute.h>
+#include <thread>
 #include "asset/logger.h"
 
 namespace fty::asset {

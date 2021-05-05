@@ -32,6 +32,7 @@
 #include "fty_proto.h"
 #include "fty_asset_dto.h"
 #include "fty_asset_server.h"
+#include <fty_log.h>
 
 #include <cxxtools/jsonserializer.h>
 

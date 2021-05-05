@@ -36,6 +36,7 @@
 #include <fty_log.h>
 #include <ftyproto.h>
 #include <fty/convert.h>
+#include <fty_common.h>
 
 namespace fty {
     BasicAsset::BasicAsset ()
