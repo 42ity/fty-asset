@@ -49,6 +49,7 @@ etn_target(shared ${PROJECT_NAME}-libng
         fty_common_rest
         fty_common_mlm
         fty_common_db
+        fty_common_socket
         czmq
         fty_proto
         fty_security_wallet
@@ -75,9 +76,11 @@ etn_target(shared ${PROJECT_NAME}-test-db
         fty-utils
         ${PROJECT_NAME}-libng
         fty_common_db
+        fty_common
         fty-pack
         mysqld
         stdc++fs
+        tntdb
 )
 
 if (BUILD_TESTING)
