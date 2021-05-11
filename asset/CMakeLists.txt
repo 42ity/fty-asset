@@ -55,6 +55,8 @@ etn_target(shared ${PROJECT_NAME}-libng
         fty-utils
 )
 
+########################################################################################################################
+
 etn_target(shared ${PROJECT_NAME}-test-db
     PUBLIC
         test-db/sample-db.h
@@ -83,7 +85,37 @@ etn_target(shared ${PROJECT_NAME}-test-db
         tntdb
 )
 
-if (BUILD_TESTING)
-    add_subdirectory(test)
-endif()
+########################################################################################################################
+
+etn_test_target(fty-asset-libng
+    SOURCES
+        test/main.cpp
+        test/db/insert.cpp
+        test/db/names.cpp
+        test/db/select.cpp
+
+        test/test-utils.h
+        test/read.cpp
+        test/create.cpp
+        test/import.cpp
+        test/export.cpp
+        test/delete.cpp
+        test/usize.cpp
+    CONFIGS
+        test/conf/logger.conf
+    USES
+        fty-utils
+        fty-asset-test-db
+        fty_common_db
+        tntdb
+        cxxtools
+        yaml-cpp
+        log4cplus
+        fty_common_logging
+        fty_common
+    SUBDIR
+        test
+)
+
+########################################################################################################################
 
