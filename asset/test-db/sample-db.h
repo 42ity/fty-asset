@@ -1,6 +1,7 @@
 #pragma once
 #include <fty/expected.h>
 #include <map>
+#include <vector>
 
 #if defined(CATCH_VERSION_MAJOR)
 #define REQUIRE_EXP(expr)\
