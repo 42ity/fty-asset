@@ -237,7 +237,7 @@ private:
         }
 
         m_elements = *res;
-        createTree(m_root, dc ? *dc : 0);
+        createTree(m_root, 0);
         collectLinks(m_root);
 
         // sort;

@@ -82,9 +82,9 @@ std::string getJsonAsset(uint32_t elemId)
 
     std::string parent_name;
     std::string ext_parent_name;
-    auto parent_names = db::idToNameExtName(tmp->parentId);
+    auto        parent_names = db::idToNameExtName(tmp->parentId);
     if (parent_names) {
-        parent_name = parent_names->first;
+        parent_name     = parent_names->first;
         ext_parent_name = parent_names->second;
     }
 
@@ -111,8 +111,14 @@ std::string getJsonAsset(uint32_t elemId)
         json += utils::json::jsonify("location_uri", "/api/v1/asset/" + parent_name) + ",";
         json += utils::json::jsonify("location_id", parent_name) + ",";
         json += utils::json::jsonify("location", ext_parent_name) + ",";
+
+        // Get informations from database
+        auto parentAsset = AssetManager::getItem(tmp->parentId);
+        json += utils::json::jsonify("location_type", trimmed(parentAsset->typeName)) + ",";
+
     } else {
         json += "\"location\":\"\",";
+        json += "\"location_type\":\"\",";
     }
 
     json += "\"groups\": [";
@@ -238,6 +244,10 @@ std::string getJsonAsset(uint32_t elemId)
         std::regex r_fqdn("^fqdn\\.[0-9][0-9]*$");
         for (auto& oneExt : tmp->extAttributes) {
             auto& attrName = oneExt.first;
+
+            // filter location_type (already present)
+            if (attrName == "location_type")
+                continue;
 
             if (attrName == "name")
                 continue;

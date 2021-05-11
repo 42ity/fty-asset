@@ -18,7 +18,6 @@ etn_target(shared ${PROJECT_NAME}-libng
         asset/error.h
         asset/logger.h
         asset/db.h
-        asset/test-db.h
 
     SOURCES
         src/json.cpp
@@ -39,17 +38,52 @@ etn_target(shared ${PROJECT_NAME}-libng
         src/manager/export.cpp
     INCLUDE_DIRS src
     USES
-        fty_common_logging
         mlm
         fty-asset
-        fty_common
-        fty-utils
         fty_shm
         fty_common_rest
-        fty_common_mlm
-        fty_common_db
-        fty_common_socket
         czmq
         fty_proto
         fty_security_wallet
+        fty_common_dto
+    USES_PUBLIC
+        fty_common_logging
+        fty_common_mlm
+        fty_common_db
+        fty_common
+        fty_common_socket
+        fty-utils
 )
+
+etn_target(shared ${PROJECT_NAME}-test-db
+    PUBLIC
+        test-db/sample-db.h
+        test-db/test-db.h
+    SOURCES
+        test-db/structure/bios_asset_element_type.h
+        test-db/structure/bios_asset_device_type.h
+        test-db/structure/bios_asset_element.h
+        test-db/structure/bios_asset_link_type.h
+        test-db/structure/bios_asset_ext_attributes.h
+        test-db/structure/bios_asset_group_relation.h
+        test-db/structure/bios_asset_link.h
+        test-db/structure/bios_device_type.h
+        test-db/structure/bios_discovered_device.h
+        test-db/structure/bios_monitor_asset_relation.h
+        test-db/sample-db.cpp
+        test-db/test-db.cpp
+    USES
+        fty-utils
+        ${PROJECT_NAME}-libng
+        fty_common_db
+        fty_common
+        fty-pack
+        mysqld
+        stdc++fs
+        tntdb
+)
+
+if (BUILD_TESTING)
+    add_subdirectory(test)
+endif()
+

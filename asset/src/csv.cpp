@@ -215,13 +215,7 @@ bool hasApostrof(std::istream& i)
 
 CsvMap CsvMap_from_istream(std::istream& in)
 {
-#if CXXTOOLS_ATOMICITY
     cxxtools::CsvDeserializer deserializer(in);
-#else
-    cxxtools::CsvDeserializer deserializer;
-    deserializer.read(in);
-#endif
-
     std::vector<std::vector<cxxtools::String>> data;
     char                                       delimiter = findDelimiter(in);
     if (delimiter == '\x0') {
