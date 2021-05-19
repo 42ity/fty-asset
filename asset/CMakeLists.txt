@@ -43,6 +43,8 @@ etn_target(shared ${PROJECT_NAME}-libng
         fty_shm
         fty_common_rest
         czmq
+        tntdb
+        cxxtools
         fty_proto
         fty_security_wallet
         fty_common_dto
@@ -83,6 +85,7 @@ etn_target(shared ${PROJECT_NAME}-test-db
         mysqld
         stdc++fs
         tntdb
+        cxxtools
 )
 
 ########################################################################################################################
