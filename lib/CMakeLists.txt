@@ -17,7 +17,7 @@ etn_target(shared ${PROJECT_NAME}
     PUBLIC
         fty_asset_dto.h
         fty_common_asset.h
-        USES_PRIVATE
+    USES_PRIVATE
         czmq
         cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
         fty_common

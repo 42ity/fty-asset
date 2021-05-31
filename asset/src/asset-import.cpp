@@ -260,7 +260,7 @@ AssetExpected<db::AssetElement> Import::processRow(
 
     if (!idStr.empty()) {
         if (auto tmp = db::nameToAssetId(idStr)) {
-            id = uint32_t(*tmp);
+            id = *tmp;
         } else {
             return unexpected(error(Errors::ElementNotFound).format(idStr));
         }

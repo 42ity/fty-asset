@@ -59,7 +59,7 @@ static void fetchWebAsset(const tnt::Row& row, WebAssetElement& asset)
 
 // =====================================================================================================================
 
-Expected<int64_t> nameToAssetId(const std::string& assetName)
+Expected<uint32_t> nameToAssetId(const std::string& assetName)
 {
     static const std::string sql = R"(
         SELECT
@@ -74,7 +74,7 @@ Expected<int64_t> nameToAssetId(const std::string& assetName)
 
         auto res = db.selectRow(sql, "assetName"_p = assetName);
 
-        return res.get<int64_t>("id_asset_element");
+        return res.get<uint32_t>("id_asset_element");
     } catch (const tntdb::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetName));
     } catch (const std::exception& e) {
@@ -164,7 +164,7 @@ Expected<std::string> extNameToAssetName(const std::string& assetExtName)
 
 // =====================================================================================================================
 
-Expected<int64_t> extNameToAssetId(const std::string& assetExtName)
+Expected<uint32_t> extNameToAssetId(const std::string& assetExtName)
 {
     static const std::string sql = R"(
         SELECT
@@ -183,7 +183,7 @@ Expected<int64_t> extNameToAssetId(const std::string& assetExtName)
 
         auto res = db.selectRow(sql, "extName"_p = assetExtName);
 
-        return res.get<int64_t>("id_asset_element");
+        return res.get<uint32_t>("id_asset_element");
     } catch (const tntdb::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetExtName));
     } catch (const std::exception& e) {
@@ -284,6 +284,30 @@ Expected<void> selectAssetElementWebById(uint32_t elementId, WebAssetElement& as
         return unexpected(error(Errors::ElementNotFound).format(elementId));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
+    }
+}
+
+// =====================================================================================================================
+
+Expected<WebAssetElement> selectAssetElementWebByName(const std::string& name)
+{
+    static const std::string sql = webAssetSql() + R"(
+        WHERE
+            :name = v.name
+    )";
+
+    try {
+        tnt::Connection db;
+
+        auto row = db.selectRow(sql, "name"_p = name);
+
+        WebAssetElement asset;
+        fetchWebAsset(row, asset);
+        return asset;
+    } catch (const tntdb::NotFound&) {
+        return unexpected(error(Errors::ElementNotFound).format(name));
+    } catch (const std::exception& e) {
+        return unexpected(error(Errors::ExceptionForElement).format(e.what(), name));
     }
 }
 
@@ -974,6 +998,57 @@ Expected<void> selectAssetsByContainer(tnt::Connection& conn, uint32_t elementId
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
+}
+
+// =====================================================================================================================
+
+Expected<void> selectAssetsByContainer(uint32_t elementId, SelectCallback&& cb)
+{
+    tnt::Connection conn;
+    return selectAssetsByContainer(conn, elementId, {}, {}, "", "", std::move(cb));
+}
+
+// =====================================================================================================================
+
+Expected<void> selectAssetsWithoutContainer(
+    const std::vector<uint16_t>& types, const std::vector<uint16_t>& subtypes, SelectCallback&& cb)
+{
+    std::string select = R"(
+        SELECT
+            t.name,
+            t.id_asset_element as asset_id,
+            t.id_type as type_id,
+            t.id_subtype as subtype_id
+        FROM
+            t_bios_asset_element AS t
+        WHERE
+            t.id_parent is NULL
+    )";
+
+    if (!subtypes.empty()) {
+        std::string list = implode(subtypes, ", ", [](const auto& it) {
+            return std::to_string(it);
+        });
+        select += " AND t.id_asset_device_type in (" + list + ")";
+    }
+
+    if (!types.empty()) {
+        std::string list = implode(types, ", ", [](const auto& it) {
+            return std::to_string(it);
+        });
+        select += " AND t.id_type in (" + list + ")";
+    }
+
+    try {
+        tnt::Connection conn;
+        for (const auto& row : conn.select(select)) {
+            cb(row);
+        }
+    } catch (const std::exception& e) {
+        return unexpected(error(Errors::InternalError).format(e.what()));
+    }
+
+    return {};
 }
 
 // =====================================================================================================================

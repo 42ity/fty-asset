@@ -55,7 +55,7 @@ static bool getDcUPSes(tnt::Connection& conn, const std::string& assetName, zhas
     }
 
     auto rv = db::selectAssetsByContainer(
-        conn, uint32_t(*dcId), {persist::asset_type::DEVICE}, {persist::asset_subtype::UPS}, "", "active", cb);
+        conn, *dcId, {persist::asset_type::DEVICE}, {persist::asset_subtype::UPS}, "", "active", cb);
 
     if (!rv) {
         return false;
