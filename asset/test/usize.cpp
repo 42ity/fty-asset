@@ -1,6 +1,7 @@
 #include "asset/asset-db.h"
 #include "asset/asset-manager.h"
 #include "test-utils.h"
+#include <test-db/sample-db.h>
 
 template <typename T>
 struct Holder
@@ -65,57 +66,65 @@ static Holder<fty::asset::db::AssetElement> placeAsset(fty::asset::db::AssetElem
 
 TEST_CASE("USize")
 {
-    assets::DataCenter dc("datacenter");
-    assets::Row        row("row", dc);
-    assets::Rack       rack("rack", row);
+    fty::SampleDb db(R"(
+        items:
+            - type     : Datacenter
+              name     : datacenter
+              ext-name : Data Center
+              items :
+                  - type     : Row
+                    name     : row
+                    items    :
+                    - type : Rack
+                      name : rack
+                      attrs :
+                          u_size: 10
 
-    rack.setExtAttributes({{"u_size", "10"}});
+        )");
+
+    auto rack = fty::asset::db::selectAssetElementWebByName("rack");
 
     SECTION("Fit it")
     {
-        auto el  = placeAsset(rack, 1, 1, true);
-        auto el1 = placeAsset(rack, 1, 2, true);
-        auto el2 = placeAsset(rack, 1, 3, true);
-        auto el3 = placeAsset(rack, 1, 4, true);
+        auto el  = placeAsset(*rack, 1, 1, true);
+        auto el1 = placeAsset(*rack, 1, 2, true);
+        auto el2 = placeAsset(*rack, 1, 3, true);
+        auto el3 = placeAsset(*rack, 1, 4, true);
     }
 
     SECTION("Wrong pos")
     {
-        auto el  = placeAsset(rack, 2, 1, true);
-        auto el1 = placeAsset(rack, 1, 2, false);
+        auto el  = placeAsset(*rack, 2, 1, true);
+        auto el1 = placeAsset(*rack, 1, 2, false);
     }
 
     SECTION("Fit it 2")
     {
-        auto el  = placeAsset(rack, 2, 1, true);
-        auto el1 = placeAsset(rack, 1, 4, true);
-        auto el2 = placeAsset(rack, 1, 5, true);
-        auto el3 = placeAsset(rack, 1, 6, true);
+        auto el  = placeAsset(*rack, 2, 1, true);
+        auto el1 = placeAsset(*rack, 1, 4, true);
+        auto el2 = placeAsset(*rack, 1, 5, true);
+        auto el3 = placeAsset(*rack, 1, 6, true);
     }
 
     SECTION("Huge")
     {
-        auto el  = placeAsset(rack, 10, 1, true);
+        auto el  = placeAsset(*rack, 10, 1, true);
     }
 
     SECTION("Huge fail")
     {
-        auto el  = placeAsset(rack, 11, 1, false);
+        auto el  = placeAsset(*rack, 11, 1, false);
     }
 
     SECTION("Border pos")
     {
-        auto el  = placeAsset(rack, 1, 9, true);
-        auto el1 = placeAsset(rack, 1, 10, true);
+        auto el  = placeAsset(*rack, 1, 9, true);
+        auto el1 = placeAsset(*rack, 1, 10, true);
     }
 
     SECTION("Border pos wrong")
     {
-        auto el  = placeAsset(rack, 1, 9, true);
-        auto el1 = placeAsset(rack, 2, 10, false);
+        auto el  = placeAsset(*rack, 1, 9, true);
+        auto el1 = placeAsset(*rack, 2, 10, false);
     }
-
-    deleteAsset(rack);
-    deleteAsset(row);
-    deleteAsset(dc);
 }
