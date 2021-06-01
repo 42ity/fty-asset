@@ -77,15 +77,16 @@ etn_target(shared ${PROJECT_NAME}-test-db
         test-db/sample-db.cpp
         test-db/test-db.cpp
     USES
-        fty-utils
         ${PROJECT_NAME}-libng
-        fty_common_db
-        fty_common
-        fty-pack
         mysqld
         stdc++fs
         tntdb
         cxxtools
+    USES_PUBLIC
+        fty-utils
+        fty_common_db
+        fty_common
+        fty-pack
 )
 
 ########################################################################################################################
@@ -107,15 +108,8 @@ etn_test_target(fty-asset-libng
     CONFIGS
         test/conf/logger.conf
     USES
-        fty-utils
         fty-asset-test-db
-        fty_common_db
-        tntdb
-        cxxtools
         yaml-cpp
-        log4cplus
-        fty_common_logging
-        fty_common
     SUBDIR
         test
 )
