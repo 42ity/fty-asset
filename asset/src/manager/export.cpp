@@ -1,6 +1,6 @@
 #include "asset/asset-manager.h"
 #include <cxxtools/csvserializer.h>
-#include <fty/split.h>
+#include <fty/string-utils.h>
 
 namespace fty::asset {
 

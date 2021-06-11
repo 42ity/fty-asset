@@ -1,7 +1,7 @@
 #pragma once
 
 #include <fmt/format.h>
-#include <fty/split.h>
+#include <fty/string-utils.h>
 #include <fty/traits.h>
 #include <fty_common_db_dbpath.h>
 #include <tntdb.h>

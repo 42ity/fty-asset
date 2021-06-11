@@ -4,8 +4,7 @@
 #include "asset/csv.h"
 #include "asset/db.h"
 #include "asset/json.h"
-#include "asset/logger.h"
-#include <fty/split.h>
+#include <fty/string-utils.h>
 #include <fty_common_db_dbpath.h>
 #include <fty_log.h>
 #include <regex>

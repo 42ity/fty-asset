@@ -4,10 +4,10 @@
 #include "asset/asset-manager.h"
 #include "asset/asset-helpers.h"
 #include "asset/csv.h"
-#include "asset/logger.h"
 #include <fty_asset_dto.h>
 #include <cxxtools/jsondeserializer.h>
 #include <mutex>
+#include <fty_log.h>
 
 namespace fty::asset {
 

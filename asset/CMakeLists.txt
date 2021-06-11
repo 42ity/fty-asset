@@ -18,7 +18,6 @@ etn_target(shared ${PROJECT_NAME}-libng
         asset/db.h
         asset/error.h
         asset/json.h
-        asset/logger.h
 
     SOURCES
         src/json.cpp

@@ -19,8 +19,7 @@
  */
 
 #include "asset/asset-cam.h"
-#include "asset/logger.h"
-
+#include <fty_log.h>
 #include <algorithm>
 // #include <fty/split.h>
 #include <fty_security_wallet.h>

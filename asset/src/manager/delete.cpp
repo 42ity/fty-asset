@@ -3,9 +3,9 @@
 #include "asset/asset-manager.h"
 #include "asset/db.h"
 #include "asset/json.h"
-#include "asset/logger.h"
 #include <fty_common_asset_types.h>
 #include "asset/asset-helpers.h"
+#include <fty_log.h>
 
 namespace fty::asset {
 

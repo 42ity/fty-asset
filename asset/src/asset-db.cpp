@@ -1,11 +1,11 @@
 #include "asset/asset-db.h"
 #include "asset/db.h"
 #include "asset/error.h"
-#include "asset/logger.h"
-#include <fty/split.h>
+#include <fty/string-utils.h>
 #include <fty/translate.h>
 #include <fty_common_asset_types.h>
 #include <sys/time.h>
+#include <fty_log.h>
 
 #define MAX_CREATE_RETRY 10
 

@@ -1,7 +1,7 @@
 #include "asset/asset-manager.h"
 #include <asset/db.h>
 #include <catch2/catch.hpp>
-#include <fty/split.h>
+#include <fty/string-utils.h>
 #include <test-db/sample-db.h>
 
 using namespace fmt::literals;
