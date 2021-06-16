@@ -965,7 +965,7 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
     }
     zstr_free(&read_only_s);
 
-    if (!is_fty_proto(zmessage)) {
+    if (!fty_proto_is(zmessage)) {
         log_error("%s:\tASSET_MANIPULATION: receiver message is not fty_proto", client_name.c_str());
         zmsg_destroy(&reply);
         return;
@@ -1346,7 +1346,7 @@ void fty_asset_server(zsock_t* pipe, void* args)
             if (zmessage == NULL) {
                 continue;
             }
-            if (is_fty_proto(zmessage)) {
+            if (fty_proto_is(zmessage)) {
                 fty_proto_t* bmsg = fty_proto_decode(&zmessage);
                 if (fty_proto_id(bmsg) == FTY_PROTO_ASSET) {
                     s_update_topology(server, bmsg);
@@ -1501,7 +1501,7 @@ void fty_asset_server_test(bool /*verbose*/)
             zstr_free(&str);
             zmsg_destroy(&reply);
         } else {
-            assert (is_fty_proto(reply));
+            assert (fty_proto_is(reply));
             fty_proto_t* fmsg             = fty_proto_decode(&reply);
             std::string  expected_subject = "unknown.unknown@";
             expected_subject.append(asset_name);
@@ -1523,7 +1523,7 @@ void fty_asset_server_test(bool /*verbose*/)
             zstr_free(&str);
             zmsg_destroy(&reply);
         } else {
-            assert (is_fty_proto(reply));
+            assert (fty_proto_is(reply));
             fty_proto_t* fmsg             = fty_proto_decode(&reply);
             std::string  expected_subject = "unknown.unknown@";
             expected_subject.append(asset_name);

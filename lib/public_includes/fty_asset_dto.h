@@ -30,7 +30,7 @@
 #include <string>
 
 // fwd declaration
-typedef struct _fty_proto_t fty_proto_t;
+struct fty_proto_t;
 
 namespace fty {
 // extended properties
