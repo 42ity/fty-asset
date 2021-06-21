@@ -5,7 +5,7 @@
 #include <set>
 #include <vector>
 
-namespace tnt {
+namespace fty::db {
 class Connection;
 class Row;
 } // namespace tnt
@@ -71,7 +71,7 @@ struct WebAssetElementExt : public WebAssetElement
     std::vector<std::tuple<uint32_t, std::string, std::string, std::string>> parents; // list of parents (id, name)
 };
 
-using SelectCallback = std::function<void(const tnt::Row&)>;
+using SelectCallback = std::function<void(const fty::db::Row&)>;
 
 // =====================================================================================================================
 
@@ -141,7 +141,7 @@ Expected<std::map<uint32_t, std::string>> selectAssetElementGroups(uint32_t elem
 /// @param priority priority
 /// @param assetTag asset tag
 /// @return affected rows count or error
-Expected<uint> updateAssetElement(tnt::Connection& conn, uint32_t elementId, uint32_t parentId,
+Expected<uint> updateAssetElement(fty::db::Connection& conn, uint32_t elementId, uint32_t parentId,
     const std::string& status, uint16_t priority, const std::string& assetTag); //! test
 
 /// Deletes all ext attributes of given asset with given 'read_only' status
@@ -149,28 +149,28 @@ Expected<uint> updateAssetElement(tnt::Connection& conn, uint32_t elementId, uin
 /// @param elementId asset element id
 /// @param readOnly read only flag
 /// @return deleted rows or error
-Expected<uint> deleteAssetExtAttributesWithRo(tnt::Connection& conn, uint32_t elementId, bool readOnly); //! test
+Expected<uint> deleteAssetExtAttributesWithRo(fty::db::Connection& conn, uint32_t elementId, bool readOnly); //! test
 
 /// Insert given ext attributes map into t_bios_asset_ext_attributes
 /// @param conn database established connection
 /// @param attributes attributes map - {key, value}
 /// @param readOnly 'read_only' status
 /// @return affected rows count or error
-Expected<uint> insertIntoAssetExtAttributes(tnt::Connection& conn, uint32_t elementId,
+Expected<uint> insertIntoAssetExtAttributes(fty::db::Connection& conn, uint32_t elementId,
     const std::map<std::string, std::string>& attributes, bool readOnly); //! test
 
 /// Delete asset from all group
 /// @param conn database established connection
 /// @param elementId asset element id to delete
 /// @return count of affected rows or error
-Expected<uint> deleteAssetElementFromAssetGroups(tnt::Connection& conn, uint32_t elementId); //! test
+Expected<uint> deleteAssetElementFromAssetGroups(fty::db::Connection& conn, uint32_t elementId); //! test
 
 /// Inserts info about an asset
 /// @param conn database established connection
 /// @param element element to insert
 /// @param update update or insert flag
 /// @return count of affected rows or error
-Expected<uint32_t> insertIntoAssetElement(tnt::Connection& conn, const AssetElement& element, bool update); //! test
+Expected<uint32_t> insertIntoAssetElement(fty::db::Connection& conn, const AssetElement& element, bool update); //! test
 
 /// Inserts asset into groups
 /// @param conn database established connection
@@ -178,25 +178,25 @@ Expected<uint32_t> insertIntoAssetElement(tnt::Connection& conn, const AssetElem
 /// @param elementId element id
 /// @return count of affected rows or error
 Expected<uint> insertElementIntoGroups(
-    tnt::Connection& conn, const std::set<uint32_t>& groups, uint32_t elementId); //! test
+    fty::db::Connection& conn, const std::set<uint32_t>& groups, uint32_t elementId); //! test
 
 /// Deletes all links which have given asset as 'dest'
 /// @param conn database established connection
 /// @param elementId element id
 /// @return count of affected rows or error
-Expected<uint> deleteAssetLinksTo(tnt::Connection& conn, uint32_t elementId); //! test
+Expected<uint> deleteAssetLinksTo(fty::db::Connection& conn, uint32_t elementId); //! test
 
 /// Inserts powerlink info
 /// @param conn database established connection
 /// @param link powerlink info
 /// @return inserted id or error
-Expected<int64_t> insertIntoAssetLink(tnt::Connection& conn, const AssetLink& link); //! test
+Expected<int64_t> insertIntoAssetLink(fty::db::Connection& conn, const AssetLink& link); //! test
 
 /// Inserts powerlink infos
 /// @param conn database established connection
 /// @param links list of powerlink info
 /// @return count of inserted links or error
-Expected<uint> insertIntoAssetLinks(tnt::Connection& conn, const std::vector<AssetLink>& links); //! test
+Expected<uint> insertIntoAssetLinks(fty::db::Connection& conn, const std::vector<AssetLink>& links); //! test
 
 /// Inserts name<->device_type relation
 /// @param conn database established connection
@@ -204,7 +204,7 @@ Expected<uint> insertIntoAssetLinks(tnt::Connection& conn, const std::vector<Ass
 /// @param deviceName device name
 /// @return new relation id or error
 Expected<uint16_t> insertIntoMonitorDevice(
-    tnt::Connection& conn, uint16_t deviceTypeId, const std::string& deviceName); //! test
+    fty::db::Connection& conn, uint16_t deviceTypeId, const std::string& deviceName); //! test
 
 /// Inserts monitor_id<->element_id relation
 /// @param conn database established connection
@@ -212,13 +212,13 @@ Expected<uint16_t> insertIntoMonitorDevice(
 /// @param elementId element id
 /// @return new relation id or error
 Expected<int64_t> insertIntoMonitorAssetRelation(
-    tnt::Connection& conn, uint16_t monitorId, uint32_t elementId); //! test
+    fty::db::Connection& conn, uint16_t monitorId, uint32_t elementId); //! test
 
 /// Selects id based on name from v_bios_device_type
 /// @param conn database established connection
 /// @param deviceTypeName device type name
 /// @return device type id or error
-Expected<uint16_t> selectMonitorDeviceTypeId(tnt::Connection& conn, const std::string& deviceTypeName); //! test
+Expected<uint16_t> selectMonitorDeviceTypeId(fty::db::Connection& conn, const std::string& deviceTypeName); //! test
 
 /// Selects parents of given device
 /// @param id asset element id
@@ -235,7 +235,7 @@ Expected<void> selectAssetElementSuperParent(uint32_t id, SelectCallback&& cb); 
 /// @param status asset status
 /// @param cb callback function
 /// @return nothing or error
-Expected<void> selectAssetsByContainer(tnt::Connection& conn, uint32_t elementId, std::vector<uint16_t> types,
+Expected<void> selectAssetsByContainer(fty::db::Connection& conn, uint32_t elementId, std::vector<uint16_t> types,
     std::vector<uint16_t> subtypes, const std::string& without, const std::string& status, SelectCallback&& cb);
 
 /// Selects assets from given container
@@ -279,19 +279,19 @@ Expected<uint16_t> convertAssetToMonitor(uint32_t assetElementId);
 /// @param conn database established connection
 /// @param id asset element id
 /// @return count of affected rows or error
-Expected<uint> deleteMonitorAssetRelationByA(tnt::Connection& conn, uint32_t id); //! test
+Expected<uint> deleteMonitorAssetRelationByA(fty::db::Connection& conn, uint32_t id); //! test
 
 /// Deletes asset from t_bios_asset_element
 /// @param conn database established connection
 /// @param elementId asset element id
 /// @return count of affected rows or error
-Expected<uint> deleteAssetElement(tnt::Connection& conn, uint32_t elementId); //! test
+Expected<uint> deleteAssetElement(fty::db::Connection& conn, uint32_t elementId); //! test
 
 /// Deletes all data about a group
 /// @param conn database established connection
 /// @param assetGroupId asset group id
 /// @return count of affected rows or error
-Expected<uint> deleteAssetGroupLinks(tnt::Connection& conn, uint32_t assetGroupId); //! test
+Expected<uint> deleteAssetGroupLinks(fty::db::Connection& conn, uint32_t assetGroupId); //! test
 
 /// Selects childrent element id
 /// @param parentId parent id

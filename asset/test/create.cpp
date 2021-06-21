@@ -1,6 +1,6 @@
 #include "asset/asset-manager.h"
-#include "asset/db.h"
 #include <catch2/catch.hpp>
+#include <fty_common_db_connection.h>
 #include <test-db/sample-db.h>
 
 TEST_CASE("Create asset")
@@ -46,7 +46,7 @@ TEST_CASE("Wrong power")
               name     : feed
         )");
 
-    tnt::Connection           conn;
+    fty::db::Connection       conn;
     fty::asset::db::AssetLink link;
     link.dest = db.idByName("feed");
     link.src  = db.idByName("feed");

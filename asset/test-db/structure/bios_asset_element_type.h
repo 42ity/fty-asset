@@ -1,8 +1,8 @@
-#include "asset/db.h"
+#include <fty_common_db_connection.h>
 
 namespace fty {
 
-void createElementType(tnt::Connection& conn)
+void createElementType(fty::db::Connection& conn)
 {
     conn.execute(R"(
         CREATE TABLE t_bios_asset_element_type (

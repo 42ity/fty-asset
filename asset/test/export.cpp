@@ -1,5 +1,5 @@
 #include "asset/asset-manager.h"
-#include <asset/db.h>
+#include <fty_common_db_connection.h>
 #include <catch2/catch.hpp>
 #include <fty/string-utils.h>
 #include <test-db/sample-db.h>
@@ -59,7 +59,7 @@ TEST_CASE("Export asset / Wrong order")
                     ext-name : Rack
     )");
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
     auto ret = fty::asset::db::updateAssetElement(conn, db.idByName("srv1"), db.idByName("rack"), "active", 1, "tag");
 
     auto exp = fty::asset::AssetManager::exportCsv();

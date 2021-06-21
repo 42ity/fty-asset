@@ -1,7 +1,7 @@
 #include "asset/asset-cam.h"
 #include "asset/asset-db.h"
 #include "asset/asset-manager.h"
-#include "asset/db.h"
+#include <fty_common_db_connection.h>
 #include "asset/json.h"
 #include <fty_common_asset_types.h>
 #include "asset/asset-helpers.h"
@@ -103,9 +103,9 @@ static bool checkFeed(const db::AssetElement& asset)
         return true;
     }
 
-    tnt::Connection       conn;
+    fty::db::Connection       conn;
     std::vector<uint32_t> ids;
-    db::selectAssetsByContainer(conn, ret->id, {persist::DEVICE}, {persist::FEED}, {}, {}, [&](const tnt::Row& row) {
+    db::selectAssetsByContainer(conn, ret->id, {persist::DEVICE}, {persist::FEED}, {}, {}, [&](const fty::db::Row& row) {
         ids.push_back(row.get<uint32_t>("asset_id"));
     });
 
@@ -293,8 +293,8 @@ std::map<std::string, AssetExpected<db::AssetElement>> AssetManager::deleteAsset
 
 AssetExpected<db::AssetElement> AssetManager::deleteDcRoomRowRack(const db::AssetElement& element)
 {
-    tnt::Connection  conn;
-    tnt::Transaction trans(conn);
+    fty::db::Connection  conn;
+    fty::db::Transaction trans(conn);
 
     static const std::string countSql = R"(
         SELECT
@@ -348,8 +348,8 @@ AssetExpected<db::AssetElement> AssetManager::deleteDcRoomRowRack(const db::Asse
 
 AssetExpected<db::AssetElement> AssetManager::deleteGroup(const db::AssetElement& element)
 {
-    tnt::Connection  conn;
-    tnt::Transaction trans(conn);
+    fty::db::Connection  conn;
+    fty::db::Transaction trans(conn);
 
     if (auto ret = db::deleteAssetGroupLinks(conn, element.id); !ret) {
         trans.rollback();
@@ -369,8 +369,8 @@ AssetExpected<db::AssetElement> AssetManager::deleteGroup(const db::AssetElement
 
 AssetExpected<db::AssetElement> AssetManager::deleteDevice(const db::AssetElement& element)
 {
-    tnt::Connection  conn;
-    tnt::Transaction trans(conn);
+    fty::db::Connection  conn;
+    fty::db::Transaction trans(conn);
 
     if (auto ret = db::deleteAssetElementFromAssetGroups(conn, element.id); !ret) {
         trans.rollback();

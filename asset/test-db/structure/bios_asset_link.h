@@ -1,8 +1,8 @@
-#include "asset/db.h"
+#include <fty_common_db_connection.h>
 
 namespace fty {
 
-void createAssetLink(tnt::Connection& conn)
+void createAssetLink(fty::db::Connection& conn)
 {
     conn.execute(R"(
         CREATE TABLE t_bios_asset_link (

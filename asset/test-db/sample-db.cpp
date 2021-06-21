@@ -1,8 +1,8 @@
 #include "sample-db.h"
 #include "test-db/test-db.h"
 #include <asset/asset-db.h>
-#include <asset/db.h>
 #include <fty_common_asset_types.h>
+#include <fty_common_db_connection.h>
 #include <pack/pack.h>
 
 namespace fty {
@@ -98,7 +98,7 @@ std::ostream& operator<<(std::ostream& ss, DBData::Types /*value*/)
 
 // =====================================================================================================================
 
-static void createItem(tnt::Connection& conn, const DBData::Item& item, std::vector<uint32_t>& ids,
+static void createItem(fty::db::Connection& conn, const DBData::Item& item, std::vector<uint32_t>& ids,
     std::map<std::string, uint32_t>& mapping, std::uint32_t parentId = 0)
 {
     auto type = [&]() {
@@ -202,7 +202,7 @@ static void createItem(tnt::Connection& conn, const DBData::Item& item, std::vec
 uint16_t linkId(const std::string& link)
 {
     static std::map<std::string, uint16_t> lnks = []() {
-        tnt::Connection                 conn;
+        fty::db::Connection             conn;
         std::map<std::string, uint16_t> ret;
 
         for (const auto& row : conn.select("select * from t_bios_asset_link_type")) {
@@ -229,7 +229,7 @@ SampleDb::SampleDb(const std::string& data)
         throw std::runtime_error(ret.error());
     }
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     for (const auto& item : sample.items) {
         createItem(conn, item, m_ids, m_mapping);
@@ -248,7 +248,7 @@ SampleDb::SampleDb(const std::string& data)
 
 SampleDb::~SampleDb()
 {
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     for (int64_t id : m_links) {
         conn.execute("delete from t_bios_asset_link where id_link = :id", "id"_p = id);

@@ -1,5 +1,4 @@
 #include "test-db.h"
-#include "asset/db.h"
 #include "structure/bios_asset_device_type.h"
 #include "structure/bios_asset_element.h"
 #include "structure/bios_asset_element_type.h"
@@ -11,8 +10,11 @@
 #include "structure/bios_discovered_device.h"
 #include "structure/bios_monitor_asset_relation.h"
 #include <filesystem>
+#include <fty_common_db_connection.h>
 #include <mariadb/mysql.h>
 #include <thread>
+#include <iostream>
+#include <unistd.h>
 
 namespace fty {
 
@@ -70,7 +72,7 @@ private:
 
 static void createDB()
 {
-    tnt::Connection conn;
+    fty::db::Connection conn;
     conn.execute("CREATE DATABASE IF NOT EXISTS box_utf8 character set utf8 collate utf8_general_ci;");
     conn.execute("USE box_utf8");
 
@@ -119,7 +121,7 @@ Expected<std::string> TestDb::create()
 void TestDb::destroy()
 {
     if (instance().m_inited) {
-        tnt::shutdown();
+        fty::db::shutdown();
         mysql_thread_end();
         mysql_library_end();
 

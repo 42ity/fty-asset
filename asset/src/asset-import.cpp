@@ -2,9 +2,9 @@
 #include "asset/asset-helpers.h"
 #include "asset/asset-licensing.h"
 #include "asset/csv.h"
-#include "asset/db.h"
 #include "asset/json.h"
 #include <fty/string-utils.h>
+#include <fty_common_db_connection.h>
 #include <fty_common_db_dbpath.h>
 #include <fty_log.h>
 #include <regex>
@@ -672,7 +672,7 @@ AssetExpected<db::AssetElement> Import::processRow(
         }
     }
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     db::AssetElement el;
 
@@ -688,7 +688,7 @@ AssetExpected<db::AssetElement> Import::processRow(
 
         std::string errmsg = "";
         if (type != "device") {
-            tnt::Transaction trans(conn);
+            fty::db::Transaction trans(conn);
 
             auto ret = updateDcRoomRowRackGroup(
                 conn, el.id, name, parentId, extattributes, status, priority, groups, assetTag, extattributesRO);
@@ -701,7 +701,7 @@ AssetExpected<db::AssetElement> Import::processRow(
             }
         } else {
             if (idStr != "rackcontroller-0") {
-                tnt::Transaction trans(conn);
+                fty::db::Transaction trans(conn);
 
                 auto ret = updateDevice(conn, el.id, name, parentId, extattributes, "nonactive", priority, groups,
                     links, assetTag, extattributesRO);
@@ -722,7 +722,7 @@ AssetExpected<db::AssetElement> Import::processRow(
                     }
                 }
             } else {
-                tnt::Transaction trans(conn);
+                fty::db::Transaction trans(conn);
 
                 auto ret = updateDevice(conn, el.id, name, parentId, extattributes, status, priority, groups, links,
                     assetTag, extattributesRO);
@@ -747,7 +747,7 @@ AssetExpected<db::AssetElement> Import::processRow(
         }
 
         if (type != "device") {
-            tnt::Transaction trans(conn);
+            fty::db::Transaction trans(conn);
             // this is a transaction
             auto ret = insertDcRoomRowRackGroup(
                 conn, ename, typeId, parentId, extattributes, status, priority, groups, assetTag, extattributesRO);
@@ -761,7 +761,7 @@ AssetExpected<db::AssetElement> Import::processRow(
             }
         } else {
             if (subtypeId != rackControllerId) {
-                tnt::Transaction trans(conn);
+                fty::db::Transaction trans(conn);
 
                 auto ret = insertDevice(conn, links, groups, ename, parentId, extattributes, subtypeId, "nonactive",
                     priority, assetTag, extattributesRO);
@@ -783,7 +783,7 @@ AssetExpected<db::AssetElement> Import::processRow(
                 }
             } else {
                 // this is a transaction
-                tnt::Transaction trans(conn);
+                fty::db::Transaction trans(conn);
                 auto ret = insertDevice(conn, links, groups, ename, parentId, extattributes, subtypeId, status,
                     priority, assetTag, extattributesRO);
 
@@ -815,7 +815,7 @@ AssetExpected<db::AssetElement> Import::processRow(
     return AssetExpected<db::AssetElement>(el);
 }
 
-AssetExpected<void> Import::updateDcRoomRowRackGroup(tnt::Connection& conn, uint32_t elementId,
+AssetExpected<void> Import::updateDcRoomRowRackGroup(fty::db::Connection& conn, uint32_t elementId,
     const std::string& elementName, uint32_t parentId, const std::map<std::string, std::string>& extattributes,
     const std::string& status, uint16_t priority, const std::set<uint32_t>& groups, const std::string& assetTag,
     const std::map<std::string, std::string>& extattributesRO) const
@@ -882,7 +882,7 @@ AssetExpected<void> Import::updateDcRoomRowRackGroup(tnt::Connection& conn, uint
     return {};
 }
 
-AssetExpected<void> Import::updateDevice(tnt::Connection& conn, uint32_t elementId, const std::string& elementName,
+AssetExpected<void> Import::updateDevice(fty::db::Connection& conn, uint32_t elementId, const std::string& elementName,
     uint32_t parentId, const std::map<std::string, std::string>& extattributes, const std::string& status,
     uint16_t priority, const std::set<uint32_t>& groups, const std::vector<db::AssetLink>& links,
     const std::string& assetTag, const std::map<std::string, std::string>& extattributesRO) const
@@ -922,7 +922,7 @@ AssetExpected<void> Import::updateDevice(tnt::Connection& conn, uint32_t element
     return {};
 }
 
-Expected<uint32_t> Import::insertDcRoomRowRackGroup(tnt::Connection& conn, const std::string& elementName,
+Expected<uint32_t> Import::insertDcRoomRowRackGroup(fty::db::Connection& conn, const std::string& elementName,
     uint16_t elementTypeId, uint32_t parentId, const std::map<std::string, std::string>& extattributes,
     const std::string& status, uint16_t priority, const std::set<uint32_t>& groups, const std::string& assetTag,
     const std::map<std::string, std::string>& extattributesRO) const
@@ -1001,7 +1001,7 @@ Expected<uint32_t> Import::insertDcRoomRowRackGroup(tnt::Connection& conn, const
     return elementId;
 }
 
-Expected<uint32_t> Import::insertDevice(tnt::Connection& conn, const std::vector<db::AssetLink>& links,
+Expected<uint32_t> Import::insertDevice(fty::db::Connection& conn, const std::vector<db::AssetLink>& links,
     const std::set<uint32_t>& groups, const std::string& elementName, uint32_t parentId,
     const std::map<std::string, std::string>& extattributes, uint16_t assetDeviceTypeId, const std::string& status,
     uint16_t priority, const std::string& assetTag, const std::map<std::string, std::string>& extattributesRO) const

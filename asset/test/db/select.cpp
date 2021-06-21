@@ -1,7 +1,7 @@
 #include "asset/asset-db.h"
-#include "asset/db.h"
 #include <catch2/catch.hpp>
 #include <fty_common_asset_types.h>
+#include <fty_common_db_connection.h>
 #include <test-db/sample-db.h>
 
 TEST_CASE("Select asset")
@@ -15,13 +15,13 @@ TEST_CASE("Select asset")
 
     auto devId = db.idByName("device");
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     fty::asset::db::AssetElement gr;
-    gr.name      = "MyGroup";
-    gr.status    = "active";
-    gr.priority  = 1;
-    gr.typeId    = persist::type_to_typeid("group");
+    gr.name     = "MyGroup";
+    gr.status   = "active";
+    gr.priority = 1;
+    gr.typeId   = persist::type_to_typeid("group");
 
     {
         auto ret = fty::asset::db::insertIntoAssetElement(conn, gr, true);
@@ -120,7 +120,8 @@ TEST_CASE("Select asset")
 
     // selectAssetElementSuperParent
     {
-        auto res = fty::asset::db::selectAssetElementSuperParent(devId, [](const auto& /*row*/){});
+        auto res = fty::asset::db::selectAssetElementSuperParent(devId, [](const auto& /*row*/) {
+        });
         if (!res) {
             FAIL(res.error());
         }
@@ -139,7 +140,8 @@ TEST_CASE("Select asset")
 
     // selectShortElements
     {
-        auto res = fty::asset::db::selectShortElements(persist::type_to_typeid("device"), persist::subtype_to_subtypeid("ups"));
+        auto res = fty::asset::db::selectShortElements(
+            persist::type_to_typeid("device"), persist::subtype_to_subtypeid("ups"));
         if (!res) {
             FAIL(res.error());
         }

@@ -1,11 +1,11 @@
 #include "asset/asset-db.h"
-#include "asset/db.h"
 #include "asset/error.h"
 #include <fty/string-utils.h>
 #include <fty/translate.h>
 #include <fty_common_asset_types.h>
 #include <sys/time.h>
 #include <fty_log.h>
+#include <fty_common_db_connection.h>
 
 #define MAX_CREATE_RETRY 10
 
@@ -40,7 +40,7 @@ static std::string webAssetSql()
     return sql;
 }
 
-static void fetchWebAsset(const tnt::Row& row, WebAssetElement& asset)
+static void fetchWebAsset(const fty::db::Row& row, WebAssetElement& asset)
 {
     row.get("id", asset.id);
     row.get("name", asset.name);
@@ -70,12 +70,12 @@ Expected<uint32_t> nameToAssetId(const std::string& assetName)
     )";
 
     try {
-        tnt::Connection db;
+        fty::db::Connection db;
 
         auto res = db.selectRow(sql, "assetName"_p = assetName);
 
         return res.get<uint32_t>("id_asset_element");
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetName));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetName));
@@ -99,12 +99,12 @@ Expected<std::pair<std::string, std::string>> idToNameExtName(uint32_t assetId)
     )";
 
     try {
-        tnt::Connection db;
+        fty::db::Connection db;
 
         auto res = db.selectRow(sql, "assetId"_p = assetId);
 
         return std::make_pair(res.get<std::string>("name"), res.get<std::string>("value"));
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetId));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetId));
@@ -124,10 +124,10 @@ Expected<std::string> nameToExtName(std::string assetName)
     )";
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
         auto            res = conn.selectRow(sql, "asset_name"_p = assetName);
         return res.get("value");
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetName));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetName));
@@ -150,12 +150,12 @@ Expected<std::string> extNameToAssetName(const std::string& assetExtName)
     )";
 
     try {
-        tnt::Connection db;
+        fty::db::Connection db;
 
         auto res = db.selectRow(sql, "extName"_p = assetExtName);
 
         return res.get("name");
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetExtName));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetExtName));
@@ -179,12 +179,12 @@ Expected<uint32_t> extNameToAssetId(const std::string& assetExtName)
             keytag = 'name' and value = :extName
     )";
     try {
-        tnt::Connection db;
+        fty::db::Connection db;
 
         auto res = db.selectRow(sql, "extName"_p = assetExtName);
 
         return res.get<uint32_t>("id_asset_element");
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetExtName));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetExtName));
@@ -220,15 +220,15 @@ Expected<AssetElement> selectAssetElementByName(const std::string& elementName, 
     }
 
     try {
-        tnt::Connection db;
-        tnt::Row        row;
+        fty::db::Connection db;
+        fty::db::Row        row;
 
         if (extNameOnly) {
             row = db.selectRow(extNameSql, "name"_p = elementName);
         } else {
             try {
                 row = db.selectRow(nameSql, "name"_p = elementName);
-            } catch (const tntdb::NotFound&) {
+            } catch (const fty::db::NotFound&) {
                 row = db.selectRow(extNameSql, "name"_p = elementName);
             }
         }
@@ -243,7 +243,7 @@ Expected<AssetElement> selectAssetElementByName(const std::string& elementName, 
         row.get("id_subtype", el.subtypeId);
 
         return std::move(el);
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(elementName));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementName));
@@ -273,14 +273,14 @@ Expected<void> selectAssetElementWebById(uint32_t elementId, WebAssetElement& as
     )";
 
     try {
-        tnt::Connection db;
+        fty::db::Connection db;
 
         auto row = db.selectRow(sql, "id"_p = elementId);
 
         fetchWebAsset(row, asset);
 
         return {};
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(elementId));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
@@ -297,14 +297,14 @@ Expected<WebAssetElement> selectAssetElementWebByName(const std::string& name)
     )";
 
     try {
-        tnt::Connection db;
+        fty::db::Connection db;
 
         auto row = db.selectRow(sql, "name"_p = name);
 
         WebAssetElement asset;
         fetchWebAsset(row, asset);
         return asset;
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(name));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), name));
@@ -327,7 +327,7 @@ Expected<Attributes> selectExtAttributes(uint32_t elementId)
     )";
 
     try {
-        tnt::Connection db;
+        fty::db::Connection db;
 
         auto result = db.select(sql, "elementId"_p = elementId);
 
@@ -365,7 +365,7 @@ Expected<std::map<uint32_t, std::string>> selectAssetElementGroups(uint32_t elem
 
 
     try {
-        tnt::Connection db;
+        fty::db::Connection db;
 
         auto res = db.select(sql, "idelement"_p = elementId);
 
@@ -382,7 +382,7 @@ Expected<std::map<uint32_t, std::string>> selectAssetElementGroups(uint32_t elem
 
 // =====================================================================================================================
 
-Expected<uint> updateAssetElement(tnt::Connection& db, uint32_t elementId, uint32_t parentId, const std::string& status,
+Expected<uint> updateAssetElement(fty::db::Connection& db, uint32_t elementId, uint32_t parentId, const std::string& status,
     uint16_t priority, const std::string& assetTag)
 {
     static const std::string sql = R"(
@@ -406,7 +406,7 @@ Expected<uint> updateAssetElement(tnt::Connection& db, uint32_t elementId, uint3
             "status"_p    = status,
             "priority"_p  = priority,
             "assetTag"_p  = assetTag,
-            "parentId"_p  = nullable(parentId, parentId)// : std::nullopt//tnt::empty<uint32_t>
+            "parentId"_p  = nullable(parentId, parentId)// : std::nullopt//fty::db::empty<uint32_t>
         );
         // clang-format on
 
@@ -418,7 +418,7 @@ Expected<uint> updateAssetElement(tnt::Connection& db, uint32_t elementId, uint3
 
 // =====================================================================================================================
 
-Expected<uint> deleteAssetExtAttributesWithRo(tnt::Connection& conn, uint32_t elementId, bool readOnly)
+Expected<uint> deleteAssetExtAttributesWithRo(fty::db::Connection& conn, uint32_t elementId, bool readOnly)
 {
     static const std::string sql = R"(
         DELETE FROM
@@ -443,7 +443,7 @@ Expected<uint> deleteAssetExtAttributesWithRo(tnt::Connection& conn, uint32_t el
 // =====================================================================================================================
 
 Expected<uint> insertIntoAssetExtAttributes(
-    tnt::Connection& conn, uint32_t elementId, const std::map<std::string, std::string>& attributes, bool readOnly)
+    fty::db::Connection& conn, uint32_t elementId, const std::map<std::string, std::string>& attributes, bool readOnly)
 {
     const std::string sql = fmt::format(R"(
         INSERT INTO
@@ -453,7 +453,7 @@ Expected<uint> insertIntoAssetExtAttributes(
         ON DUPLICATE KEY UPDATE
             id_asset_ext_attribute = LAST_INSERT_ID(id_asset_ext_attribute)
     )",
-        tnt::multiInsert({"keytag", "value", "id_asset_element", "read_only"}, attributes.size()));
+        fty::db::multiInsert({"keytag", "value", "id_asset_element", "read_only"}, attributes.size()));
 
     if (attributes.empty()) {
         return unexpected("no attributes to insert"_tr);
@@ -482,7 +482,7 @@ Expected<uint> insertIntoAssetExtAttributes(
 
 // =====================================================================================================================
 
-Expected<uint> deleteAssetElementFromAssetGroups(tnt::Connection& conn, uint32_t elementId)
+Expected<uint> deleteAssetElementFromAssetGroups(fty::db::Connection& conn, uint32_t elementId)
 {
     static const std::string sql = R"(
         DELETE FROM
@@ -500,7 +500,7 @@ Expected<uint> deleteAssetElementFromAssetGroups(tnt::Connection& conn, uint32_t
 
 // =====================================================================================================================
 
-Expected<uint> insertElementIntoGroups(tnt::Connection& conn, const std::set<uint32_t>& groups, uint32_t elementId)
+Expected<uint> insertElementIntoGroups(fty::db::Connection& conn, const std::set<uint32_t>& groups, uint32_t elementId)
 {
     // input parameters control
     if (elementId == 0) {
@@ -520,7 +520,7 @@ Expected<uint> insertElementIntoGroups(tnt::Connection& conn, const std::set<uin
             (id_asset_group, id_asset_element)
          VALUES {}
     )",
-        tnt::multiInsert({"gid", "elementId"}, groups.size()));
+        fty::db::multiInsert({"gid", "elementId"}, groups.size()));
 
     try {
         auto   st    = conn.prepare(sql);
@@ -550,7 +550,7 @@ Expected<uint> insertElementIntoGroups(tnt::Connection& conn, const std::set<uin
 
 // =====================================================================================================================
 
-static std::string createAssetName(tnt::Connection& conn, uint32_t typeId, uint32_t subtypeId)
+static std::string createAssetName(fty::db::Connection& conn, uint32_t typeId, uint32_t subtypeId)
 {
     std::string type    = persist::typeid_to_type(static_cast<uint16_t>(typeId));
     std::string subtype = persist::subtypeid_to_subtype(static_cast<uint16_t>(subtypeId));
@@ -604,7 +604,7 @@ static std::string createAssetName(tnt::Connection& conn, uint32_t typeId, uint3
 
 // =====================================================================================================================
 
-Expected<uint32_t> insertIntoAssetElement(tnt::Connection& conn, const AssetElement& element, bool update)
+Expected<uint32_t> insertIntoAssetElement(fty::db::Connection& conn, const AssetElement& element, bool update)
 {
     if (!persist::is_ok_name(element.name.c_str())) {
         return unexpected("wrong element name"_tr);
@@ -655,7 +655,7 @@ Expected<uint32_t> insertIntoAssetElement(tnt::Connection& conn, const AssetElem
 
 // =====================================================================================================================
 
-Expected<uint> deleteAssetLinksTo(tnt::Connection& conn, uint32_t elementId)
+Expected<uint> deleteAssetLinksTo(fty::db::Connection& conn, uint32_t elementId)
 {
     static const std::string sql = R"(
         DELETE FROM
@@ -673,7 +673,7 @@ Expected<uint> deleteAssetLinksTo(tnt::Connection& conn, uint32_t elementId)
 
 // =====================================================================================================================
 
-Expected<uint> insertIntoAssetLinks(tnt::Connection& conn, const std::vector<AssetLink>& links)
+Expected<uint> insertIntoAssetLinks(fty::db::Connection& conn, const std::vector<AssetLink>& links)
 {
     if (links.empty()) {
         logDebug("nothing to insert");
@@ -699,7 +699,7 @@ Expected<uint> insertIntoAssetLinks(tnt::Connection& conn, const std::vector<Ass
 
 // =====================================================================================================================
 
-Expected<int64_t> insertIntoAssetLink(tnt::Connection& conn, const AssetLink& link)
+Expected<int64_t> insertIntoAssetLink(fty::db::Connection& conn, const AssetLink& link)
 {
     // input parameters control
     if (link.dest == 0) {
@@ -766,7 +766,7 @@ Expected<int64_t> insertIntoAssetLink(tnt::Connection& conn, const AssetLink& li
 
 // =====================================================================================================================
 
-Expected<uint16_t> insertIntoMonitorDevice(tnt::Connection& conn, uint16_t deviceTypeId, const std::string& deviceName)
+Expected<uint16_t> insertIntoMonitorDevice(fty::db::Connection& conn, uint16_t deviceTypeId, const std::string& deviceName)
 {
     static const std::string sql = R"(
         INSERT INTO t_bios_discovered_device
@@ -788,7 +788,7 @@ Expected<uint16_t> insertIntoMonitorDevice(tnt::Connection& conn, uint16_t devic
 
 // =====================================================================================================================
 
-Expected<int64_t> insertIntoMonitorAssetRelation(tnt::Connection& conn, uint16_t monitorId, uint32_t elementId)
+Expected<int64_t> insertIntoMonitorAssetRelation(fty::db::Connection& conn, uint16_t monitorId, uint32_t elementId)
 {
     if (elementId == 0) {
         auto msg = "0 value of elementId is not allowed"_tr;
@@ -824,7 +824,7 @@ Expected<int64_t> insertIntoMonitorAssetRelation(tnt::Connection& conn, uint16_t
 
 // =====================================================================================================================
 
-Expected<uint16_t> selectMonitorDeviceTypeId(tnt::Connection& conn, const std::string& deviceTypeName)
+Expected<uint16_t> selectMonitorDeviceTypeId(fty::db::Connection& conn, const std::string& deviceTypeName)
 {
     static const std::string sql = R"(
         SELECT
@@ -838,7 +838,7 @@ Expected<uint16_t> selectMonitorDeviceTypeId(tnt::Connection& conn, const std::s
     try {
         auto res = conn.selectRow(sql, "name"_p = deviceTypeName);
         return res.get<uint16_t>("id");
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(deviceTypeName));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), deviceTypeName));
@@ -906,7 +906,7 @@ Expected<void> selectAssetElementSuperParent(uint32_t id, SelectCallback&& cb)
     )";
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
         for (const auto& row : conn.select(sql, "id"_p = id)) {
             cb(row);
         }
@@ -918,7 +918,7 @@ Expected<void> selectAssetElementSuperParent(uint32_t id, SelectCallback&& cb)
 
 // =====================================================================================================================
 
-Expected<void> selectAssetsByContainer(tnt::Connection& conn, uint32_t elementId, std::vector<uint16_t> types,
+Expected<void> selectAssetsByContainer(fty::db::Connection& conn, uint32_t elementId, std::vector<uint16_t> types,
     std::vector<uint16_t> subtypes, const std::string& without, const std::string& status, SelectCallback&& cb)
 {
     std::string select = R"(
@@ -1004,7 +1004,7 @@ Expected<void> selectAssetsByContainer(tnt::Connection& conn, uint32_t elementId
 
 Expected<void> selectAssetsByContainer(uint32_t elementId, SelectCallback&& cb)
 {
-    tnt::Connection conn;
+    fty::db::Connection conn;
     return selectAssetsByContainer(conn, elementId, {}, {}, "", "", std::move(cb));
 }
 
@@ -1040,7 +1040,7 @@ Expected<void> selectAssetsWithoutContainer(
     }
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
         for (const auto& row : conn.select(select)) {
             cb(row);
         }
@@ -1058,7 +1058,7 @@ static Expected<std::map<std::string, int>> getDictionary(const std::string& stS
     std::map<std::string, int> mymap;
 
     try {
-        tnt::Connection db;
+        fty::db::Connection db;
         for (const auto& row : db.select(stStr)) {
             mymap.emplace(row.get("name"), row.get<int>("id"));
         }
@@ -1109,7 +1109,7 @@ Expected<std::vector<DbAssetLink>> selectAssetDeviceLinksTo(uint32_t elementId, 
 
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
 
         // clang-format off
         auto rows = conn.select(sql,
@@ -1154,7 +1154,7 @@ Expected<std::map<uint32_t, std::string>> selectShortElements(uint16_t typeId, u
     }
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
         auto            st = conn.prepare(sql);
         st.bind("typeid"_p = typeId);
         if (subtypeId) {
@@ -1187,7 +1187,7 @@ Expected<int> countKeytag(const std::string& keytag, const std::string& value)
     )";
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
         // clang-format off
         return conn.selectRow(sql,
             "keytag"_p = keytag,
@@ -1213,10 +1213,10 @@ Expected<uint16_t> convertAssetToMonitor(uint32_t assetElementId)
     )";
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
         auto            res = conn.selectRow(sql, "id"_p = assetElementId);
         return res.get<uint16_t>("id_discovered_device");
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return 0;
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetElementId));
@@ -1225,7 +1225,7 @@ Expected<uint16_t> convertAssetToMonitor(uint32_t assetElementId)
 
 // =====================================================================================================================
 
-Expected<uint> deleteMonitorAssetRelationByA(tnt::Connection& conn, uint32_t id)
+Expected<uint> deleteMonitorAssetRelationByA(fty::db::Connection& conn, uint32_t id)
 {
     static const std::string sql = R"(
         DELETE FROM
@@ -1243,7 +1243,7 @@ Expected<uint> deleteMonitorAssetRelationByA(tnt::Connection& conn, uint32_t id)
 
 // =====================================================================================================================
 
-Expected<uint> deleteAssetElement(tnt::Connection& conn, uint32_t elementId)
+Expected<uint> deleteAssetElement(fty::db::Connection& conn, uint32_t elementId)
 {
     static const std::string sql = R"(
         DELETE FROM
@@ -1261,7 +1261,7 @@ Expected<uint> deleteAssetElement(tnt::Connection& conn, uint32_t elementId)
 
 // =====================================================================================================================
 
-Expected<uint> deleteAssetGroupLinks(tnt::Connection& conn, uint32_t assetGroupId)
+Expected<uint> deleteAssetGroupLinks(fty::db::Connection& conn, uint32_t assetGroupId)
 {
     static const std::string sql = R"(
         DELETE FROM
@@ -1290,13 +1290,13 @@ Expected<std::vector<uint32_t>> selectAssetsByParent(uint32_t parentId)
     )";
 
     try {
-        tnt::Connection       conn;
+        fty::db::Connection       conn;
         std::vector<uint32_t> ids;
         for (const auto& it : conn.select(sql, "parentId"_p = parentId)) {
             ids.emplace_back(it.get<uint32_t>("id"));
         }
         return std::move(ids);
-    } catch (const tntdb::NotFound&) {
+    } catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(parentId));
     } catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), parentId));
@@ -1316,7 +1316,7 @@ Expected<std::vector<uint32_t>> selectAssetDeviceLinksSrc(uint32_t elementId)
             id_asset_device_src = :src
     )";
     try {
-        tnt::Connection       conn;
+        fty::db::Connection       conn;
         std::vector<uint32_t> ids;
         for (const auto& it : conn.select(sql, "src"_p = elementId)) {
             ids.emplace_back(it.get<uint32_t>("id_asset_device_dest"));
@@ -1340,7 +1340,7 @@ Expected<uint32_t> maxNumberOfPowerLinks()
     )";
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
         auto            res = conn.selectRow(sql);
         return res.get<uint32_t>("maxCount");
     } catch (const std::exception& e) {
@@ -1361,7 +1361,7 @@ Expected<uint32_t> maxNumberOfAssetGroups()
     )";
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
         auto            res = conn.selectRow(sql);
         return res.get<uint32_t>("maxCount");
     } catch (const std::exception& e) {
@@ -1384,7 +1384,7 @@ Expected<std::vector<std::string>> selectExtRwAttributesKeytags()
     )";
 
     try {
-        tnt::Connection          conn;
+        fty::db::Connection          conn;
         std::vector<std::string> ret;
         for (const auto& row : conn.select(sql)) {
             ret.push_back(row.get("keytag"));
@@ -1413,9 +1413,9 @@ Expected<std::vector<WebAssetElement>> selectAssetElementAll(const std::optional
     }
 
     try {
-        tnt::Connection              db;
+        fty::db::Connection              db;
         std::vector<WebAssetElement> list;
-        tnt::Rows                    result;
+        fty::db::Rows                    result;
         if (dc) {
             result = db.select(sql, "containerid"_p = *dc);
         } else {
@@ -1447,7 +1447,7 @@ Expected<std::vector<std::string>> selectGroupNames(uint32_t id)
     )";
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
 
         std::vector<std::string> result;
         for (const auto& row : conn.select(sql, "id"_p = id)) {
@@ -1472,7 +1472,7 @@ Expected<WebAssetElement> findParentByType(uint32_t assetId, uint16_t parentType
     )";
 
     try {
-        tnt::Connection conn;
+        fty::db::Connection conn;
 
         uint32_t aid = assetId;
         while (true) {

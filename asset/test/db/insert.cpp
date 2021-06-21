@@ -1,5 +1,5 @@
 #include "asset/asset-db.h"
-#include "asset/db.h"
+#include <fty_common_db_connection.h>
 #include <catch2/catch.hpp>
 #include <fty_common_asset_types.h>
 #include <test-db/sample-db.h>
@@ -8,7 +8,7 @@ TEST_CASE("Asset/insert")
 {
     fty::SampleDb db("");
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     fty::asset::db::AssetElement el;
     el.name      = "device";
@@ -104,7 +104,7 @@ TEST_CASE("Asset/insert")
 TEST_CASE("Asset/Wrong parent")
 {
     fty::SampleDb db("");
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     fty::asset::db::AssetElement el;
     el.name      = "device";
@@ -123,7 +123,7 @@ TEST_CASE("Asset/Wrong type")
 {
     fty::SampleDb db("");
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     fty::asset::db::AssetElement el;
     el.name      = "device";
@@ -140,7 +140,7 @@ TEST_CASE("Asset/Wrong name1")
 {
     fty::SampleDb db("");
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     fty::asset::db::AssetElement el;
     el.name      = "device_1";
@@ -158,7 +158,7 @@ TEST_CASE("Asset/Wrong name2")
 {
     fty::SampleDb db("");
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     fty::asset::db::AssetElement el;
     el.name      = "device@";
@@ -176,7 +176,7 @@ TEST_CASE("Asset/Wrong name3")
 {
     fty::SampleDb db("");
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     fty::asset::db::AssetElement el;
     el.name      = "device%";
@@ -194,7 +194,7 @@ TEST_CASE("Monitor")
 {
     fty::SampleDb db("");
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
     auto type = fty::asset::db::selectMonitorDeviceTypeId(conn, "ups");
     if (!type) {
         FAIL(type.error());

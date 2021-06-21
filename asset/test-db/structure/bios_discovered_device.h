@@ -1,8 +1,8 @@
-#include "asset/db.h"
+#include <fty_common_db_connection.h>
 
 namespace fty {
 
-void createDiscoveryDevice(tnt::Connection& conn)
+void createDiscoveryDevice(fty::db::Connection& conn)
 {
     conn.execute(R"(
         CREATE TABLE t_bios_discovered_device(

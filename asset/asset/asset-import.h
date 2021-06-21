@@ -35,22 +35,22 @@ private:
     std::string                        matchExtAttr(const std::string& value, const std::string& key) const;
     bool                               checkUSize(const std::string& s) const;
 
-    AssetExpected<void> updateDcRoomRowRackGroup(tnt::Connection& conn, uint32_t elementId,
+    AssetExpected<void> updateDcRoomRowRackGroup(fty::db::Connection& conn, uint32_t elementId,
         const std::string& elementName, uint32_t parentId, const std::map<std::string, std::string>& extattributes,
         const std::string& status, uint16_t priority, const std::set<uint32_t>& groups, const std::string& assetTag,
         const std::map<std::string, std::string>& extattributesRO) const;
 
-    AssetExpected<void> updateDevice(tnt::Connection& conn, uint32_t elementId, const std::string& elementName,
+    AssetExpected<void> updateDevice(fty::db::Connection& conn, uint32_t elementId, const std::string& elementName,
         uint32_t parentId, const std::map<std::string, std::string>& extattributes, const std::string& status,
         uint16_t priority, const std::set<uint32_t>& groups, const std::vector<db::AssetLink>& links,
         const std::string& assetTag, const std::map<std::string, std::string>& extattributesRO) const;
 
-    Expected<uint32_t> insertDcRoomRowRackGroup(tnt::Connection& conn, const std::string& elementName,
+    Expected<uint32_t> insertDcRoomRowRackGroup(fty::db::Connection& conn, const std::string& elementName,
         uint16_t elementTypeId, uint32_t parentId, const std::map<std::string, std::string>& extattributes,
         const std::string& status, uint16_t priority, const std::set<uint32_t>& groups, const std::string& assetTag,
         const std::map<std::string, std::string>& extattributesRO) const;
 
-    Expected<uint32_t> insertDevice(tnt::Connection& conn, const std::vector<db::AssetLink>& links,
+    Expected<uint32_t> insertDevice(fty::db::Connection& conn, const std::vector<db::AssetLink>& links,
         const std::set<uint32_t>& groups, const std::string& elementName, uint32_t parentId,
         const std::map<std::string, std::string>& extattributes, uint16_t assetDeviceTypeId, const std::string& status,
         uint16_t priority, const std::string& assetTag,

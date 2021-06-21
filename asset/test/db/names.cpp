@@ -1,7 +1,7 @@
 #include "asset/asset-db.h"
-#include "asset/db.h"
 #include <catch2/catch.hpp>
 #include <fty_common_asset_types.h>
+#include <fty_common_db_connection.h>
 #include <test-db/sample-db.h>
 
 TEST_CASE("Asset names")
@@ -13,7 +13,7 @@ TEST_CASE("Asset names")
             ext-name : Ups
     )");
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     // Tests
     // nameToAssetId

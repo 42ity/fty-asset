@@ -1,15 +1,15 @@
 #pragma once
 #include "asset/asset-db.h"
 #include "asset/asset-helpers.h"
-#include "asset/db.h"
 #include <catch2/catch.hpp>
 #include <fty_common_asset_types.h>
+#include <fty_common_db_connection.h>
 #include <yaml-cpp/yaml.h>
 
 inline fty::asset::db::AssetElement createAsset(
     const std::string& name, const std::string& extName, const std::string& type, uint32_t parentId = 0)
 {
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     fty::asset::db::AssetElement el;
     el.name     = name;
@@ -65,8 +65,8 @@ public:
 
     void setExtName(const std::string& extName)
     {
-        tnt::Connection conn;
-        auto            ret = fty::asset::db::insertIntoAssetExtAttributes(conn, id, {{"name", extName}}, true);
+        fty::db::Connection conn;
+        auto                ret = fty::asset::db::insertIntoAssetExtAttributes(conn, id, {{"name", extName}}, true);
         if (!ret) {
             FAIL(ret.error());
         }
@@ -75,8 +75,8 @@ public:
 
     void setExtAttributes(const std::map<std::string, std::string>& attr)
     {
-        tnt::Connection conn;
-        auto            ret = fty::asset::db::insertIntoAssetExtAttributes(conn, id, attr, true);
+        fty::db::Connection conn;
+        auto                ret = fty::asset::db::insertIntoAssetExtAttributes(conn, id, attr, true);
         if (!ret) {
             FAIL(ret.error());
         }
@@ -85,8 +85,8 @@ public:
 
     void setParent(const fty::asset::db::AssetElement& parent)
     {
-        tnt::Connection conn;
-        auto            ret = fty::asset::db::updateAssetElement(conn, id, parent.id, status, priority, assetTag);
+        fty::db::Connection conn;
+        auto                ret = fty::asset::db::updateAssetElement(conn, id, parent.id, status, priority, assetTag);
         if (!ret) {
             FAIL(ret.error());
         }
@@ -95,7 +95,7 @@ public:
 
     void setPower(const fty::asset::db::AssetElement& source)
     {
-        tnt::Connection           conn;
+        fty::db::Connection       conn;
         fty::asset::db::AssetLink link;
         link.dest = id;
         link.src  = source.id;
@@ -109,7 +109,7 @@ public:
 
     void removePower()
     {
-        tnt::Connection conn;
+        fty::db::Connection conn;
 
         auto ret = fty::asset::db::deleteAssetLinksTo(conn, id);
         if (!ret) {
@@ -121,15 +121,14 @@ public:
 private:
     void create()
     {
-        tnt::Connection conn;
-        auto            ret = fty::asset::db::insertIntoAssetElement(conn, *this, true);
+        fty::db::Connection conn;
+        auto                ret = fty::asset::db::insertIntoAssetElement(conn, *this, true);
         if (!ret) {
             FAIL(ret.error());
         }
         REQUIRE(*ret > 0);
         id = *ret;
     }
-
 };
 
 namespace assets {
@@ -143,7 +142,7 @@ using Server     = AssetElement<persist::DEVICE, persist::SERVER>;
 
 inline void deleteAsset(const fty::asset::db::AssetElement& el)
 {
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     {
         auto ret = fty::asset::db::deleteAssetExtAttributesWithRo(conn, el.id, true);
