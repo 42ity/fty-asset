@@ -18,7 +18,7 @@
  *
  */
 
-#include "asset/csv.h"
+#include "fty/asset/csv.h"
 #include <algorithm>
 #include <cxxtools/csvdeserializer.h>
 #include <cxxtools/serializationinfo.h>

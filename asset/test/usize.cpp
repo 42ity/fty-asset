@@ -1,5 +1,5 @@
-#include "asset/asset-db.h"
-#include "asset/asset-manager.h"
+#include "fty/asset/asset-db.h"
+#include "fty/asset/asset-manager.h"
 #include "test-utils.h"
 #include <test-db/sample-db.h>
 

@@ -1,6 +1,6 @@
-#include "asset/asset-helpers.h"
-#include "asset/json.h"
-#include <asset/asset-manager.h>
+#include "fty/asset/asset-helpers.h"
+#include "fty/asset/json.h"
+#include <fty/asset/asset-manager.h>
 #include <catch2/catch.hpp>
 #include <test-db/sample-db.h>
 #include <yaml-cpp/yaml.h>

@@ -1,5 +1,5 @@
-#include "asset/asset-helpers.h"
-#include "asset/asset-db.h"
+#include "fty/asset/asset-helpers.h"
+#include "fty/asset/asset-db.h"
 #include <ctime>
 #include <fty_asset_dto.h>
 #include <fty_common_agents.h>

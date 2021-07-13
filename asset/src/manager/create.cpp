@@ -1,9 +1,9 @@
-#include "asset/asset-cam.h"
-#include "asset/asset-configure-inform.h"
-#include "asset/asset-import.h"
-#include "asset/asset-manager.h"
-#include "asset/asset-helpers.h"
-#include "asset/csv.h"
+#include "fty/asset/asset-cam.h"
+#include "fty/asset/asset-configure-inform.h"
+#include "fty/asset/asset-import.h"
+#include "fty/asset/asset-manager.h"
+#include "fty/asset/asset-helpers.h"
+#include "fty/asset/csv.h"
 #include <fty_asset_dto.h>
 #include <cxxtools/jsondeserializer.h>
 #include <mutex>

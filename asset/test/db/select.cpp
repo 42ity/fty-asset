@@ -1,4 +1,4 @@
-#include "asset/asset-db.h"
+#include "fty/asset/asset-db.h"
 #include <catch2/catch.hpp>
 #include <fty_common_asset_types.h>
 #include <fty_common_db_connection.h>

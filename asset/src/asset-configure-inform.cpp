@@ -18,7 +18,7 @@
  *
  */
 
-#include "asset/asset-configure-inform.h"
+#include "fty/asset/asset-configure-inform.h"
 #include <fty_common_db_connection.h>
 #include <fty_common.h>
 #include <fty_common_db.h>

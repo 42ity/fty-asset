@@ -1,4 +1,4 @@
-#include "asset/asset-manager.h"
+#include "fty/asset/asset-manager.h"
 #include <cxxtools/csvserializer.h>
 #include <fty/string-utils.h>
 
