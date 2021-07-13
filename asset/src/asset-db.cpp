@@ -1,5 +1,5 @@
-#include "asset/asset-db.h"
-#include "asset/error.h"
+#include "fty/asset/asset-db.h"
+#include "fty/asset/error.h"
 #include <fty/string-utils.h>
 #include <fty/translate.h>
 #include <fty_common_asset_types.h>
@@ -8,6 +8,7 @@
 #include <sys/time.h>
 
 #define MAX_CREATE_RETRY 10
+#define INPUT_POWER_CHAIN 1
 
 namespace fty::asset::db {
 
@@ -1526,4 +1527,56 @@ Expected<WebAssetElement> findParentByType(uint32_t assetId, uint16_t parentType
 
 // =====================================================================================================================
 
+Expected<std::vector<DbAssetLink>> selectLinksByContainer(uint32_t elementId, const std::string& status)
+{
+    static const std::string sql = R"(
+         SELECT
+           v.id_asset_element_src,
+           v.id_asset_element_dest
+        FROM
+           v_bios_asset_link AS v,
+           v_bios_asset_element_super_parent AS v1,
+           v_bios_asset_element_super_parent AS v2
+        WHERE
+           v.id_asset_link_type = :linktypeid AND
+           v.id_asset_element_dest = v2.id_asset_element AND
+           v.id_asset_element_src = v1.id_asset_element AND
+           (
+               ( :containerid IN (v2.id_parent1, v2.id_parent2 ,v2.id_parent3,
+                                  v2.id_parent4, v2.id_parent5, v2.id_parent6,
+                                  v2.id_parent7, v2.id_parent8, v2.id_parent9,
+                                  v2.id_parent10) AND v1.status = :vstatus AND v2.status = :vstatus) OR
+               ( :containerid IN (v1.id_parent1, v1.id_parent2 ,v1.id_parent3,
+                                  v1.id_parent4, v1.id_parent5, v1.id_parent6,
+                                  v1.id_parent7, v1.id_parent8, v1.id_parent9,
+                                  v1.id_parent10) AND v1.status = :vstatus AND v2.status = :vstatus)
+           )
+    )";
+
+    try {
+        fty::db::Connection conn;
+
+        std::vector<DbAssetLink> result;
+        // clang-format off
+        auto rows = conn.select(sql,
+            "containerid"_p = elementId,
+            "linktypeid"_p  = INPUT_POWER_CHAIN,
+            "vstatus"_p     = status
+        );
+        // clang-format on
+
+        for (const auto& row : rows) {
+            DbAssetLink link;
+            link.srcId = row.get<uint32_t>("id_asset_element_src");
+            link.destId = row.get<uint32_t>("id_asset_element_dest");
+            result.push_back(link);
+        }
+
+        return std::move(result);
+    } catch (const std::exception& e) {
+        return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
+    }
+}
+
+// =====================================================================================================================
 } // namespace fty::asset::db

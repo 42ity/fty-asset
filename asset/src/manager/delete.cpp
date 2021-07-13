@@ -1,10 +1,10 @@
-#include "asset/asset-cam.h"
-#include "asset/asset-db.h"
-#include "asset/asset-manager.h"
+#include "fty/asset/asset-cam.h"
+#include "fty/asset/asset-db.h"
+#include "fty/asset/asset-manager.h"
 #include <fty_common_db_connection.h>
-#include "asset/json.h"
+#include "fty/asset/json.h"
 #include <fty_common_asset_types.h>
-#include "asset/asset-helpers.h"
+#include "fty/asset/asset-helpers.h"
 #include <fty_log.h>
 
 namespace fty::asset {

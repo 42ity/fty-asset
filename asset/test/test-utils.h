@@ -1,6 +1,6 @@
 #pragma once
-#include "asset/asset-db.h"
-#include "asset/asset-helpers.h"
+#include "fty/asset/asset-db.h"
+#include "fty/asset/asset-helpers.h"
 #include <catch2/catch.hpp>
 #include <fty_common_asset_types.h>
 #include <fty_common_db_connection.h>

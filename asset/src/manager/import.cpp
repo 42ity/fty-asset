@@ -1,6 +1,6 @@
-#include "asset/asset-import.h"
-#include "asset/asset-manager.h"
-#include "asset/csv.h"
+#include "fty/asset/asset-import.h"
+#include "fty/asset/asset-manager.h"
+#include "fty/asset/csv.h"
 #include <fty/string-utils.h>
 
 #define CREATE_MODE_CSV 2

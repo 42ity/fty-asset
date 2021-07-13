@@ -3,11 +3,10 @@ cmake_policy(VERSION 3.13)
 
 ##############################################################################################################
 
-file(GLOB_RECURSE SOURCES_FILES src/*.cc)
-
 etn_target(exe ${PROJECT_NAME}-server
     SOURCES
-        ${SOURCES_FILES}
+        src/*.cc
+        src/*.h
 
     INCLUDE_DIRS
         src
@@ -23,6 +22,7 @@ etn_target(exe ${PROJECT_NAME}-server
         fty_common
     USES_PRIVATE
         ${PROJECT_NAME}
+        ${PROJECT_NAME}-libng
         cxxtools
         fty_common
         fty_common_db

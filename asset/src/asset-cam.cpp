@@ -18,7 +18,7 @@
  *
  */
 
-#include "asset/asset-cam.h"
+#include "fty/asset/asset-cam.h"
 #include <fty_log.h>
 #include <algorithm>
 // #include <fty/split.h>

@@ -6,18 +6,17 @@ find_package(fty-cmake PATHS ${CMAKE_BINARY_DIR}/fty-cmake)
 
 etn_target(shared ${PROJECT_NAME}-libng
     PUBLIC
-        asset/asset-cam.h
-        asset/asset-computed.h
-        asset/asset-configure-inform.h
-        asset/asset-db.h
-        asset/asset-helpers.h
-        asset/asset-import.h
-        asset/asset-licensing.h
-        asset/asset-manager.h
-        asset/csv.h
-        asset/db.h
-        asset/error.h
-        asset/json.h
+        fty/asset/asset-cam.h
+        fty/asset/asset-computed.h
+        fty/asset/asset-configure-inform.h
+        fty/asset/asset-db.h
+        fty/asset/asset-helpers.h
+        fty/asset/asset-import.h
+        fty/asset/asset-licensing.h
+        fty/asset/asset-manager.h
+        fty/asset/csv.h
+        fty/asset/error.h
+        fty/asset/json.h
 
     SOURCES
         src/json.cpp

@@ -1,8 +1,8 @@
-#include "asset/asset-import.h"
-#include "asset/asset-helpers.h"
-#include "asset/asset-licensing.h"
-#include "asset/csv.h"
-#include "asset/json.h"
+#include "fty/asset/asset-import.h"
+#include "fty/asset/asset-helpers.h"
+#include "fty/asset/asset-licensing.h"
+#include "fty/asset/csv.h"
+#include "fty/asset/json.h"
 #include <fty/string-utils.h>
 #include <fty_common_db_connection.h>
 #include <fty_common_db_dbpath.h>

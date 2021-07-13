@@ -1,4 +1,4 @@
-#include "asset/asset-licensing.h"
+#include "fty/asset/asset-licensing.h"
 #include <zmq.h>
 #include <fty_common_mlm_pool.h>
 #include <fty_proto.h>

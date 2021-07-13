@@ -19,38 +19,16 @@
     =========================================================================
 */
 
-#ifndef TOTAL_POWER_H_INCLUDED
-#define TOTAL_POWER_H_INCLUDED
+#pragma once
 
 #include <string>
 #include <vector>
+#include <fty/expected.h>
 
-/*
- * \brief For the specified asset finds out the devices
- *        that are used for total power computation
- * *
- * \param[in] assetName - name of the asset, for which we need to
- *                      determine devices for total power calculation
- * \param[out] powerDevices - list of devices for the specified asset
- *                      used for total power computation.
- *                      It's content would be cleared every time
- *                      at the beginning.
- *
- * \return  0 - in case of success
- *         -1 - in case of internal error
- *         -2 - in case the requested asset was not found
- */
-//  Self test of this class
+/// For the specified asset finds out the devices that are used for total power computation
+///
+/// @param assetName - name of the asset, for which we need to determine devices for total power calculation
+/// @param test - use for testing only
+/// @return list of devices for the specified asset used for total power computation or error.
+fty::Expected<std::vector<std::string>> selectDevicesTotalPower(const std::string& assetName, bool test);
 
- int
-    select_devices_total_power(
-        const std::string &assetName,
-        std::vector<std::string> &powerDevices,
-        bool test
-    );
-
- void
-    total_power_test (bool verbose);
-
-
-#endif

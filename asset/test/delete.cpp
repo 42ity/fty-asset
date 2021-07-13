@@ -1,5 +1,5 @@
-#include "asset/asset-manager.h"
-#include "asset/json.h"
+#include "fty/asset/asset-manager.h"
+#include "fty/asset/json.h"
 #include <catch2/catch.hpp>
 #include <test-db/sample-db.h>
 
