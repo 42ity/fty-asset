@@ -553,7 +553,6 @@ topology2_from_json (
     }
 
     cxxtools::JsonSerializer serializer (out);
-    serializer.inputUtf8 (true);
     serializer.beautify (false);
     item_from.contains = topo;
     serializer.serialize(item_from).finish();
@@ -710,7 +709,6 @@ topology2_from_json_recursive (
         topo.groups.insert (topo.groups.end (), groups.begin (), groups.end ());
 
     cxxtools::JsonSerializer serializer (out);
-    serializer.inputUtf8 (true);
     serializer.beautify (false);
     it2.contains = topo;
     serializer.serialize(it2).finish();

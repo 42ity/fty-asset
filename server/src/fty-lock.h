@@ -2,8 +2,7 @@
 
 #include <thread>
 #include <mutex>
-
-#include "fty_log.h"
+#include <fty_log.h>
 
 namespace fty
 {

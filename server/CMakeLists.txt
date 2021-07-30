@@ -31,6 +31,7 @@ etn_target(exe ${PROJECT_NAME}-server
         fty_common_mlm
         fty_common_dto
         fty_common_messagebus
+        fty_common_socket
         fty_security_wallet
         fty-utils
         tntdb

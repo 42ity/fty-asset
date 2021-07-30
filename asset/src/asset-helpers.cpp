@@ -1,6 +1,5 @@
 #include "asset/asset-helpers.h"
 #include "asset/asset-db.h"
-#include "asset/logger.h"
 #include <ctime>
 #include <fty_asset_dto.h>
 #include <fty_common_agents.h>
@@ -31,7 +30,7 @@ AssetExpected<uint32_t> checkElementIdentifier(const std::string& paramName, con
     }
 
     if (auto eid = db::nameToAssetId(paramValue)) {
-        return uint32_t(*eid);
+        return *eid;
     } else {
         std::string err      = "value '{}' is not valid identifier. Error: {}"_tr.format(paramValue, eid.error());
         std::string expected = "existing identifier"_tr;

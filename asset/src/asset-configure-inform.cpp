@@ -19,14 +19,15 @@
  */
 
 #include "asset/asset-configure-inform.h"
-#include "asset/db.h"
+#include <fty_common_db_connection.h>
 #include <fty_common.h>
 #include <fty_common_db.h>
 #include <fty_common_mlm_utils.h>
 #include <fty_proto.h>
 #include <thread>
 #include <malamute.h>
-#include "asset/logger.h"
+#include <thread>
+#include <fty_log.h>
 
 namespace fty::asset {
 
@@ -40,11 +41,11 @@ static zhash_t* s_map2zhash(const std::map<std::string, std::string>& m)
     return ret;
 }
 
-static bool getDcUPSes(tnt::Connection& conn, const std::string& assetName, zhash_t* hash)
+static bool getDcUPSes(fty::db::Connection& conn, const std::string& assetName, zhash_t* hash)
 {
     std::vector<std::string> listUps;
 
-    auto cb = [&listUps](const tnt::Row& row) {
+    auto cb = [&listUps](const fty::db::Row& row) {
         listUps.push_back(row.get("name"));
     };
 
@@ -54,7 +55,7 @@ static bool getDcUPSes(tnt::Connection& conn, const std::string& assetName, zhas
     }
 
     auto rv = db::selectAssetsByContainer(
-        conn, uint32_t(*dcId), {persist::asset_type::DEVICE}, {persist::asset_subtype::UPS}, "", "active", cb);
+        conn, *dcId, {persist::asset_type::DEVICE}, {persist::asset_subtype::UPS}, "", "active", cb);
 
     if (!rv) {
         return false;
@@ -98,7 +99,7 @@ Expected<void> sendConfigure(
         return unexpected(" mlm_client_set_producer () failed.");
     }
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
     for (const auto& oneRow : rows) {
 
         std::string s_priority    = std::to_string(oneRow.first.priority);
@@ -125,7 +126,7 @@ Expected<void> sendConfigure(
         // this is a bit hack, but we now that our topology ends with datacenter (hopefully)
         std::string dc_name;
 
-        auto cb = [aux, &dc_name](const tnt::Row& row) {
+        auto cb = [aux, &dc_name](const fty::db::Row& row) {
             for (const auto& name : {"parent_name1", "parent_name2", "parent_name3", "parent_name4", "parent_name5",
                      "parent_name6", "parent_name7", "parent_name8", "parent_name9", "parent_name10"}) {
                 std::string foo       = row.get(name);

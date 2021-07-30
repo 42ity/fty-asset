@@ -1,11 +1,11 @@
 #include "asset/asset-cam.h"
 #include "asset/asset-db.h"
 #include "asset/asset-manager.h"
-#include "asset/db.h"
+#include <fty_common_db_connection.h>
 #include "asset/json.h"
-#include "asset/logger.h"
 #include <fty_common_asset_types.h>
 #include "asset/asset-helpers.h"
+#include <fty_log.h>
 
 namespace fty::asset {
 
@@ -19,6 +19,10 @@ namespace {
     using ElementPtr = std::shared_ptr<Element>;
     struct Element : public db::WebAssetElement
     {
+        Element(const db::WebAssetElement& other):
+            db::WebAssetElement(other)
+        {}
+        Element() = default;
         std::vector<ElementPtr> chidren;
         std::vector<ElementPtr> links;
         bool                    isDeleted = false;
@@ -99,9 +103,9 @@ static bool checkFeed(const db::AssetElement& asset)
         return true;
     }
 
-    tnt::Connection       conn;
+    fty::db::Connection       conn;
     std::vector<uint32_t> ids;
-    db::selectAssetsByContainer(conn, ret->id, {persist::DEVICE}, {persist::FEED}, {}, {}, [&](const tnt::Row& row) {
+    db::selectAssetsByContainer(conn, ret->id, {persist::DEVICE}, {persist::FEED}, {}, {}, [&](const fty::db::Row& row) {
         ids.push_back(row.get<uint32_t>("asset_id"));
     });
 
@@ -134,6 +138,18 @@ AssetExpected<db::AssetElement> AssetManager::deleteAsset(const db::AssetElement
     if (asset.subtypeId == persist::FEED) {
         if (!checkFeed(asset)) {
             return unexpected("Last feed cannot be deleted in device centric mode"_tr);
+        }
+    }
+
+    if (asset.typeId == persist::DEVICE && !asset.parentId && asset.status == "nonactive") {
+        if (auto ret = db::selectAssetsByParent(asset.id)) {
+            for(const auto& it: *ret) {
+                if (auto child = db::selectAssetElementWebById(it)) {
+                    if (child->typeId == persist::DEVICE && child->subtypeId == persist::SENSOR && child->status == "nonactive") {
+                        deleteAsset(*child);
+                    }
+                }
+            }
         }
     }
 
@@ -207,6 +223,24 @@ std::map<std::string, AssetExpected<db::AssetElement>> AssetManager::deleteAsset
             std::vector<uint32_t> links;
             collectLinks(el->id, links, ids);
 
+            if (!allChildren.empty()) {
+                if (el->typeId == persist::DEVICE && !el->parentId && el->status == "nonactive") {
+                    for(auto it = allChildren.begin(); it != allChildren.end(); ) {
+                        bool erased = false;
+                        if (auto child = db::selectAssetElementWebById(*it)) {
+                            if (child->typeId == persist::DEVICE && child->subtypeId == persist::SENSOR && child->status == "nonactive") {
+                                toDel.push_back(std::make_shared<Element>(*child));
+                                allChildren.erase(it);
+                                erased = true;
+                            }
+                        }
+                        if (!erased) {
+                            ++it;
+                        }
+                    }
+                }
+            }
+
             if (!allChildren.empty() || !links.empty()) {
                 result.emplace(
                     name, unexpected("Asset can't be deleted because it is referenced by 1 or more asset(s) (being their host, their power source or their paired asset...)"_tr));
@@ -259,8 +293,8 @@ std::map<std::string, AssetExpected<db::AssetElement>> AssetManager::deleteAsset
 
 AssetExpected<db::AssetElement> AssetManager::deleteDcRoomRowRack(const db::AssetElement& element)
 {
-    tnt::Connection  conn;
-    tnt::Transaction trans(conn);
+    fty::db::Connection  conn;
+    fty::db::Transaction trans(conn);
 
     static const std::string countSql = R"(
         SELECT
@@ -314,8 +348,8 @@ AssetExpected<db::AssetElement> AssetManager::deleteDcRoomRowRack(const db::Asse
 
 AssetExpected<db::AssetElement> AssetManager::deleteGroup(const db::AssetElement& element)
 {
-    tnt::Connection  conn;
-    tnt::Transaction trans(conn);
+    fty::db::Connection  conn;
+    fty::db::Transaction trans(conn);
 
     if (auto ret = db::deleteAssetGroupLinks(conn, element.id); !ret) {
         trans.rollback();
@@ -335,8 +369,8 @@ AssetExpected<db::AssetElement> AssetManager::deleteGroup(const db::AssetElement
 
 AssetExpected<db::AssetElement> AssetManager::deleteDevice(const db::AssetElement& element)
 {
-    tnt::Connection  conn;
-    tnt::Transaction trans(conn);
+    fty::db::Connection  conn;
+    fty::db::Transaction trans(conn);
 
     if (auto ret = db::deleteAssetElementFromAssetGroups(conn, element.id); !ret) {
         trans.rollback();

@@ -1,6 +1,6 @@
 #include "asset/asset-manager.h"
 #include <cxxtools/csvserializer.h>
-#include <fty/split.h>
+#include <fty/string-utils.h>
 
 namespace fty::asset {
 
@@ -237,7 +237,7 @@ private:
         }
 
         m_elements = *res;
-        createTree(m_root, dc ? *dc : 0);
+        createTree(m_root, 0);
         collectLinks(m_root);
 
         // sort;

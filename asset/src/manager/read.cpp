@@ -1,8 +1,8 @@
 #include "asset/asset-db.h"
 #include "asset/asset-manager.h"
-#include "asset/db.h"
-#include "asset/logger.h"
 #include <fty_common_asset_types.h>
+#include <fty_common_db_connection.h>
+#include <fty_log.h>
 
 namespace fty::asset {
 
@@ -11,7 +11,7 @@ static std::vector<std::tuple<uint32_t, std::string, std::string, std::string>> 
 
     std::vector<std::tuple<uint32_t, std::string, std::string, std::string>> ret{};
 
-    auto cb = [&ret](const tnt::Row& row) {
+    auto cb = [&ret](const fty::db::Row& row) {
         // Dim: I keep this comment from original code for history :)
 
         // C++ is c r a z y!! Having static initializer in lambda function made

@@ -26,10 +26,11 @@
 #include "asset-storage.h"
 #include "asset/dbhelpers.h"
 #include <algorithm>
-#include <fty_common_db_dbpath.h>
 #include <fty_common_mlm.h>
+#include <fty_common.h>
+#include <fty_common_db_dbpath.h>
 #include <fty_log.h>
-#include <fty/split.h>
+#include <fty/string-utils.h>
 #include <functional>
 #include <iostream>
 #include <map>

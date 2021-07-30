@@ -1,6 +1,6 @@
 #include "asset/asset-licensing.h"
 #include <zmq.h>
-#include <fty_common_mlm_tntmlm.h>
+#include <fty_common_mlm_pool.h>
 #include <fty_proto.h>
 #include <fty/translate.h>
 #include <fty/expected.h>

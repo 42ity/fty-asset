@@ -27,6 +27,7 @@
 */
 
 #include "topology_input_powerchain.h"
+#include <fty_common.h>
 
 ////////////////////////////////////////////////////////////////////////
 // copied from fty-rest
@@ -51,6 +52,9 @@
 #include <fty_common_macros.h>
 #include <iostream>
 #include <string>
+#include <fty_common.h>
+#include "assettopology.h"
+
 
 
 // struct for "devices" array
@@ -234,9 +238,8 @@ int topology_input_powerchain(std::map<std::string, std::string>& param, std::st
 
     // serialize topo (json)
     try {
-        std::ostringstream       out;
-        cxxtools::JsonSerializer serializer(out);
-        serializer.inputUtf8(true);
+        std::ostringstream out;
+        cxxtools::JsonSerializer serializer (out);
         serializer.serialize(topo).finish();
         json = out.str();
     } catch (...) {

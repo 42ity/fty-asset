@@ -34,8 +34,9 @@
 #include <fty_common_asset_types.h>
 #include <fty_common_macros.h>
 #include <fty_log.h>
-#include <ftyproto.h>
+#include <fty_proto.h>
 #include <fty/convert.h>
+#include <fty_common.h>
 
 namespace fty {
     BasicAsset::BasicAsset ()
@@ -412,7 +413,7 @@ namespace fty {
         if (si.findMember ("aux"))
         {
             const cxxtools::SerializationInfo auxSi = si.getMember("aux");
-            for (const auto oneElement : auxSi)
+            for (const auto& oneElement : auxSi)
             {
                 auto key = oneElement.name();
                 std::string value;
@@ -424,13 +425,13 @@ namespace fty {
         if (si.findMember ("ext"))
         {
             const cxxtools::SerializationInfo extSi = si.getMember("ext");
-            for (const auto oneElement : extSi)
+            for (const auto& oneElement : extSi)
             {
                 auto key = oneElement.name();
                 // ext from UI behaves as an object of objects with empty 1st level keys
                 if (key.empty())
                 {
-                    for (const auto innerElement : oneElement)
+                    for (const auto& innerElement : oneElement)
                     {
                         auto innerKey = innerElement.name();
                         log_debug ("inner key = %s", innerKey.c_str ());
@@ -460,7 +461,7 @@ namespace fty {
 
         cxxtools::SerializationInfo &auxSi = si.addMember("aux");
         auxSi.setCategory (cxxtools::SerializationInfo::Object);
-        for (const auto keyValue : aux_)
+        for (const auto& keyValue : aux_)
         {
             auto key = keyValue.first;
             auto value = keyValue.second;
@@ -471,7 +472,7 @@ namespace fty {
 
         cxxtools::SerializationInfo &extSi = si.addMember("ext");
         extSi.setCategory (cxxtools::SerializationInfo::Object);
-        for (const auto keyValue : ext_)
+        for (const auto& keyValue : ext_)
         {
             auto key = keyValue.first;
             auto value = keyValue.second;

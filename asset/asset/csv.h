@@ -44,10 +44,14 @@ Example:
 #pragma once
 
 #include <cstdint>
-#include <cxxtools/csvdeserializer.h>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
+
+namespace cxxtools {
+class SerializationInfo;
+}
 
 namespace fty::asset {
 /**
@@ -64,8 +68,7 @@ class CsvMap
 {
 
 public:
-    typedef std::vector<std::vector<std::string>>      Data;
-    typedef std::vector<std::vector<cxxtools::String>> CxxData;
+    typedef std::vector<std::vector<std::string>> Data;
 
     /**
      * \brief Creates new CsvMap instance with data inside
@@ -81,11 +84,6 @@ public:
     CsvMap()
     {
     }
-
-    /**
-     * \brief Creates new CsvMap instance with data inside
-     */
-    CsvMap(const CxxData& data);
 
     /**
      * \brief deserialize provided data, inicialize map of row title to index
@@ -206,4 +204,4 @@ CsvMap CsvMap_from_istream(std::istream& in);
  */
 CsvMap CsvMap_from_serialization_info(const cxxtools::SerializationInfo& si);
 
-} // namespace shared
+} // namespace fty::asset

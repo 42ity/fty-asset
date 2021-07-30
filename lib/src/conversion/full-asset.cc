@@ -24,7 +24,7 @@
 #include <fty_asset_dto.h>
 #include <fty_common_asset.h>
 
-typedef struct _fty_proto_t fty_proto_t;
+struct fty_proto_t;
 
 namespace fty { namespace conversion {
 

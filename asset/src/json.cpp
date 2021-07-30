@@ -21,12 +21,11 @@
 #include "asset/json.h"
 #include "asset/asset-computed.h"
 #include "asset/asset-manager.h"
-#include <fty/split.h>
+#include <fty/string-utils.h>
 #include <fty_common.h>
 #include <fty_common_db_asset.h>
 #include <fty_common_rest.h>
 #include <fty_shm.h>
-#include <cxxtools/regex.h>
 
 namespace fty::asset {
 
@@ -82,9 +81,9 @@ std::string getJsonAsset(uint32_t elemId)
 
     std::string parent_name;
     std::string ext_parent_name;
-    auto parent_names = db::idToNameExtName(tmp->parentId);
+    auto        parent_names = db::idToNameExtName(tmp->parentId);
     if (parent_names) {
-        parent_name = parent_names->first;
+        parent_name     = parent_names->first;
         ext_parent_name = parent_names->second;
     }
 
@@ -111,8 +110,14 @@ std::string getJsonAsset(uint32_t elemId)
         json += utils::json::jsonify("location_uri", "/api/v1/asset/" + parent_name) + ",";
         json += utils::json::jsonify("location_id", parent_name) + ",";
         json += utils::json::jsonify("location", ext_parent_name) + ",";
+
+        // Get informations from database
+        auto parentAsset = AssetManager::getItem(tmp->parentId);
+        json += utils::json::jsonify("location_type", trimmed(parentAsset->typeName)) + ",";
+
     } else {
         json += "\"location\":\"\",";
+        json += "\"location_type\":\"\",";
     }
 
     json += "\"groups\": [";
@@ -229,22 +234,26 @@ std::string getJsonAsset(uint32_t elemId)
     std::vector<std::string>      fqdns;
     std::vector<std::string>      hostnames;
     if (!tmp->extAttributes.empty()) {
-        cxxtools::Regex r_outlet_label("^outlet\\.[0-9][0-9]*\\.label$");
-        cxxtools::Regex r_outlet_group("^outlet\\.[0-9][0-9]*\\.group$");
-        cxxtools::Regex r_outlet_type("^outlet\\.[0-9][0-9]*\\.type$");
-        cxxtools::Regex r_ip("^ip\\.[0-9][0-9]*$");
-        cxxtools::Regex r_mac("^mac\\.[0-9][0-9]*$");
-        cxxtools::Regex r_hostname("^hostname\\.[0-9][0-9]*$");
-        cxxtools::Regex r_fqdn("^fqdn\\.[0-9][0-9]*$");
+        std::regex r_outlet_label("^outlet\\.[0-9][0-9]*\\.label$");
+        std::regex r_outlet_group("^outlet\\.[0-9][0-9]*\\.group$");
+        std::regex r_outlet_type("^outlet\\.[0-9][0-9]*\\.type$");
+        std::regex r_ip("^ip\\.[0-9][0-9]*$");
+        std::regex r_mac("^mac\\.[0-9][0-9]*$");
+        std::regex r_hostname("^hostname\\.[0-9][0-9]*$");
+        std::regex r_fqdn("^fqdn\\.[0-9][0-9]*$");
         for (auto& oneExt : tmp->extAttributes) {
             auto& attrName = oneExt.first;
+
+            // filter location_type (already present)
+            if (attrName == "location_type")
+                continue;
 
             if (attrName == "name")
                 continue;
 
             auto& attrValue  = oneExt.second.value;
             auto  isReadOnly = oneExt.second.readOnly;
-            if (r_outlet_label.match(attrName)) {
+            if (std::regex_match(attrName, r_outlet_label)) {
                 auto oNumber = getOutletNumber(attrName);
                 auto it      = outlets.find(oNumber);
                 if (it == outlets.cend()) {
@@ -254,7 +263,7 @@ std::string getJsonAsset(uint32_t elemId)
                 it->second.label   = attrValue;
                 it->second.label_r = isReadOnly;
                 continue;
-            } else if (r_outlet_group.match(attrName)) {
+            } else if (std::regex_match(attrName, r_outlet_group)) {
                 auto oNumber = getOutletNumber(attrName);
                 auto it      = outlets.find(oNumber);
                 if (it == outlets.cend()) {
@@ -264,7 +273,7 @@ std::string getJsonAsset(uint32_t elemId)
                 it->second.group   = attrValue;
                 it->second.group_r = isReadOnly;
                 continue;
-            } else if (r_outlet_type.match(attrName)) {
+            } else if (std::regex_match(attrName, r_outlet_type)) {
                 auto oNumber = getOutletNumber(attrName);
                 auto it      = outlets.find(oNumber);
                 if (it == outlets.cend()) {
@@ -274,16 +283,16 @@ std::string getJsonAsset(uint32_t elemId)
                 it->second.type   = attrValue;
                 it->second.type_r = isReadOnly;
                 continue;
-            } else if (r_ip.match(attrName)) {
+            } else if (std::regex_match(attrName, r_ip)) {
                 ips.push_back(attrValue);
                 continue;
-            } else if (r_mac.match(attrName)) {
+            } else if (std::regex_match(attrName, r_mac)) {
                 macs.push_back(attrValue);
                 continue;
-            } else if (r_fqdn.match(attrName)) {
+            } else if (std::regex_match(attrName, r_fqdn)) {
                 fqdns.push_back(attrValue);
                 continue;
-            } else if (r_hostname.match(attrName)) {
+            } else if (std::regex_match(attrName, r_hostname)) {
                 hostnames.push_back(attrValue);
                 continue;
             }

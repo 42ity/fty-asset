@@ -26,7 +26,7 @@
 #include <string>
 
 // fwd declaration
-typedef struct _fty_proto_t fty_proto_t;
+struct fty_proto_t;
 
 // clang-format off
 using AttributesMap = std::map<std::string,std::string>;

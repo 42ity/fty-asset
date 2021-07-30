@@ -33,6 +33,9 @@
 #include <tntdb/connect.h>
 #include <tntdb/error.h>
 #include <tntdb/result.h>
+#include <exception>
+#include <fty_log.h>
+#include <fty_common.h>
 
 class ShortAssetInfo
 {

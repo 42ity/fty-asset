@@ -6,19 +6,18 @@ find_package(fty-cmake PATHS ${CMAKE_BINARY_DIR}/fty-cmake)
 
 etn_target(shared ${PROJECT_NAME}-libng
     PUBLIC
-        asset/json.h
-        asset/asset-manager.h
-        asset/asset-helpers.h
+        asset/asset-cam.h
         asset/asset-computed.h
-        asset/asset-db.h
-        asset/asset-licensing.h
-        asset/asset-import.h
         asset/asset-configure-inform.h
+        asset/asset-db.h
+        asset/asset-helpers.h
+        asset/asset-import.h
+        asset/asset-licensing.h
+        asset/asset-manager.h
         asset/csv.h
-        asset/error.h
-        asset/logger.h
         asset/db.h
-        asset/test-db.h
+        asset/error.h
+        asset/json.h
 
     SOURCES
         src/json.cpp
@@ -39,15 +38,81 @@ etn_target(shared ${PROJECT_NAME}-libng
         src/manager/export.cpp
     INCLUDE_DIRS src
     USES
-        fty_common_logging
         mlm
         fty-asset
-        fty_common
-        fty-utils
         fty_shm
         fty_common_rest
-        fty_common_mlm
         czmq
+        tntdb
+        cxxtools
         fty_proto
         fty_security_wallet
+        fty_common_dto
+    USES_PUBLIC
+        fty_common_logging
+        fty_common_mlm
+        fty_common_db
+        fty_common
+        fty_common_socket
+        fty-utils
 )
+
+########################################################################################################################
+
+etn_target(shared ${PROJECT_NAME}-test-db
+    PUBLIC
+        test-db/sample-db.h
+        test-db/test-db.h
+    SOURCES
+        test-db/structure/bios_asset_element_type.h
+        test-db/structure/bios_asset_device_type.h
+        test-db/structure/bios_asset_element.h
+        test-db/structure/bios_asset_link_type.h
+        test-db/structure/bios_asset_ext_attributes.h
+        test-db/structure/bios_asset_group_relation.h
+        test-db/structure/bios_asset_link.h
+        test-db/structure/bios_device_type.h
+        test-db/structure/bios_discovered_device.h
+        test-db/structure/bios_monitor_asset_relation.h
+        test-db/sample-db.cpp
+        test-db/test-db.cpp
+    USES
+        ${PROJECT_NAME}-libng
+        mysqld
+        stdc++fs
+        tntdb
+        cxxtools
+    USES_PUBLIC
+        fty-utils
+        fty_common_db
+        fty_common
+        fty-pack
+)
+
+########################################################################################################################
+
+etn_test_target(fty-asset-libng
+    SOURCES
+        test/main.cpp
+        test/db/insert.cpp
+        test/db/names.cpp
+        test/db/select.cpp
+
+        test/test-utils.h
+        test/read.cpp
+        test/create.cpp
+        test/import.cpp
+        test/export.cpp
+        test/delete.cpp
+        test/usize.cpp
+    CONFIGS
+        test/conf/logger.conf
+    USES
+        fty-asset-test-db
+        yaml-cpp
+    SUBDIR
+        test
+)
+
+########################################################################################################################
+

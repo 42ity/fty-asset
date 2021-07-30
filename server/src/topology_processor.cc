@@ -32,6 +32,8 @@
 #include "topology_input_powerchain.h"
 
 #include <cxxtools/serializationinfo.h>
+#include <cxxtools/jsondeserializer.h>
+#include <cxxtools/jsonserializer.h>
 #include <map>
 
 #include <fty_log.h>

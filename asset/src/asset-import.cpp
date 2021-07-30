@@ -2,10 +2,9 @@
 #include "asset/asset-helpers.h"
 #include "asset/asset-licensing.h"
 #include "asset/csv.h"
-#include "asset/db.h"
 #include "asset/json.h"
-#include "asset/logger.h"
-#include <fty/split.h>
+#include <fty/string-utils.h>
+#include <fty_common_db_connection.h>
 #include <fty_common_db_dbpath.h>
 #include <fty_log.h>
 #include <regex>
@@ -23,6 +22,14 @@ namespace fty::asset {
 //    });
 //    return keys;
 //}
+
+static std::string strip(const std::string& st)
+{
+    std::regex re(R"(\\')");
+    std::regex re2(R"(\\")");
+
+    return std::regex_replace(std::regex_replace(st, re2, "\""), re, "'");
+}
 
 Import::Import(const CsvMap& cm)
     : m_cm(cm)
@@ -74,7 +81,7 @@ std::map<std::string, std::string> Import::sanitizeRowExtNames(size_t row, bool 
                         break;
                     }
 
-                    auto name = db::extNameToAssetName(it->second);
+                    auto name = db::extNameToAssetName(strip(it->second));
                     if (!name) {
                         logError(name.error());
                     } else {
@@ -86,7 +93,7 @@ std::map<std::string, std::string> Import::sanitizeRowExtNames(size_t row, bool 
                 // simple name
                 auto it = result.find(item);
                 if (it != result.end()) {
-                    auto name = db::extNameToAssetName(it->second);
+                    auto name = db::extNameToAssetName(strip(it->second));
                     if (!name) {
                         logError(name.error());
                     } else {
@@ -252,7 +259,7 @@ AssetExpected<db::AssetElement> Import::processRow(
 
     if (!idStr.empty()) {
         if (auto tmp = db::nameToAssetId(idStr)) {
-            id = uint32_t(*tmp);
+            id = *tmp;
         } else {
             return unexpected(error(Errors::ElementNotFound).format(idStr));
         }
@@ -263,7 +270,7 @@ AssetExpected<db::AssetElement> Import::processRow(
         m_operation = persist::asset_operation::UPDATE;
     }
 
-    auto ename = m_cm.get(row, "name");
+    auto ename = strip(m_cm.get(row, "name"));
     if (ename.empty()) {
         return unexpected(error(Errors::BadParams).format("name", "empty value"_tr, "unique, non empty value"_tr));
     }
@@ -313,7 +320,7 @@ AssetExpected<db::AssetElement> Import::processRow(
     }
     unusedColumns.erase("status");
 
-    auto assetTag = unusedColumns.count("asset_tag") ? m_cm.get(row, "asset_tag") : "";
+    auto assetTag = unusedColumns.count("asset_tag") ? strip(m_cm.get(row, "asset_tag")) : "";
     logDebug("asset_tag = '{}'", assetTag);
     if (assetTag.length() > 50) {
         std::string received = "too long string"_tr;
@@ -326,7 +333,7 @@ AssetExpected<db::AssetElement> Import::processRow(
     logDebug("priority = {}", priority);
     unusedColumns.erase("priority");
 
-    auto location = sanitizedAssetNames["location"];
+    auto location = strip(sanitizedAssetNames["location"]);
     logDebug("location = '{}'", location);
     uint32_t parentId = 0;
     if (!location.empty()) {
@@ -431,7 +438,7 @@ AssetExpected<db::AssetElement> Import::processRow(
             // remove from unused
             unusedColumns.erase(linkColName);
             // take value
-            linkSource = sanitizedAssetNames.at(linkColName);
+            linkSource = strip(sanitizedAssetNames.at(linkColName));
         } catch (const std::out_of_range&) {
             break;
         }
@@ -459,6 +466,28 @@ AssetExpected<db::AssetElement> Import::processRow(
                 oneLink.src = ret->id; // if OK, then take ID
             } else {
                 return unexpected(ret.error());
+            }
+
+            // check that power source in same dc as parentId
+            if (parentId) {
+                uint64_t dcId = 0;
+                if (auto ret = db::selectAssetElementWebById(parentId)) {
+                    if (ret->typeId == persist::DATACENTER) {
+                        dcId = ret->id;
+                    } else {
+                        if (auto dc = db::findParentByType(parentId, persist::DATACENTER)) {
+                            dcId = dc->id;
+                        }
+                    }
+                }
+
+                auto fdc = db::findParentByType(oneLink.src, persist::DATACENTER);
+                if (!fdc) {
+                    return unexpected("Power source is not in DC");
+                }
+                if (dcId && dcId != fdc->id) {
+                    return unexpected("Power source is not in same DC");
+                }
             }
         }
 
@@ -643,7 +672,7 @@ AssetExpected<db::AssetElement> Import::processRow(
         }
     }
 
-    tnt::Connection conn;
+    fty::db::Connection conn;
 
     db::AssetElement el;
 
@@ -659,7 +688,7 @@ AssetExpected<db::AssetElement> Import::processRow(
 
         std::string errmsg = "";
         if (type != "device") {
-            tnt::Transaction trans(conn);
+            fty::db::Transaction trans(conn);
 
             auto ret = updateDcRoomRowRackGroup(
                 conn, el.id, name, parentId, extattributes, status, priority, groups, assetTag, extattributesRO);
@@ -672,7 +701,7 @@ AssetExpected<db::AssetElement> Import::processRow(
             }
         } else {
             if (idStr != "rackcontroller-0") {
-                tnt::Transaction trans(conn);
+                fty::db::Transaction trans(conn);
 
                 auto ret = updateDevice(conn, el.id, name, parentId, extattributes, "nonactive", priority, groups,
                     links, assetTag, extattributesRO);
@@ -693,7 +722,7 @@ AssetExpected<db::AssetElement> Import::processRow(
                     }
                 }
             } else {
-                tnt::Transaction trans(conn);
+                fty::db::Transaction trans(conn);
 
                 auto ret = updateDevice(conn, el.id, name, parentId, extattributes, status, priority, groups, links,
                     assetTag, extattributesRO);
@@ -718,7 +747,7 @@ AssetExpected<db::AssetElement> Import::processRow(
         }
 
         if (type != "device") {
-            tnt::Transaction trans(conn);
+            fty::db::Transaction trans(conn);
             // this is a transaction
             auto ret = insertDcRoomRowRackGroup(
                 conn, ename, typeId, parentId, extattributes, status, priority, groups, assetTag, extattributesRO);
@@ -732,7 +761,7 @@ AssetExpected<db::AssetElement> Import::processRow(
             }
         } else {
             if (subtypeId != rackControllerId) {
-                tnt::Transaction trans(conn);
+                fty::db::Transaction trans(conn);
 
                 auto ret = insertDevice(conn, links, groups, ename, parentId, extattributes, subtypeId, "nonactive",
                     priority, assetTag, extattributesRO);
@@ -754,7 +783,7 @@ AssetExpected<db::AssetElement> Import::processRow(
                 }
             } else {
                 // this is a transaction
-                tnt::Transaction trans(conn);
+                fty::db::Transaction trans(conn);
                 auto ret = insertDevice(conn, links, groups, ename, parentId, extattributes, subtypeId, status,
                     priority, assetTag, extattributesRO);
 
@@ -786,7 +815,7 @@ AssetExpected<db::AssetElement> Import::processRow(
     return AssetExpected<db::AssetElement>(el);
 }
 
-AssetExpected<void> Import::updateDcRoomRowRackGroup(tnt::Connection& conn, uint32_t elementId,
+AssetExpected<void> Import::updateDcRoomRowRackGroup(fty::db::Connection& conn, uint32_t elementId,
     const std::string& elementName, uint32_t parentId, const std::map<std::string, std::string>& extattributes,
     const std::string& status, uint16_t priority, const std::set<uint32_t>& groups, const std::string& assetTag,
     const std::map<std::string, std::string>& extattributesRO) const
@@ -853,7 +882,7 @@ AssetExpected<void> Import::updateDcRoomRowRackGroup(tnt::Connection& conn, uint
     return {};
 }
 
-AssetExpected<void> Import::updateDevice(tnt::Connection& conn, uint32_t elementId, const std::string& elementName,
+AssetExpected<void> Import::updateDevice(fty::db::Connection& conn, uint32_t elementId, const std::string& elementName,
     uint32_t parentId, const std::map<std::string, std::string>& extattributes, const std::string& status,
     uint16_t priority, const std::set<uint32_t>& groups, const std::vector<db::AssetLink>& links,
     const std::string& assetTag, const std::map<std::string, std::string>& extattributesRO) const
@@ -893,7 +922,7 @@ AssetExpected<void> Import::updateDevice(tnt::Connection& conn, uint32_t element
     return {};
 }
 
-Expected<uint32_t> Import::insertDcRoomRowRackGroup(tnt::Connection& conn, const std::string& elementName,
+Expected<uint32_t> Import::insertDcRoomRowRackGroup(fty::db::Connection& conn, const std::string& elementName,
     uint16_t elementTypeId, uint32_t parentId, const std::map<std::string, std::string>& extattributes,
     const std::string& status, uint16_t priority, const std::set<uint32_t>& groups, const std::string& assetTag,
     const std::map<std::string, std::string>& extattributesRO) const
@@ -972,7 +1001,7 @@ Expected<uint32_t> Import::insertDcRoomRowRackGroup(tnt::Connection& conn, const
     return elementId;
 }
 
-Expected<uint32_t> Import::insertDevice(tnt::Connection& conn, const std::vector<db::AssetLink>& links,
+Expected<uint32_t> Import::insertDevice(fty::db::Connection& conn, const std::vector<db::AssetLink>& links,
     const std::set<uint32_t>& groups, const std::string& elementName, uint32_t parentId,
     const std::map<std::string, std::string>& extattributes, uint16_t assetDeviceTypeId, const std::string& status,
     uint16_t priority, const std::string& assetTag, const std::map<std::string, std::string>& extattributesRO) const

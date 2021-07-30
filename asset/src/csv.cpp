@@ -21,14 +21,26 @@
 #include "asset/csv.h"
 #include <algorithm>
 #include <cxxtools/csvdeserializer.h>
+#include <cxxtools/serializationinfo.h>
 #include <fty_common.h>
 #include <fty_common_macros.h>
 #include <iostream>
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <type_traits>
 
 namespace fty::asset {
+
+template <typename T, typename = void>
+struct HasRead : std::false_type
+{
+};
+
+template <typename T>
+struct HasRead<T, decltype(std::declval<T>().read, void())> : std::true_type
+{
+};
 
 /* Workaround for a fact a) std::transform to do a strip and lower is weird, b) it breaks the map somehow*/
 static const std::string _ci_strip(const std::string& str)
@@ -42,27 +54,6 @@ static const std::string _ci_strip(const std::string& str)
     }
 
     return b.str();
-}
-
-CsvMap::CsvMap(const CsvMap::CxxData& data)
-    : _data{}
-    , _title_to_index{}
-{
-    // XXX: this is ugly part, which takes the table of cxxtools::String and convert it to table of utf-8 encoded
-    // std::string
-    for (size_t i = 0; i != data.size(); i++) {
-        auto row = std::vector<std::string>{};
-        row.reserve(data[0].size());
-
-        /*FIXME: segfaults!
-         * std::transform(data[i].begin(), data[i].end(), row.begin(),
-                [&](const cxxtools::String& s) -> std::string { return to_utf8(s); });
-        */
-        for (const auto& s : data[i]) {
-            row.push_back(cxxtools::Utf8Codec::encode(s));
-        }
-        _data.push_back(row);
-    }
 }
 
 void CsvMap::deserialize()
@@ -205,11 +196,13 @@ bool hasApostrof(std::istream& i)
     i.seekg(0);
     return false;
 }
+
 CsvMap CsvMap_from_istream(std::istream& in)
 {
-    std::vector<std::vector<cxxtools::String>> data;
-    cxxtools::CsvDeserializer                  deserializer(in);
-    char                                       delimiter = findDelimiter(in);
+    cxxtools::CsvDeserializer             deserializer(in);
+    std::vector<std::vector<std::string>> data;
+    char                                  delimiter = findDelimiter(in);
+
     if (delimiter == '\x0') {
         std::string msg = TRANSLATE_ME("Cannot detect the delimiter, use comma (,) semicolon (;) or tabulator");
         log_error("%s\n", msg.c_str());
@@ -227,7 +220,7 @@ CsvMap CsvMap_from_istream(std::istream& in)
 
 
 static void process_powers_key(
-    const cxxtools::SerializationInfo& powers_si, std::vector<std::vector<cxxtools::String>>& data)
+    const cxxtools::SerializationInfo& powers_si, std::vector<std::vector<std::string>>& data)
 {
     if (powers_si.category() != cxxtools::SerializationInfo::Array) {
         throw std::invalid_argument(TRANSLATE_ME("Key 'powers' should be an array"));
@@ -240,22 +233,22 @@ static void process_powers_key(
             throw std::invalid_argument(TRANSLATE_ME("Key 'src_name' in the key 'powers' is mandatory"));
         }
 
-        cxxtools::String src_name{};
+        std::string src_name;
         oneElement.getMember("src_name") >>= src_name;
-        data[0].push_back(cxxtools::String("power_source." + std::to_string(i)));
+        data[0].push_back("power_source." + std::to_string(i));
         data[1].push_back(src_name);
         // src_outlet is optimal
         if (oneElement.findMember("src_socket") != nullptr) {
-            cxxtools::String src_socket{};
+            std::string src_socket{};
             oneElement.getMember("src_socket") >>= src_socket;
-            data[0].push_back(cxxtools::String("power_plug_src." + std::to_string(i)));
+            data[0].push_back("power_plug_src." + std::to_string(i));
             data[1].push_back(src_socket);
         }
         // dest_outlet is optional
         if (oneElement.findMember("dest_socket") != nullptr) {
-            cxxtools::String dest_socket{};
+            std::string dest_socket;
             oneElement.getMember("dest_socket") >>= dest_socket;
-            data[0].push_back(cxxtools::String("power_input." + std::to_string(i)));
+            data[0].push_back("power_input." + std::to_string(i));
             data[1].push_back(dest_socket);
         }
         // src_id is there, but here it is ignored
@@ -267,7 +260,7 @@ static void process_powers_key(
 
 
 static void process_groups_key(
-    const cxxtools::SerializationInfo& groups_si, std::vector<std::vector<cxxtools::String>>& data)
+    const cxxtools::SerializationInfo& groups_si, std::vector<std::vector<std::string>>& data)
 {
     if (groups_si.category() != cxxtools::SerializationInfo::Array) {
         throw std::invalid_argument(TRANSLATE_ME("Key 'groups' should be an array"));
@@ -280,9 +273,9 @@ static void process_groups_key(
         if (oneElement.findMember("name") == nullptr) {
             throw std::invalid_argument(TRANSLATE_ME("Key 'name' in the key 'groups' is mandatory"));
         } else {
-            cxxtools::String group_name{};
+            std::string group_name;
             oneElement.getMember("name") >>= group_name;
-            data[0].push_back(cxxtools::String("group." + std::to_string(i)));
+            data[0].push_back("group." + std::to_string(i));
             data[1].push_back(group_name);
         }
         i++;
@@ -290,7 +283,7 @@ static void process_groups_key(
 }
 
 
-static void process_ips_key(const cxxtools::SerializationInfo& si, std::vector<std::vector<cxxtools::String>>& data)
+static void process_ips_key(const cxxtools::SerializationInfo& si, std::vector<std::vector<std::string>>& data)
 {
     LOG_START;
     if (si.category() != cxxtools::SerializationInfo::Array) {
@@ -301,14 +294,14 @@ static void process_ips_key(const cxxtools::SerializationInfo& si, std::vector<s
     for (const auto& oneElement : si) { // iterate through the array
         std::string value;
         oneElement.getValue(value);
-        data[0].push_back(cxxtools::String("ip." + std::to_string(i)));
-        data[1].push_back(cxxtools::String(value));
+        data[0].push_back("ip." + std::to_string(i));
+        data[1].push_back(value);
         i++;
     }
 }
 
 
-static void process_macs_key(const cxxtools::SerializationInfo& si, std::vector<std::vector<cxxtools::String>>& data)
+static void process_macs_key(const cxxtools::SerializationInfo& si, std::vector<std::vector<std::string>>& data)
 {
     LOG_START;
     if (si.category() != cxxtools::SerializationInfo::Array) {
@@ -319,15 +312,14 @@ static void process_macs_key(const cxxtools::SerializationInfo& si, std::vector<
     for (const auto& oneElement : si) { // iterate through the array
         std::string value;
         oneElement.getValue(value);
-        data[0].push_back(cxxtools::String("mac." + std::to_string(i)));
-        data[1].push_back(cxxtools::String(value));
+        data[0].push_back("mac." + std::to_string(i));
+        data[1].push_back(value);
         i++;
     }
 }
 
 
-static void process_hostnames_key(
-    const cxxtools::SerializationInfo& si, std::vector<std::vector<cxxtools::String>>& data)
+static void process_hostnames_key(const cxxtools::SerializationInfo& si, std::vector<std::vector<std::string>>& data)
 {
     LOG_START;
     if (si.category() != cxxtools::SerializationInfo::Array) {
@@ -338,14 +330,14 @@ static void process_hostnames_key(
     for (const auto& oneElement : si) { // iterate through the array
         std::string value;
         oneElement.getValue(value);
-        data[0].push_back(cxxtools::String("hostname." + std::to_string(i)));
-        data[1].push_back(cxxtools::String(value));
+        data[0].push_back("hostname." + std::to_string(i));
+        data[1].push_back(value);
         i++;
     }
 }
 
 
-static void process_fqdns_key(const cxxtools::SerializationInfo& si, std::vector<std::vector<cxxtools::String>>& data)
+static void process_fqdns_key(const cxxtools::SerializationInfo& si, std::vector<std::vector<std::string>>& data)
 {
     LOG_START;
     if (si.category() != cxxtools::SerializationInfo::Array) {
@@ -356,14 +348,13 @@ static void process_fqdns_key(const cxxtools::SerializationInfo& si, std::vector
     for (const auto& oneElement : si) { // iterate through the array
         std::string value;
         oneElement.getValue(value);
-        data[0].push_back(cxxtools::String("fqdn." + std::to_string(i)));
-        data[1].push_back(cxxtools::String(value));
+        data[0].push_back("fqdn." + std::to_string(i));
+        data[1].push_back(value);
         i++;
     }
 }
 
-static void process_oneOutlet(
-    const cxxtools::SerializationInfo& outlet_si, std::vector<std::vector<cxxtools::String>>& data)
+static void process_oneOutlet(const cxxtools::SerializationInfo& outlet_si, std::vector<std::vector<std::string>>& data)
 {
     if (outlet_si.category() != cxxtools::SerializationInfo::Array) {
         std::string msg = TRANSLATE_ME("Key '%s' should be an array", outlet_si.name().c_str());
@@ -380,14 +371,14 @@ static void process_oneOutlet(
         } catch (...) {
             throw std::invalid_argument(TRANSLATE_ME("In outlet object key 'name/value/read_only' is missing"));
         }
-        data[0].push_back(cxxtools::String("outlet." + outlet_si.name() + "." + name));
-        data[1].push_back(cxxtools::String(value));
+        data[0].push_back("outlet." + outlet_si.name() + "." + name);
+        data[1].push_back(value);
     }
 }
 
 
 static void process_outlets_key(
-    const cxxtools::SerializationInfo& outlets_si, std::vector<std::vector<cxxtools::String>>& data)
+    const cxxtools::SerializationInfo& outlets_si, std::vector<std::vector<std::string>>& data)
 {
     if (outlets_si.category() != cxxtools::SerializationInfo::Object) {
         throw std::invalid_argument(TRANSLATE_ME("Key 'outlets' should be an object"));
@@ -399,9 +390,9 @@ static void process_outlets_key(
 
 
 // forward declaration
-static void s_read_si(const cxxtools::SerializationInfo& si, std::vector<std::vector<cxxtools::String>>& data);
+static void s_read_si(const cxxtools::SerializationInfo& si, std::vector<std::vector<std::string>>& data);
 
-static void process_ext_key(const cxxtools::SerializationInfo& ext_si, std::vector<std::vector<cxxtools::String>>& data)
+static void process_ext_key(const cxxtools::SerializationInfo& ext_si, std::vector<std::vector<std::string>>& data)
 {
     if (ext_si.category() == cxxtools::SerializationInfo::Array) {
         log_debug("it is GET format");
@@ -421,8 +412,8 @@ static void process_ext_key(const cxxtools::SerializationInfo& ext_si, std::vect
                 }
                 std::string value;
                 oneAttr.getValue(value);
-                data[0].push_back(cxxtools::String(name));
-                data[1].push_back(cxxtools::String(value));
+                data[0].push_back(name);
+                data[1].push_back(value);
             }
         }
     } else if (ext_si.category() == cxxtools::SerializationInfo::Object) {
@@ -434,14 +425,14 @@ static void process_ext_key(const cxxtools::SerializationInfo& ext_si, std::vect
     }
 }
 
-static void s_read_si(const cxxtools::SerializationInfo& si, std::vector<std::vector<cxxtools::String>>& data)
+static void s_read_si(const cxxtools::SerializationInfo& si, std::vector<std::vector<std::string>>& data)
 {
     if (data.size() != 2) {
         throw std::invalid_argument(TRANSLATE_ME("Expected two items in array, got %zu", data.size()));
     }
 
     for (auto it = si.begin(); it != si.end(); ++it) {
-        const cxxtools::String name = cxxtools::convert<cxxtools::String>(it->name());
+        std::string name = it->name();
         if (name == "ext") {
             process_ext_key(si.getMember("ext"), data);
             continue;
@@ -491,7 +482,7 @@ static void s_read_si(const cxxtools::SerializationInfo& si, std::vector<std::ve
             process_fqdns_key(si.getMember("fqdns"), data);
             continue;
         }
-        std::basic_string<cxxtools::Char> value;
+        std::string value;
         it->getValue(value);
         data[0].push_back(name);
         data[1].push_back(value);
@@ -500,7 +491,7 @@ static void s_read_si(const cxxtools::SerializationInfo& si, std::vector<std::ve
 
 CsvMap CsvMap_from_serialization_info(const cxxtools::SerializationInfo& si)
 {
-    std::vector<std::vector<cxxtools::String>> data = {{}, {}};
+    std::vector<std::vector<std::string>> data = {{}, {}};
     s_read_si(si, data);
     // print the data
     // for ( unsigned int i = 0; i < data.size(); i++ ) {
@@ -513,4 +504,4 @@ CsvMap CsvMap_from_serialization_info(const cxxtools::SerializationInfo& si)
 }
 
 
-} // namespace shared
+} // namespace fty::asset
