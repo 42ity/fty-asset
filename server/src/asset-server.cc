@@ -926,7 +926,7 @@ cxxtools::SerializationInfo AssetServer::saveAssets(bool saveVirtualAssets)
 
     cxxtools::SerializationInfo& data = si.addMember("data");
 
-    for (const std::string assetName : assets) {
+    for (const std::string& assetName : assets) {
         AssetImpl a(assetName);
 
         if (a.isVirtual() && !saveVirtualAssets) {
@@ -986,7 +986,7 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si, bool tryA
     std::string srrVersion;
     si.getMember("version") >>= srrVersion;
 
-    if (srrVersion != SRR_ACTIVE_VERSION) {
+    if (fty::convert<float>(srrVersion) > fty::convert<float>(SRR_ACTIVE_VERSION)) {
         throw std::runtime_error("Version " + srrVersion + " is not supported");
     }
 
