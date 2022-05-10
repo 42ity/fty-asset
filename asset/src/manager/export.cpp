@@ -275,7 +275,7 @@ private:
             for (const auto& tag : *ret) {
                 auto pos = std::find(m_assetElementKeytags.cbegin(), m_assetElementKeytags.cend(), tag);
                 if (pos != m_assetElementKeytags.end()) {
-                    return {};
+                    continue;
                 }
 
                 if (std::find(keyTags.cbegin(), keyTags.cend(), tag) == keyTags.end()) {
