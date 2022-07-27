@@ -19,10 +19,19 @@
 
 namespace fty::asset {
 
+std::string strToUpper(const std::string& input)
+{
+    std::string buffer { input };
+    std::transform(buffer.begin(), buffer.end(), buffer.begin(), ::toupper);
+    return buffer;
+}
+
 Uuid generateUUID(const AssetFilter& assetFilter)
 {
     static std::string ns = "\x93\x3d\x6c\x80\xde\xa9\x8c\x6b\xd1\x11\x8b\x3b\x46\xa1\x81\xf1";
     Uuid               result;
+
+    logDebug("generateUUID: manufacturer={}, model={}, serial={}", assetFilter.manufacturer, assetFilter.model, assetFilter.serial);
 
     if (!assetFilter.manufacturer.empty() && !assetFilter.model.empty() && !assetFilter.serial.empty()) {
         log_debug("generate full UUID");

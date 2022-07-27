@@ -407,10 +407,24 @@ void AssetServer::createAsset(const messagebus::Message& msg)
         fty::AssetImpl asset;
         fty::Asset::fromJson(userData, asset);
 
-        auto ipAddr = asset.getExtEntry("ip.1");
-        asset::AssetFilter filter(asset.getManufacturer(), asset.getModel(), asset.getSerialNo(), ipAddr);
-        auto ret = asset::checkDuplicatedAsset(filter);
+        std::string manufacturer = asset.getManufacturer();
+        std::string model = asset.getModel();
+        std::string serialNumber = asset.getSerialNo();
+        std::string ipAddr = asset.getExtEntry("ip.1");
+
+        asset::AssetFilter assetFilter{manufacturer, model, serialNumber, ipAddr};
+        asset::AssetFilter assetFilterUpper{asset::strToUpper(manufacturer), asset::strToUpper(model), asset::strToUpper(serialNumber), ipAddr};
+
+        // First check duplicate asset with first version of uuid calculation: no data standardisation
+        auto ret = asset::checkDuplicatedAsset(assetFilter);
         if(!ret) {
+            throw std::runtime_error("Asset already exists");
+        }
+
+        // Then check duplicate asset with second version of uuid calculation: with data standardisation
+        // use UPPER string for manufacturer, model and serial number
+        auto ret2 = asset::checkDuplicatedAsset(assetFilterUpper);
+        if(!ret2) {
             throw std::runtime_error("Asset already exists");
         }
 

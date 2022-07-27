@@ -42,6 +42,7 @@ struct Uuid
     int         type;
 };
 
+std::string                strToUpper(const std::string& input);
 AssetExpected<uint32_t>    checkElementIdentifier(const std::string& paramName, const std::string& paramValue);
 AssetExpected<std::string> sanitizeDate(const std::string& inp);
 AssetExpected<double>      sanitizeValueDouble(const std::string& key, const std::string& value);
