@@ -87,19 +87,37 @@ AssetExpected<uint32_t> AssetManager::importAsset(
         return unexpected(msg.format(itemName, "key 'id' is forbidden to be used"_tr));
     }
     // If descriminant are available, check to not duplicate asset.
-    if (cm.hasTitle("manufacturer") && cm.hasTitle("model") && cm.hasTitle("serial_no")) {
-      logDebug("All discriminant data are available, checking to not duplicate asset");
+    if ((cm.hasTitle("manufacturer") && cm.hasTitle("model") && cm.hasTitle("serial_no"))
+       || cm.hasTitle("ip.1")) {
+        logDebug("All discriminant data are available, checking to not duplicate asset");
 
-      std::string ipAddr = cm.hasTitle("ip.1") ? cm.get(1, "ip.1") : "";
-      AssetFilter assetFilter{cm.get(1, "manufacturer"), cm.get(1, "model"), cm.get(1, "serial_no"), ipAddr};
+        auto getValue = [&cm](const std::string& name) -> std::string {
+            return cm.hasTitle(name) ? cm.get(1, name) : "";
+        };
 
-      auto ret = checkDuplicatedAsset(assetFilter);
-      if (!ret) {
-        return unexpected(msg.format(itemName, ret.error()));
-      }
+        std::string manufacturer = getValue("manufacturer");
+        std::string model = getValue("model");
+        std::string serialNumber = getValue("serial_no");
+        std::string ip = getValue("ip.1");
+
+        AssetFilter assetFilter{manufacturer, model, serialNumber, ip};
+        AssetFilter assetFilterUpper{strToUpper(manufacturer), strToUpper(model), strToUpper(serialNumber), ip};
+
+        // First check duplicate asset with first version of uuid calculation: no data standardisation
+        auto ret = checkDuplicatedAsset(assetFilter);
+        if (!ret) {
+            return unexpected(msg.format(itemName, ret.error()));
+        }
+
+        // Then check duplicate asset with second version of uuid calculation: with data standardisation
+        // use UPPER string for manufacturer, model and serial number
+        auto ret2 = checkDuplicatedAsset(assetFilterUpper);
+        if (!ret2) {
+            return unexpected(msg.format(itemName, ret2.error()));
+        }
     }
     else {
-      logError("Discriminant data are not availables, can not check duplicated asset");
+        logError("Discriminant data are not availables, can not check duplicated asset");
     }
 
     if (sendNotify) {

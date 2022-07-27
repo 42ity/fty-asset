@@ -368,8 +368,9 @@ void AssetImpl::create()
         // set creation timestamp
         setExtEntry(fty::EXT_CREATE_TS, generateCurrentTimestamp(), true);
         // generate uuid if not already present in the payload
+        // Note: Normalize manufacturer, model and serial number (SET UPPER CASE)
         if(getExtEntry("uuid").empty()) {
-            AssetFilter assetFilter{getManufacturer(), getModel(), getSerialNo()};
+            AssetFilter assetFilter{strToUpper(getManufacturer()), strToUpper(getModel()), strToUpper(getSerialNo())};
             setExtEntry(fty::EXT_UUID, generateUUID(assetFilter).uuid, true);
         }
 
