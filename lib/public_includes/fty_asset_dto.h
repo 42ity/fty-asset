@@ -209,7 +209,7 @@ public:
     bool                            hasParentsList() const;
     const std::vector<Asset>&       getParentsList() const;
 
-    const std::string&              getFriendlyName() const; 
+    const std::string&              getFriendlyName() const;
     std::vector<std::string>        getAddresses() const;
 
 
@@ -244,7 +244,7 @@ public:
 
     //Wrapper Endpoints => max 256
     using ProtocolMap = std::map<uint8_t, std::string>;
-    
+
     ProtocolMap         getProtocolMap() const;
 
     const std::string&  getEndpointProtocol(uint8_t index) const;
@@ -327,6 +327,3 @@ public:
 };
 
 } // namespace fty
-
-//  Self test of this class
-void fty_asset_dto_test(bool verbose);

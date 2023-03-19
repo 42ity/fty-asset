@@ -42,7 +42,7 @@
 std::set<std::string> name_to_ip4 (const char *name)
 {
     char buffer[INET_ADDRSTRLEN];
-    struct addrinfo *info, *infos = NULL;
+    struct addrinfo *info{nullptr}, *infos{nullptr};
     struct addrinfo hint;
     std::set<std::string> result;
 
@@ -58,14 +58,16 @@ std::set<std::string> name_to_ip4 (const char *name)
         }
         info = info->ai_next;
     }
-    freeaddrinfo(infos);
+    if (infos) {
+        freeaddrinfo(infos);
+    }
     return result;
 }
 
 std::set<std::string> name_to_ip6 (const char *name)
 {
     char buffer[INET6_ADDRSTRLEN];
-    struct addrinfo *info, *infos = NULL;
+    struct addrinfo *info{nullptr}, *infos{nullptr};
     struct addrinfo hint;
     std::set<std::string> result;
 
@@ -81,7 +83,9 @@ std::set<std::string> name_to_ip6 (const char *name)
         }
         info = info->ai_next;
     }
-    freeaddrinfo(infos);
+    if (infos) {
+        freeaddrinfo(infos);
+    }
     return result;
 }
 
@@ -95,9 +99,11 @@ std::set<std::string> name_to_ip (const char *name)
 
 std::string ip_to_name (const char *ip)
 {
-    char hbuf[NI_MAXHOST];
-
     if (!ip) return "";
+
+    char hbuf[NI_MAXHOST];
+    memset(hbuf, 0, sizeof(hbuf));
+
     if (strchr(ip, ':')) {
         // IPv6
         struct sockaddr_in6 sa_in;
@@ -119,6 +125,7 @@ std::string ip_to_name (const char *ip)
             }
         }
     }
+
     // IPv4
     struct sockaddr_in sa_in;
     memset (&sa_in, 0, sizeof(sa_in));
@@ -138,23 +145,26 @@ std::string ip_to_name (const char *ip)
             return hbuf;
         }
     }
+
     return "";
 }
 
 std::map<std::string,std::set<std::string>> local_addresses()
 {
-    struct ifaddrs *interfaces, *iface;
-    char host[NI_MAXHOST];
     std::map<std::string,std::set<std::string>> result;
 
+    struct ifaddrs *interfaces{nullptr};
     if (getifaddrs (&interfaces) == -1) {
         return result;
     }
 
-    for (iface = interfaces; iface != NULL; iface = iface->ifa_next) {
+    char host[NI_MAXHOST];
+
+    for (struct ifaddrs *iface = interfaces; iface != NULL; iface = iface->ifa_next) {
         if (iface->ifa_addr == NULL) continue;
         int family = iface->ifa_addr->sa_family;
         if (family == AF_INET || family == AF_INET6) {
+            memset(host, 0, sizeof(host));
             if (
                 getnameinfo(iface->ifa_addr,
                             (family == AF_INET) ? sizeof(struct sockaddr_in) :

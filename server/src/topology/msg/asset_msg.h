@@ -19,8 +19,7 @@
     =========================================================================
 */
 
-#ifndef TOPOLOGY_POWER_MSG_ASSET_MSG_H_INCLUDED
-#define TOPOLOGY_POWER_MSG_ASSET_MSG_H_INCLUDED
+#pragma once
 
 /*  These are the asset_msg messages:
 
@@ -771,6 +770,4 @@ int
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

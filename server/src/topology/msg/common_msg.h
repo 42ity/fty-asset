@@ -19,8 +19,7 @@
     =========================================================================
 */
 
-#ifndef TOPOLOGY_POWER_MSG_COMMON_MSG_H_INCLUDED
-#define TOPOLOGY_POWER_MSG_COMMON_MSG_H_INCLUDED
+#pragma once
 
 /*  These are the common_msg messages:
 
@@ -867,6 +866,4 @@ int
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

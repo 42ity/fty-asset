@@ -177,6 +177,7 @@ typedef struct _asset_msg_t {
     if (self->needle + string_size > (self->ceiling)) \
         goto malformed; \
     (host) = static_cast<char*>(malloc (static_cast<size_t>(string_size + 1))); \
+    if (!((host))) goto malformed; \
     memcpy ((host), self->needle, static_cast<size_t>(string_size)); \
     (host) [string_size] = 0; \
     self->needle += string_size; \
@@ -197,6 +198,7 @@ typedef struct _asset_msg_t {
     if (self->needle + string_size > (self->ceiling)) \
         goto malformed; \
     (host) = static_cast<char*>(malloc (static_cast<size_t>(string_size + 1))); \
+    if (!((host))) goto malformed; \
     memcpy ((host), self->needle, static_cast<size_t>(string_size)); \
     (host) [string_size] = 0; \
     self->needle += string_size; \
@@ -331,6 +333,8 @@ asset_msg_decode (zmsg_t **msg_p)
     if (msg == NULL)
         return NULL;
 
+    char *key{nullptr}, *value{nullptr};
+
     asset_msg_t *self = asset_msg_new (0);
     //  Read and parse command in frame
     zframe_t *frame = zmsg_pop (msg);
@@ -360,12 +364,12 @@ asset_msg_decode (zmsg_t **msg_p)
                 self->ext = zhash_new ();
                 zhash_autofree (self->ext);
                 while (hash_size--) {
-                    char *key, *value;
+                    key = value = nullptr;
                     GET_STRING (key);
                     GET_LONGSTR (value);
                     zhash_insert (self->ext, key, value);
-                    free (key);
-                    free (value);
+                    zstr_free(&key);
+                    zstr_free(&value);
                 }
             }
             break;
@@ -378,10 +382,10 @@ asset_msg_decode (zmsg_t **msg_p)
                 self->groups = zlist_new ();
                 zlist_autofree (self->groups);
                 while (list_size--) {
-                    char *string;
-                    GET_LONGSTR (string);
-                    zlist_append (self->groups, string);
-                    free (string);
+                    value = nullptr;
+                    GET_LONGSTR (value);
+                    zlist_append (self->groups, value);
+                    zstr_free(&value);
                 }
             }
             {
@@ -390,10 +394,10 @@ asset_msg_decode (zmsg_t **msg_p)
                 self->powers = zlist_new ();
                 zlist_autofree (self->powers);
                 while (list_size--) {
-                    char *string;
-                    GET_LONGSTR (string);
-                    zlist_append (self->powers, string);
-                    free (string);
+                    value = nullptr;
+                    GET_LONGSTR (value);
+                    zlist_append (self->powers, value);
+                    zstr_free(&value);
                 }
             }
             GET_STRING (self->ip);
@@ -462,12 +466,12 @@ asset_msg_decode (zmsg_t **msg_p)
                 self->element_ids = zhash_new ();
                 zhash_autofree (self->element_ids);
                 while (hash_size--) {
-                    char *key, *value;
+                    key = value = nullptr;
                     GET_STRING (key);
                     GET_LONGSTR (value);
                     zhash_insert (self->element_ids, key, value);
-                    free (key);
-                    free (value);
+                    zstr_free(&key);
+                    zstr_free(&value);
                 }
             }
             break;
@@ -567,10 +571,10 @@ asset_msg_decode (zmsg_t **msg_p)
                 self->powers = zlist_new ();
                 zlist_autofree (self->powers);
                 while (list_size--) {
-                    char *string;
-                    GET_LONGSTR (string);
-                    zlist_append (self->powers, string);
-                    free (string);
+                    value = nullptr;
+                    GET_LONGSTR (value);
+                    zlist_append (self->powers, value);
+                    zstr_free(&value);
                 }
             }
             break;
@@ -591,6 +595,8 @@ asset_msg_decode (zmsg_t **msg_p)
             goto malformed;
     }
     //  Successful return
+    zstr_free(&key);
+    zstr_free(&value);
     zframe_destroy (&frame);
     zmsg_destroy (msg_p);
     return self;
@@ -599,6 +605,8 @@ asset_msg_decode (zmsg_t **msg_p)
     malformed:
         log_error ("malformed message '%d'\n", self->id);
     empty:
+        zstr_free(&key);
+        zstr_free(&value);
         zframe_destroy (&frame);
         zmsg_destroy (msg_p);
         asset_msg_destroy (&self);

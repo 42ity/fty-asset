@@ -21,9 +21,7 @@
 
 // clang-format off
 
-#ifndef DBHELPERS_H_INCLUDED
-#define DBHELPERS_H_INCLUDED
-
+#pragma once
 
 #include <functional>
 #include <string>
@@ -188,7 +186,7 @@ void updateAssetProperty(
     query << " UPDATE t_bios_asset_element " <<
              " SET " << updateColumn << " = :updateValue" <<
              " WHERE " << keyColumn << " = :keyValue";
-    
+
     tntdb::Connection conn = tntdb::connectCached (DBConn::url);
     tntdb::Statement statement;
 
@@ -202,6 +200,3 @@ void updateAssetProperty(
 
 // for test purposes
 extern std::map<std::string, std::string> test_map_asset_state;
-
-//  @end
-#endif
