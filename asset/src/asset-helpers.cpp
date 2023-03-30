@@ -41,6 +41,7 @@ Uuid generateUUID(const AssetFilter& assetFilter)
         hash[8] |= 0x80;
 
         char uuid_char[37];
+        memset(uuid_char, 0, sizeof(uuid_char));
         uuid_unparse_lower(hash.data(), uuid_char);
 
         result.uuid = uuid_char;
@@ -51,6 +52,7 @@ Uuid generateUUID(const AssetFilter& assetFilter)
         uuid_generate_random(u);
 
         char uuid_char[37];
+        memset(uuid_char, 0, sizeof(uuid_char));
         uuid_unparse_lower(u, uuid_char);
 
         result.uuid = uuid_char;

@@ -147,7 +147,7 @@ private:
     Data                          _data;
     std::map<std::string, size_t> _title_to_index;
     std::string                   _create_user, _update_user, _update_ts;
-    uint32_t                      _create_mode;
+    uint32_t                      _create_mode{0};
 };
 
 // TODO: does not belongs to csv, move somewhere else

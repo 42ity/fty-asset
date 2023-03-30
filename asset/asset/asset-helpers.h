@@ -39,7 +39,7 @@ struct Uuid
     }
 
     std::string uuid;
-    int         type;
+    int         type{UUID_TYPE_VERSION_NIL};
 };
 
 AssetExpected<uint32_t>    checkElementIdentifier(const std::string& paramName, const std::string& paramValue);

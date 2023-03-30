@@ -59,7 +59,7 @@ private:
 private:
     const CsvMap&            m_cm;
     ImportResMap             m_el;
-    persist::asset_operation m_operation;
+    persist::asset_operation m_operation{persist::asset_operation::GET};
 };
 
 } // namespace fty::asset

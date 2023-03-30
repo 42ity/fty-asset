@@ -19,8 +19,7 @@
     =========================================================================
 */
 
-#ifndef FTY_COMMON_ASSET_H_INCLUDED
-#define FTY_COMMON_ASSET_H_INCLUDED
+#pragma once
 
 #include <cxxtools/serializationinfo.h>
 #include <string>
@@ -46,7 +45,7 @@ namespace fty
         protected:
             /// internal identification string (iname)
             std::string id_;
-            Status status_;
+            Status status_{Nonactive};
             std::pair<uint16_t, uint16_t> type_subtype_;
         private:
             /// asset types string reprezentation
@@ -106,7 +105,7 @@ namespace fty
             /// direct parent iname
             std::string parent_id_;
             /// priority 1..5 (1 is most, 5 is least)
-            uint8_t priority_ = 0;
+            uint8_t priority_ = 5;
         public:
             // ctors, dtors, =
             explicit ExtendedAsset (const std::string & id, const std::string & status, const std::string & type, const std::string & subtype,
@@ -195,17 +194,10 @@ namespace fty
 }
 // end namespace
 
-    void operator>>= (const cxxtools::SerializationInfo & si, fty::BasicAsset & asset);
+void operator>>= (const cxxtools::SerializationInfo & si, fty::BasicAsset & asset);
+void operator>>= (const cxxtools::SerializationInfo & si, fty::ExtendedAsset & asset);
+void operator>>= (const cxxtools::SerializationInfo & si, fty::FullAsset & asset);
 
-    void operator>>= (const cxxtools::SerializationInfo & si, fty::ExtendedAsset & asset);
-
-    void operator>>= (const cxxtools::SerializationInfo & si, fty::FullAsset & asset);
-
-    void operator<<= (cxxtools::SerializationInfo & si, const fty::BasicAsset & asset);
-
-    void operator<<= (cxxtools::SerializationInfo & si, const fty::ExtendedAsset & asset);
-
-    void operator<<= (cxxtools::SerializationInfo & si, const fty::FullAsset & asset);
-
-void fty_common_asset_test(bool verbose);
-#endif
+void operator<<= (cxxtools::SerializationInfo & si, const fty::BasicAsset & asset);
+void operator<<= (cxxtools::SerializationInfo & si, const fty::ExtendedAsset & asset);
+void operator<<= (cxxtools::SerializationInfo & si, const fty::FullAsset & asset);

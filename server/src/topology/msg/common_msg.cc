@@ -174,6 +174,7 @@ struct _common_msg_t {
     if (self->needle + string_size > (self->ceiling)) \
         goto malformed; \
     (host) = static_cast<char*>(malloc (static_cast<size_t>(string_size + 1))); \
+    if (!((host))) goto malformed; \
     memcpy ((host), self->needle, static_cast<size_t>(string_size)); \
     (host) [string_size] = 0; \
     self->needle += string_size; \
@@ -194,6 +195,7 @@ struct _common_msg_t {
     if (self->needle + string_size > (self->ceiling)) \
         goto malformed; \
     (host) = static_cast<char*>(malloc (static_cast<size_t>(string_size + 1))); \
+    if (!((host))) goto malformed; \
     memcpy ((host), self->needle, static_cast<size_t>(string_size)); \
     (host) [string_size] = 0; \
     self->needle += string_size; \
@@ -332,6 +334,8 @@ common_msg_decode (zmsg_t **msg_p)
     if (msg == NULL)
         return NULL;
 
+    char *key{nullptr}, *value{nullptr};
+
     common_msg_t *self = common_msg_new (0);
     //  Read and parse command in frame
     zframe_t *frame = zmsg_pop (msg);
@@ -393,12 +397,12 @@ common_msg_decode (zmsg_t **msg_p)
                 self->aux = zhash_new ();
                 zhash_autofree (self->aux);
                 while (hash_size--) {
-                    char *key, *value;
+                    key = value = nullptr;
                     GET_STRING (key);
                     GET_LONGSTR (value);
                     zhash_insert (self->aux, key, value);
-                    free (key);
-                    free (value);
+                    zstr_free(&key);
+                    zstr_free(&value);
                 }
             }
             break;
@@ -411,12 +415,12 @@ common_msg_decode (zmsg_t **msg_p)
                 self->aux = zhash_new ();
                 zhash_autofree (self->aux);
                 while (hash_size--) {
-                    char *key, *value;
+                    key = value = nullptr;
                     GET_STRING (key);
                     GET_LONGSTR (value);
                     zhash_insert (self->aux, key, value);
-                    free (key);
-                    free (value);
+                    zstr_free(&key);
+                    zstr_free(&value);
                 }
             }
             break;
@@ -579,10 +583,10 @@ common_msg_decode (zmsg_t **msg_p)
                 self->measurements = zlist_new ();
                 zlist_autofree (self->measurements);
                 while (list_size--) {
-                    char *string;
-                    GET_LONGSTR (string);
-                    zlist_append (self->measurements, string);
-                    free (string);
+                    value = nullptr;
+                    GET_LONGSTR (value);
+                    zlist_append (self->measurements, value);
+                    zstr_free(&value);
                 }
             }
             break;
@@ -591,6 +595,8 @@ common_msg_decode (zmsg_t **msg_p)
             goto malformed;
     }
     //  Successful return
+    zstr_free(&key);
+    zstr_free(&value);
     zframe_destroy (&frame);
     zmsg_destroy (msg_p);
     return self;
@@ -599,10 +605,12 @@ common_msg_decode (zmsg_t **msg_p)
     malformed:
         log_error ("malformed message '%d'\n", self->id);
     empty:
+        zstr_free(&key);
+        zstr_free(&value);
         zframe_destroy (&frame);
         zmsg_destroy (msg_p);
         common_msg_destroy (&self);
-        return (NULL);
+        return NULL;
 }
 
 

@@ -44,7 +44,7 @@ private:
     Expected<void> subscribe(const std::string& queue, std::function<void(const messagebus::Message&)>&& func);
 
 private:
-    std::unique_ptr<messagebus::MessageBus> m_bus;
+    std::unique_ptr<messagebus::MessageBus> m_bus{nullptr};
     std::mutex                              m_mutex;
     std::string                             m_actorName;
 };

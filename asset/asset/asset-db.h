@@ -37,15 +37,15 @@ struct WebAssetElement : public AssetElement
 {
     std::string extName;
     std::string typeName;
-    uint16_t    parentTypeId;
+    uint16_t    parentTypeId{0};
     std::string subtypeName;
     std::string parentName;
 };
 
 struct DbAssetLink
 {
-    uint32_t    srcId;
-    uint32_t    destId;
+    uint32_t    srcId{0};
+    uint32_t    destId{0};
     std::string srcName;
     std::string srcSocket;
     std::string destSocket;
@@ -53,11 +53,11 @@ struct DbAssetLink
 
 struct AssetLink
 {
-    uint32_t    src;    //!< id of src element
-    uint32_t    dest;   //!< id of dest element
-    std::string srcOut; //!< outlet in src
-    std::string destIn; //!< inlet in dest
-    uint16_t    type;   //!< link type id
+    uint32_t    src{0};    //!< id of src element
+    uint32_t    dest{0};   //!< id of dest element
+    std::string srcOut;    //!< outlet in src
+    std::string destIn;    //!< inlet in dest
+    uint16_t    type{0};   //!< link type id
 };
 
 struct ExtAttrValue
