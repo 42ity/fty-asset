@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cxxtools/csvdeserializer.h>
 #include <cxxtools/serializationinfo.h>
+#include <fty_log.h>
 #include <fty_common.h>
 #include <fty_common_macros.h>
 #include <iostream>

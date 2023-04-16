@@ -30,6 +30,7 @@
 
 #include <tntdb/row.h>
 #include <tntdb/error.h>
+#include <fty_log.h>
 #include <fty_common.h>
 #include <fty_common_macros.h>
 
