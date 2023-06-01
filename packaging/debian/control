@@ -20,7 +20,7 @@
 Source:         fty-asset
 Section:        net
 Priority:       optional
-Maintainer:     fty-asset Developers <eatonipcopensource@eaton.com>
+Maintainer:     fty-asset Developers <opensource@eaton.com>
 Standards-Version: 4.0.1.0
 Build-Depends: debhelper (>= 9),
     pkg-config,
@@ -59,7 +59,7 @@ Architecture: any
 Depends:
     libfty-asset (= ${binary:Version}),
 Description: fty-asset shared library with dto
- 
+
 Package: libfty-asset-dev
 Architecture: any
 Section: libdevel
@@ -83,7 +83,7 @@ Architecture: any
 Depends:
     libfty-asset-accessor (= ${binary:Version})
 Description: fty-asset accessor shared library
- 
+
 Package: libfty-asset-accessor-dev
 Architecture: any
 Section: libdevel
@@ -101,7 +101,7 @@ Depends:
     libfty-asset (= ${binary:Version}),
    ${shlibs:Depends},
    ${misc:Depends}
-Description: fty-asset-server 
+Description: fty-asset-server
  This package contains fty asset agent
 
 Package: fty-asset-dbg

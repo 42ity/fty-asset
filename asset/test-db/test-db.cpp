@@ -71,6 +71,7 @@ private:
 
 // =====================================================================================================================
 
+// create mysql database and initialize tables
 static void createDB()
 {
     fty::db::Connection conn;
@@ -96,59 +97,65 @@ Expected<std::string> TestDb::create()
     ss << getpid();
     std::string pid = ss.str();
 
-    m_path           = "/tmp/mysql-" + pid;
-    std::string sock = "/tmp/mysql-" + pid + ".sock";
+    m_path = "/tmp/mysql-" + pid;
+    std::string sock = m_path + ".sock";
 
+    // create DB directory
     if (!std::filesystem::create_directory(m_path)) {
         return unexpected("cannot create db dir {}", m_path);
     }
 
+    // start mysql client on the DB directory
     CharArray options("mysql_test", "--datadir=" + m_path, "--socket=" + sock);
     CharArray groups("libmysqld_server", "libmysqld_client");
-
     mysql_library_init(int(options.size()) - 1, options.data(), groups.data());
 
     std::string url = "mysql:unix_socket=" + sock;
     setenv("DBURL", url.c_str(), 1);
 
+    // create database and tables
     try {
         createDB();
     } catch (const std::exception& e) {
         return unexpected(e.what());
     }
 
-    return "mysql:unix_socket=" + sock + ";db=box_utf8";
+    url = "mysql:unix_socket=" + sock + ";db=box_utf8";
+    setenv("DBURL", url.c_str(), 1);
+    return url;
 }
 
+//static
 void TestDb::destroy()
 {
     if (instance().m_inited) {
+        instance().m_inited = false;
+        std::filesystem::path path = instance().m_path;
+
+        // stop mysql client
         fty::db::shutdown();
         mysql_thread_end();
         mysql_library_end();
 
-        std::filesystem::remove_all(instance().m_path);
+        // remove DB files and directory
+        std::filesystem::remove_all(path);
     }
 }
 
+//static
 Expected<void> TestDb::init()
 {
-    if (instance().m_inited) {
-        return {};
+    if (!instance().m_inited) {
+        if (auto res = instance().create(); !res) {
+            std::cerr << res.error() << std::endl;
+            return fty::unexpected(res.error());
+        }
+        instance().m_inited = true;
     }
-
-    if (auto res = instance().create()) {
-        std::string url = *res;
-        setenv("DBURL", url.c_str(), 1);
-    } else {
-        std::cerr << res.error() << std::endl;
-        return fty::unexpected(res.error());
-    }
-
-    instance().m_inited = true;
     return {};
 }
 
+//static
 TestDb& TestDb::instance()
 {
     static TestDb db;

@@ -19,6 +19,7 @@
  */
 
 #include "asset/asset-computed.h"
+#include <fty_log.h>
 #include <fty/convert.h>
 #include <fty_common.h>
 #include <fty_common_db_asset.h>
