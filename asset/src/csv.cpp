@@ -69,7 +69,7 @@ void CsvMap::deserialize()
         if (_title_to_index.count(title) == 1) {
             /*std::string msg = TRANSLATE_ME("duplicate title name '%s'", title.c_str());
             throw std::invalid_argument(msg);*/
-            log_warning("Duplicate title name '%s', we will still use the previous on.", title.c_str());
+            log_warning("Duplicate title name '%s', we will still use the previous one.", title.c_str());
         } else {
             _title_to_index.emplace(title, i);
         }
