@@ -219,6 +219,11 @@ AssetExpected<db::AssetElement> Import::processRow(
     if (unusedColumns.empty()) {
         return unexpected(error(Errors::BadRequestDocument).format("Cannot import empty document."_tr));
     }
+    if (unusedColumns.count("") != 0) {
+        //return unexpected(error(Errors::BadRequestDocument).format("Untitled column"_tr));
+        logWarn("Remove untitled column");
+        unusedColumns.erase("");
+    }
 
     int rc0 = -1;
 

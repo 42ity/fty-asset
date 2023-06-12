@@ -654,6 +654,10 @@ Expected<uint> insertIntoAssetExtAttributes(
 
         size_t count = 0;
         for (const auto& [key, value] : attributes) {
+            if (key.empty()) { // secure
+                continue;
+            }
+
             // clang-format off
             st.bindMulti(count++,
                 "keytag"_p           = key,
