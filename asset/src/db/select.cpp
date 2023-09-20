@@ -77,6 +77,15 @@ static fty::Expected<std::string> assetExtSql(const Filter& filter, const Order&
                 )";
                 wheres.emplace_back(pwr);
             } else {
+                //IPMPROG-6763 sanityze against SQL injection
+                const std::vector<std::string> unwanted{"\"", "'", ";", "--", "/*"};
+                for (const auto& s : unwanted) {
+                    if (filter.without.find(s) != std::string::npos) {
+                        return unexpected(error(fty::asset::Errors::InternalError)
+                                              .format("without field is invalid"));
+                    }
+                }
+
                 auto other = fmt::format(
                     R"(
                     NOT EXISTS
