@@ -542,7 +542,7 @@ static void testItemsWithoutContainer(fty::db::Connection& conn)
         order.field = "name";
 
         const std::vector<std::string> testVector = {
-            "\"", "'", ";", "--", "/*",
+            "\"", "'", ";", "--", "/*", "*/",
             "hello\"",
             "world;",
             "hello; drop table world"
