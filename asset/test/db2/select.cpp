@@ -535,6 +535,27 @@ static void testItemsWithoutContainer(fty::db::Connection& conn)
         CHECK(items.at(0).name == "UpsWoDC");
         CHECK(items.at(1).name == "datacenter");
     }
+
+    //IPMPROG-6763 : "without field is invalid"
+    {
+        asset::select::Order order;
+        order.field = "name";
+
+        const std::vector<std::string> testVector = {
+            "\"", "'", ";", "--", "/*", "*/",
+            "hello\"",
+            "world;",
+            "hello; drop table world"
+        };
+
+        for (const auto& s : testVector) {
+            asset::select::Filter filter;
+            filter.without = s;
+
+            auto res = asset::select::itemsWithoutContainer(conn, filter, order);
+            REQUIRE(!res); // "without field is invalid"
+        }
+    }
 }
 
 
