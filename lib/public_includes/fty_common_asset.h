@@ -23,6 +23,7 @@
 
 #include <cxxtools/serializationinfo.h>
 #include <string>
+#include <memory>
 
 // fwd declaration
 struct fty_proto_t;
