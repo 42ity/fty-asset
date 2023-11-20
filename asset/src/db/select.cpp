@@ -107,26 +107,26 @@ static fty::Expected<std::string> assetExtSql(const Filter& filter, const Order&
 
     std::string orderJoin;
     if (order) {
-        orderJoin = R"(
+        orderJoin = fmt::format(R"(
             LEFT JOIN t_bios_asset_ext_attributes orderAttr
                 ON id = orderAttr.id_asset_element AND orderAttr.keytag = '{}'
             LEFT JOIN t_bios_asset_ext_attributes secondOrderAttr
                 ON id = secondOrderAttr.id_asset_element AND secondOrderAttr.keytag = 'name'
-        )"_format(order.field);
+        )", order.field);
     }
 
     std::string orderBy;
     if (order) {
-        orderBy = "ORDER BY {0} {1}, secondOrderAttr.value {1}"_format(
+        orderBy = fmt::format("ORDER BY {0} {1}, secondOrderAttr.value {1}",
             order.dir == Order::Dir::Asc ? "COALESCE (orderAttr.value, 'ZZZZZZ999999')" : "orderAttr.value",
             order.dir == Order::Dir::Asc ? "ASC" : "DESC");
     }
 
     std::string wstr;
     if (where.empty() && !filterWhere.empty()) {
-        wstr = "WHERE {}"_format(filterWhere);
+        wstr = fmt::format("WHERE {}", filterWhere);
     } else if (!where.empty() && !filterWhere.empty()) {
-        wstr = "{} AND {}"_format(where, filterWhere);
+        wstr = fmt::format("{} AND {}", where, filterWhere);
     } else {
         wstr = where;
     }
