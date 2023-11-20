@@ -266,7 +266,7 @@ uint32_t SampleDb::idByName(const std::string& name)
     if (m_mapping.count(name)) {
         return m_mapping[name];
     }
-    throw std::runtime_error("{} not in sample db"_format(name));
+    throw std::runtime_error(fmt::format("{} not in sample db", name));
 }
 
 // =====================================================================================================================

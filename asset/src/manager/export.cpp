@@ -162,7 +162,7 @@ private:
         lcs.add(trimmed(subTypeName));
         lcs.add(location);
         lcs.add(el.status);
-        lcs.add("P{}"_format(el.priority));
+        lcs.add(fmt::format("P{}", el.priority));
         lcs.add(el.assetTag);
 
         // power location
@@ -250,9 +250,9 @@ private:
 
         // print power links
         for (uint32_t i = 0; i != m_maxPowerLinks; ++i) {
-            lcs.add("power_source.{}"_format(i + 1));
-            lcs.add("power_plug_src.{}"_format(i + 1));
-            lcs.add("power_input.{}"_format(i + 1));
+            lcs.add(fmt::format("power_source.{}", i + 1));
+            lcs.add(fmt::format("power_plug_src.{}", i + 1));
+            lcs.add(fmt::format("power_input.{}", i + 1));
         }
 
         // print extended attributes
@@ -262,7 +262,7 @@ private:
 
         // print groups
         for (uint32_t i = 0; i != m_maxGroups; ++i) {
-            lcs.add("group.{}"_format(i + 1));
+            lcs.add(fmt::format("group.{}", i + 1));
         }
 
         lcs.add("id");

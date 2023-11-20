@@ -102,13 +102,13 @@ TEST_CASE("Export asset / Wrong power order")
     auto exp = fty::asset::AssetManager::exportCsv();
     REQUIRE_EXP(exp);
 
-    static std::string data = R"(
+    static std::string data = fmt::format(R"(
         name,type,sub_type,location,status,priority,asset_tag,power_source.1,power_plug_src.1,power_input.1,description,ip.1,company,site_name,region,country,address,contact_name,contact_email,contact_phone,u_size,manufacturer,model,serial_no,runtime,installation_date,maintenance_date,maintenance_due,location_u_pos,location_w_pos,end_warranty_date,hostname.1,http_link.1,id
         Data Center,datacenter,,,active,P1,,,,,,,,,,,,,,,,,,,,,,,,,,,,datacenter
         Feed,device,feed,Data Center,active,P1,,,,,,,,,,,,,,,,,,,,,,,,,,,,feed
         Server,device,server,Data Center,active,P1,,Feed,,{},,,,,,,,,,,,,,,,,,,,,,,,srv
         Server 1,device,server,Data Center,active,P1,,,,,,,,,,,,,,,,,,,,,,,,,,,,srv1
-    )"_format(db.idByName("srv"));
+    )", db.idByName("srv"));
 
     CHECK(*exp == csvTrim(data));
 }
