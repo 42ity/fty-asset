@@ -21,62 +21,12 @@ namespace fty {
 
 // =====================================================================================================================
 
-class CharArray
-{
-public:
-    template <typename... Args>
-    CharArray(const Args&... args)
-    {
-        add(args...);
-        m_data.push_back(nullptr);
-    }
-
-    CharArray(const CharArray&) = delete;
-
-    ~CharArray()
-    {
-        for (size_t i = 0; i < m_data.size(); i++) {
-            delete[] m_data[i];
-        }
-    }
-
-    template <typename... Args>
-    void add(const std::string& arg, const Args&... args)
-    {
-        add(arg);
-        add(args...);
-    }
-
-    void add(const std::string& str)
-    {
-        char* s = new char[str.size() + 1];
-        memset(s, 0, str.size() + 1);
-        strncpy(s, str.c_str(), str.size());
-        m_data.push_back(s);
-    }
-
-    char** data()
-    {
-        return m_data.data();
-    }
-
-    size_t size() const
-    {
-        return m_data.size();
-    }
-
-private:
-    std::vector<char*> m_data;
-};
-
-// =====================================================================================================================
-
-// create mysql database and initialize tables
-static void createDB()
+// create database
+static void createDB(const std::string& dbName)
 {
     fty::db::Connection conn;
-    conn.execute("CREATE DATABASE IF NOT EXISTS box_utf8 character set utf8 collate utf8_general_ci;");
-    conn.execute("USE box_utf8");
+    conn.execute("CREATE DATABASE IF NOT EXISTS " + dbName + " character set utf8 collate utf8_general_ci;");
+    conn.execute("USE " + dbName);
 
     createElementType(conn);
     createAssetDeviceType(conn);
@@ -97,32 +47,49 @@ Expected<std::string> TestDb::create()
     ss << getpid();
     std::string pid = ss.str();
 
-    m_path = "/tmp/mysql-" + pid;
+    m_path = "/tmp/mysql_" + pid;
     std::string sock = m_path + ".sock";
+    std::string dbName = "box_utf8"; // *must be*
 
     // create DB directory
     if (!std::filesystem::create_directory(m_path)) {
         return unexpected("cannot create db dir {}", m_path);
     }
 
-    // start mysql client on the DB directory
-    CharArray options("mysql_test", "--datadir=" + m_path, "--socket=" + sock);
-    CharArray groups("libmysqld_server", "libmysqld_client");
-    mysql_library_init(int(options.size()) - 1, options.data(), groups.data());
+    // mysql init. DB dir
+    char cmd[255]; snprintf(cmd, sizeof(cmd), "/usr/bin/mysql_install_db --datadir=%s", m_path.c_str());
+    int r = std::system(cmd);
+    if (r != 0) {
+        return unexpected("cannot initialize db dir {}", m_path);
+    }
 
-    std::string url = "mysql:unix_socket=" + sock;
-    setenv("DBURL", url.c_str(), 1);
+    // start mysql client on the DB directory
+    char dbname[255]; snprintf(dbname, sizeof(dbname), "%s", dbName.c_str());
+    char datadir[255]; snprintf(datadir, sizeof(datadir), "--datadir=%s", m_path.c_str());
+    char socket[255]; snprintf(socket, sizeof(socket), "--socket=%s", sock.c_str());
+    char group1[255]; snprintf(group1, sizeof(group1), "%s", "libmysqld_server");
+    char group2[255]; snprintf(group2, sizeof(group2), "%s", "libmysqld_client");
+    int argc = 3;
+    char* argv[] = { dbname, datadir, socket, nullptr };
+    char* groups[] = { group1, group2, nullptr };
+
+    mysql_library_init(argc, argv, groups);
+
+    std::string dburl = "mysql:unix_socket=" + sock;
+    setenv("DBURL", dburl.c_str(), 1);
 
     // create database and tables
     try {
-        createDB();
+        createDB(dbName);
     } catch (const std::exception& e) {
+        std::cerr << "== createDB exception: " << e.what() << std::endl;
         return unexpected(e.what());
     }
 
-    url = "mysql:unix_socket=" + sock + ";db=box_utf8";
-    setenv("DBURL", url.c_str(), 1);
-    return url;
+    dburl = "mysql:unix_socket=" + sock + ";db=" + dbName;
+    setenv("DBURL", dburl.c_str(), 1);
+
+    return dburl;
 }
 
 //static
@@ -133,9 +100,12 @@ void TestDb::destroy()
         std::filesystem::path path = instance().m_path;
 
         // stop mysql client
-        fty::db::shutdown();
-        mysql_thread_end();
-        mysql_library_end();
+        try {
+            fty::db::shutdown();
+        }
+        catch (const std::exception& e) {
+            std::cerr << "== destroy DB exception: " << e.what() << std::endl;
+        }
 
         // remove DB files and directory
         std::filesystem::remove_all(path);

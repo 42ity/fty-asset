@@ -115,6 +115,7 @@ etn_target(shared ${PROJECT_NAME}-test-db
 etn_test_target(fty-asset-libng
     SOURCES
         test/main.cpp
+        test/sampledb.cpp
         test/db/insert.cpp
         test/db/names.cpp
         test/db/select.cpp

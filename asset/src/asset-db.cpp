@@ -469,7 +469,10 @@ Expected<Attributes> selectExtAttributes(uint32_t elementId)
             ExtAttrValue val;
 
             row.get("value", val.value);
-            row.get("read_only", val.readOnly);
+
+            int ro;
+            row.get("read_only", ro); // 'read_only' is tinyint
+            val.readOnly = (ro != 0);
 
             attrs.emplace(row.get("keytag"), val);
         }
@@ -521,7 +524,10 @@ Expected<Attributes> selectExtAttributes(const std::map<std::string, std::string
             ExtAttrValue val;
 
             row.get("value", val.value);
-            row.get("read_only", val.readOnly);
+
+            int ro;
+            row.get("read_only", ro); // 'read_only' is tinyint
+            val.readOnly = (ro != 0);
 
             attrs.emplace(row.get("keytag"), val);
         }
