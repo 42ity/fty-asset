@@ -6,7 +6,7 @@
 #include <iostream>
 #include <test-db/sample-db.h>
 
-TEST_CASE("Select asset")
+TEST_CASE("Select asset without filters")
 {
     fty::SampleDb db(R"(
         items:
@@ -41,7 +41,6 @@ TEST_CASE("Select asset")
         }
         REQUIRE(*ret > 0);
     }
-
 
     // selectAssetElementByName
     {
