@@ -392,6 +392,69 @@ static void testItemsByContainer(fty::db::Connection& conn, uint32_t cntId)
     }
 }
 
+// multi container ids
+static void testItemsByContainers(fty::db::Connection& conn, uint32_t cntId)
+{
+    std::vector<asset::AssetItem> items;
+
+    auto func = [&](const fty::db::Row& row) {
+        asset::AssetItem item;
+        item.name      = row.get("name");
+        item.id        = row.get<uint32_t>("id");
+        item.typeId    = row.get<uint16_t>("typeId");
+        item.subtypeId = row.get<uint16_t>("subTypeId");
+
+        items.emplace_back(item);
+    };
+
+    {
+        items.clear();
+
+        asset::select::Order order;
+        order.field = "name";
+
+		// fails if ids is empty
+        auto ret = asset::select::itemsByContainers(conn, {}, func, {}, order);
+        REQUIRE(!ret);
+        REQUIRE(items.size() == 0);
+    }
+    {
+        items.clear();
+
+        asset::select::Order order;
+        order.field = "name";
+
+        auto ret = asset::select::itemsByContainers(conn, {cntId}, func, {}, order);
+        EXP_CHECK(ret);
+        REQUIRE(items.size() == 1);
+        CHECK(items.at(0).name == "device");
+    }
+    {
+        items.clear();
+
+        asset::select::Order order;
+        order.field = "name";
+
+		// support multi def. (no doublon in items)
+        auto ret = asset::select::itemsByContainers(conn, {cntId, cntId, cntId}, func, {}, order);
+        EXP_CHECK(ret);
+        REQUIRE(items.size() == 1);
+        CHECK(items.at(0).name == "device");
+    }
+    {
+        items.clear();
+
+        asset::select::Order order;
+        order.field = "name";
+
+		// support mangled ids
+        auto ret = asset::select::itemsByContainers(conn, {cntId, 0}, func, {}, order);
+        EXP_CHECK(ret);
+        REQUIRE(items.size() == 1);
+        CHECK(items.at(0).name == "device");
+    }
+}
+
 static void testItemsByContainer2(fty::db::Connection& conn, uint32_t cntId)
 {
     {
@@ -583,6 +646,7 @@ TEST_CASE("DB: select")
     testItemExtById(conn, db.idByName("UpsWoDC"));
     testItemExtByName(conn);
     testItemsByContainer(conn, db.idByName("datacenter"));
+    testItemsByContainers(conn, db.idByName("datacenter"));
     testItemsByContainer2(conn, db.idByName("datacenter"));
     testItemsWithoutContainer(conn);
 }
