@@ -170,6 +170,18 @@ using Callback = std::function<void(const Row&)>;
 
 // =========================================================================================================================================
 
+/// Selects assets from given set of containers (OR)
+/// @param conn database established connection
+/// @param containerIds asset element ids
+/// @param cb callback function
+/// @param filter filter
+/// @param order sort order
+/// @return nothing or error
+[[nodiscard]] Expected<void> itemsByContainers(
+    Connection& conn, const std::vector<uint32_t>& containerIds, Callback&& cb, const Filter& filter = {}, const Order& order = {});
+
+// =========================================================================================================================================
+
 /// Select all assets in all (or without) containers
 /// @param flt filter
 /// @param cb callback function

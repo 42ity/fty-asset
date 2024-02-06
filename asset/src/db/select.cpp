@@ -184,8 +184,8 @@ bool Order::isValid() const
 Expected<AssetItem> item(const std::string& elementName, bool extNameOnly)
 {
     try {
-        Connection db;
-        return item(db, elementName, extNameOnly);
+        Connection conn;
+        return item(conn, elementName, extNameOnly);
     } catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), elementName));
     }
@@ -268,8 +268,8 @@ Expected<AssetItem> item(Connection& conn, const std::string& elementName, bool 
 Expected<void> items(Callback&& cb, const Filter& filter, const Order& order)
 {
     try {
-        Connection db;
-        return items(db, std::move(cb), filter, order);
+        Connection conn;
+        return items(conn, std::move(cb), filter, order);
     } catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
@@ -359,8 +359,8 @@ Expected<AssetItemExt> itemExt(Connection& conn, uint32_t elementId)
 Expected<void> itemExt(uint32_t elementId, AssetItemExt& asset)
 {
     try {
-        Connection db;
-        return itemExt(db, elementId, asset);
+        Connection conn;
+        return itemExt(conn, elementId, asset);
     } catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), elementId));
     }
@@ -391,8 +391,8 @@ Expected<void> itemExt(Connection& conn, uint32_t elementId, AssetItemExt& asset
 Expected<AssetItemExt> itemExt(const std::string& name)
 {
     try {
-        Connection db;
-        return itemExt(db, name);
+        Connection conn;
+        return itemExt(conn, name);
     } catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), name));
     }
@@ -422,14 +422,44 @@ Expected<AssetItemExt> itemExt(Connection& conn, const std::string& name)
 }
 
 // =========================================================================================================================================
-// Selects assets from given container
+// Selects assets from one given container
 // =========================================================================================================================================
+
+Expected<std::vector<AssetItemExt>> itemsByContainer(uint32_t containerId, const Filter& flt, const Order& order)
+{
+    try {
+        Connection conn;
+        return itemsByContainer(conn, containerId, flt, order);
+    } catch (const std::exception& e) {
+        return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), containerId));
+    }
+}
 
 Expected<void> itemsByContainer(uint32_t containerId, Callback&& cb, const Filter& filter, const Order& order)
 {
     try {
-        Connection db;
-        return itemsByContainer(db, containerId, std::move(cb), filter, order);
+        Connection conn;
+        return itemsByContainer(conn, containerId, std::move(cb), filter, order);
+    } catch (const std::exception& e) {
+        return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), containerId));
+    }
+}
+
+Expected<std::vector<AssetItemExt>> itemsByContainer(Connection& conn, uint32_t containerId, const Filter& flt, const Order& order)
+{
+    try {
+        std::vector<AssetItemExt> result;
+
+        auto func = [&](const fty::db::Row& row) {
+            AssetItemExt el;
+            fetchAssetExt(row, el);
+            result.emplace_back(std::move(el));
+        };
+
+        if (auto res = itemsByContainer(conn, containerId, func, flt, order); !res) {
+            return unexpected(res.error());
+        }
+        return result;
     } catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), containerId));
     }
@@ -468,36 +498,65 @@ Expected<void> itemsByContainer(Connection& conn, uint32_t containerId, Callback
 }
 
 // =========================================================================================================================================
-// Selects assets from given container
+// Selects assets from given multiple containers
 // =========================================================================================================================================
-
-Expected<std::vector<AssetItemExt>> itemsByContainer(uint32_t containerId, const Filter& flt, const Order& order)
+Expected<void> itemsByContainers(Connection& conn, const std::vector<uint32_t>& containerIds, Callback&& cb, const Filter& filter, const Order& order)
 {
-    try {
-        Connection conn;
-        return itemsByContainer(conn, containerId, flt, order);
-    } catch (const std::exception& e) {
-        return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), containerId));
+    if (containerIds.empty()) {
+        return unexpected("No container ids defined");
     }
-}
 
-Expected<std::vector<AssetItemExt>> itemsByContainer(Connection& conn, uint32_t containerId, const Filter& flt, const Order& order)
-{
-    try {
-        std::vector<AssetItemExt> result;
+    static const std::string whereTemplate = R"(
+        WHERE v.id in (
+            SELECT
+                sp.id_asset_element
+            FROM
+                v_bios_asset_element_super_parent AS sp
+            WHERE
+                {{whereClauses}}
+        )
+    )";
 
-        auto func = [&](const fty::db::Row& row) {
-            AssetItemExt el;
-            fetchAssetExt(row, el);
-            result.emplace_back(std::move(el));
-        };
+    static const std::string inContainerTemplate = R"(
+                {{containerId}} in (
+                    sp.id_parent1, sp.id_parent2, sp.id_parent3, sp.id_parent4, sp.id_parent5,
+                    sp.id_parent6, sp.id_parent7, sp.id_parent8, sp.id_parent9, sp.id_parent10
+                )
+            )";
 
-        if (auto res = itemsByContainer(conn, containerId, func, flt, order); !res) {
-            return unexpected(res.error());
+    // replace token by value in string
+    std::function<void(std::string& s, const std::string&, const std::string&)> strReplace =
+    [] (std::string& s, const std::string& token, const std::string& value)
+    {
+        std::size_t pos{s.find(token, 0)};
+        while (pos != std::string::npos) {
+            s.replace(pos, token.size(), value);
+            pos = s.find(token, pos + value.size());
         }
-        return result;
+    };
+
+    std::string whereClauses;
+    for (const auto& containerId : containerIds) {
+        std::string inContainer{inContainerTemplate};
+        strReplace(inContainer, "{{containerId}}", std::to_string(containerId));
+        whereClauses += (whereClauses.empty() ? "" : " OR ") + inContainer;
+    }
+
+    std::string where{whereTemplate};
+    strReplace(where, "{{whereClauses}}", whereClauses);
+
+    auto sql = assetExtSql(filter, order, where);
+    if (!sql) {
+        return unexpected(sql.error());
+    }
+
+    try {
+        for (const auto& row : conn.select(*sql)) {
+            cb(row);
+        }
+        return {};
     } catch (const std::exception& e) {
-        return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), containerId));
+        return unexpected("exception caught: " + std::string(e.what()));
     }
 }
 
@@ -573,8 +632,8 @@ Expected<std::vector<AssetItemExt>> itemsWithoutContainer(Connection& conn, cons
 Expected<Attributes> extAttributes(uint32_t elementId)
 {
     try {
-        Connection db;
-        return extAttributes(db, elementId);
+        Connection conn;
+        return extAttributes(conn, elementId);
     } catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), elementId));
     }
