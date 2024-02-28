@@ -211,7 +211,8 @@ CsvMap CsvMap_from_istream(std::istream& in)
 
     std::vector<std::vector<std::string>> data;
     {
-        cxxtools::CsvDeserializer deserializer(in);
+        cxxtools::CsvDeserializer deserializer;
+        deserializer.read(in);
         deserializer.delimiter(delimiter);
         deserializer.readTitle(false);
         deserializer.deserialize(data);
@@ -221,7 +222,6 @@ CsvMap CsvMap_from_istream(std::istream& in)
     cm.deserialize();
     return cm;
 }
-
 
 static void process_powers_key(
     const cxxtools::SerializationInfo& powers_si, std::vector<std::vector<std::string>>& data)
