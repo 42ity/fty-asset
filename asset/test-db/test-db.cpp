@@ -43,8 +43,6 @@ static void createDB(const std::string& dbName)
 
 Expected<std::string> TestDb::create()
 {
-    //std::cout << "== TestDb::createDB started " << std::endl;
-
     std::stringstream ss;
     ss << getpid();
     std::string pid = ss.str();
@@ -82,7 +80,6 @@ Expected<std::string> TestDb::create()
 
     // create database and tables
     try {
-        //std::cout << "== TestDb::createDB: " << dbName << std::endl;
         createDB(dbName);
     } catch (const std::exception& e) {
         std::cerr << "== createDB exception: " << e.what() << std::endl;
@@ -92,27 +89,20 @@ Expected<std::string> TestDb::create()
     dburl = "mysql:unix_socket=" + sock + ";db=" + dbName;
     setenv("DBURL", dburl.c_str(), 1);
 
-    //std::cout << "== TestDb::createDB ended: dburl: " << dburl << std::endl;
-
     return dburl;
 }
 
 //static
 void TestDb::destroy()
 {
-    //std::cout << "== TestDb::destroy started" << std::endl;
-
     if (instance().m_inited) {
-
         instance().m_inited = false;
         std::filesystem::path path = instance().m_path;
-        //std::cout << "== TestDb::destroy path: " << path << std::endl;
 
         // stop mysql client
         try {
-            //std::cout << "== TestDb::destroy DB shutdown " << std::endl;
             fty::db::shutdown();
-			// DB client must breath a while to shutdown properly (may crash if not)
+            // DB client must breath a while to shutdown properly (may crash if not)
             sleep(1);
         }
         catch (const std::exception& e) {
@@ -122,8 +112,6 @@ void TestDb::destroy()
         // remove DB files and directory
         std::filesystem::remove_all(path);
     }
-
-    //std::cout << "== TestDb::destroy ended " << std::endl;
 }
 
 //static
