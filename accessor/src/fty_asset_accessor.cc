@@ -175,24 +175,8 @@ namespace fty
     void AssetAccessor::notifyAssetUpdate(const Asset& oldAsset, const Asset& newAsset)
     {
         cxxtools::SerializationInfo si;
-
-        // before update
-        cxxtools::SerializationInfo tmpSi;
-        tmpSi <<= oldAsset;
-
-        cxxtools::SerializationInfo& before = si.addMember("");
-        before.setCategory(cxxtools::SerializationInfo::Category::Object);
-        before = tmpSi;
-        before.setName("before");
-
-        // after update
-        tmpSi.clear();
-        tmpSi <<= newAsset;
-
-        cxxtools::SerializationInfo& after = si.addMember("");
-        after.setCategory(cxxtools::SerializationInfo::Category::Object);
-        after = tmpSi;
-        after.setName("after");
+        si.addMember("before") <<= oldAsset;
+        si.addMember("after") <<= newAsset;
 
         std::string json = JSON::writeToString(si, false);
 

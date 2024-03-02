@@ -895,26 +895,9 @@ void AssetServer::notifyAsset(const messagebus::Message& msg)
 void AssetServer::notifyAssetUpdate(const Asset& before, const Asset& after)
 {
     try {
-
         cxxtools::SerializationInfo si;
-
-        // before update
-        cxxtools::SerializationInfo tmpSi;
-        tmpSi <<= before;
-
-        cxxtools::SerializationInfo& beforeSi = si.addMember("");
-        beforeSi.setCategory(cxxtools::SerializationInfo::Category::Object);
-        beforeSi = tmpSi;
-        beforeSi.setName("before");
-
-        // after update
-        tmpSi.clear();
-        tmpSi <<= after;
-
-        cxxtools::SerializationInfo& afterSi = si.addMember("");
-        afterSi.setCategory(cxxtools::SerializationInfo::Category::Object);
-        afterSi = tmpSi;
-        afterSi.setName("after");
+        si.addMember("before") <<= before;
+        si.addMember("after") <<= after;
 
         // full notification
         messagebus::Message notification = assetutils::createMessage(FTY_ASSET_SUBJECT_UPDATED, "",
