@@ -43,7 +43,10 @@ struct HasRead<T, decltype(std::declval<T>().read, void())> : std::true_type
 {
 };
 
-/* Workaround for a fact a) std::transform to do a strip and lower is weird, b) it breaks the map somehow*/
+/* Workaround for a fact
+ * a) std::transform to do a strip and lower is weird,
+ * b) it breaks the map somehow
+ **/
 static const std::string _ci_strip(const std::string& str)
 {
     std::ostringstream b;
@@ -198,8 +201,27 @@ bool hasApostrof(std::istream& i)
     return false;
 }
 
-CsvMap CsvMap_from_istream(std::istream& in)
+CsvMap CsvMap_from_istream(std::istream& in_)
 {
+    // WA libcxxtools10 CsvDeserializer issue
+    // the first line is *ignored* from istream input
+    // csv titles are not parsed from the first line, but the second
+    std::function<std::string(std::istream&)> duplicateFirstLine = [](std::istream& in)
+    {
+        std::stringstream ret;
+        std::string line;
+        bool first{true};
+        while (std::getline(in, line)) {
+            if (first) { ret << line; first = false; }
+            ret << "\n" << line;
+        }
+        return ret.str();
+    };
+
+    std::stringstream in(duplicateFirstLine(in_));
+
+    //logDebug("== istream in: {}", in.str()); in.seekg(0);
+
     char delimiter = findDelimiter(in);
     if (delimiter == '\x0') {
         std::string msg = TRANSLATE_ME("Cannot detect the delimiter, use comma (,) semicolon (;) or tabulator");
@@ -217,6 +239,19 @@ CsvMap CsvMap_from_istream(std::istream& in)
         deserializer.readTitle(false);
         deserializer.deserialize(data);
     }
+
+    logDebug("== CsvMap_from_istream (data size: {})", data.size());
+#if 0
+    int i = 0;
+    for (const auto& row : data) {
+        int j = 0;
+        for (const auto& col : row) {
+            logDebug("== ({},{}) : {}", i, j, col);
+            j++;
+        }
+        i++;
+    }
+#endif
 
     CsvMap cm{data};
     cm.deserialize();

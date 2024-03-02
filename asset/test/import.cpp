@@ -2,7 +2,39 @@
 #include <catch2/catch.hpp>
 #include <test-db/sample-db.h>
 
-TEST_CASE("Import asset")
+
+TEST_CASE("Import asset0")
+{
+    fty::SampleDb db(R"(
+        items:
+          - type     : Datacenter
+            name     : datacenter
+            ext-name : DC
+    )");
+
+    static std::string data = R"(name,type,sub_type,location,status,priority,id
+MainFeed,device,feed,DC,active,P1,)";
+
+    auto ret = fty::asset::AssetManager::importCsv(data, "dummy", false);
+    if (!ret) {
+        FAIL(ret.error());
+    }
+    REQUIRE(ret);
+
+    for (auto iter = ret->rbegin(); iter != ret->rend(); ++iter) {
+        if (!iter->second) {
+            FAIL(iter->second.error());
+        }
+
+        auto el = fty::asset::db::selectAssetElementWebById(*(iter->second));
+        std::cerr << *(iter->second) << " " << el->name << std::endl;
+        if (auto res = fty::asset::AssetManager::deleteAsset(*el, false); !res) {
+            FAIL(res.error());
+        }
+    }
+}
+
+TEST_CASE("Import asset1")
 {
     fty::SampleDb db(R"(
         items:
