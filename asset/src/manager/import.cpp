@@ -52,8 +52,13 @@ static std::string sanitize(const std::string& csvStr)
 }
 
 AssetExpected<AssetManager::ImportList> AssetManager::importCsv(
-    const std::string& csvStr, const std::string& user, bool sendNotify)
+    const std::string& csvStr_, const std::string& user, bool sendNotify)
 {
+    // sanitize input string, *remove* \ufeff sbom
+    std::string csvStr{csvStr_};
+    if (auto pos = csvStr.find("\ufeff") == 0)
+        { csvStr.replace(pos, 2, ""); }
+
     std::function<std::string(const std::string&)> iso_8859_1_to_utf8 = [](const std::string& strIn)
     {
         std::string strOut;
@@ -82,7 +87,8 @@ AssetExpected<AssetManager::ImportList> AssetManager::importCsv(
         csv.setCreateUser(user);
         csv.setUpdateUser(user);
     }
-    catch (...) {
+    catch (const std::exception& e) {
+        //std::cout << "importCsv exception: " << e.what() << std::endl;
         return unexpected(error(fty::asset::Errors::BadRequestDocument).format("csv"));
     }
 

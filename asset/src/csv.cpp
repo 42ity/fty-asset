@@ -215,12 +215,13 @@ CsvMap CsvMap_from_istream(std::istream& in_)
             if (first) { ret << line; first = false; }
             ret << "\n" << line;
         }
+        in.seekg(0);
         return ret.str();
     };
 
     std::stringstream in(duplicateFirstLine(in_));
 
-    //logDebug("== istream in: {}", in.str()); in.seekg(0);
+    //logDebug("== istream in: {}", in.str());
 
     char delimiter = findDelimiter(in);
     if (delimiter == '\x0') {
