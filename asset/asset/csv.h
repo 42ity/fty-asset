@@ -30,9 +30,9 @@ Example:
 
     std::vector<std::vector<std::string> > data;
     cxxtools::CsvDeserializer deserializer;
-    deserializer.read(buf);
     deserializer.delimiter(',');
     deserializer.readTitle(false);
+    deserializer.read(buf);
     deserializer.deserialize(data);
 
     shared::CsvMap cm{data};

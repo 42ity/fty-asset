@@ -201,28 +201,8 @@ bool hasApostrof(std::istream& i)
     return false;
 }
 
-CsvMap CsvMap_from_istream(std::istream& in_)
+CsvMap CsvMap_from_istream(std::istream& in)
 {
-    // WA libcxxtools10 CsvDeserializer issue
-    // the first line is *ignored* from istream input
-    // csv titles are not parsed from the first line, but the second
-    std::function<std::string(std::istream&)> duplicateFirstLine = [](std::istream& in)
-    {
-        std::stringstream ret;
-        std::string line;
-        bool first{true};
-        while (std::getline(in, line)) {
-            if (first) { ret << line; first = false; }
-            ret << "\n" << line;
-        }
-        in.seekg(0);
-        return ret.str();
-    };
-
-    std::stringstream in(duplicateFirstLine(in_));
-
-    //logDebug("== istream in: {}", in.str());
-
     char delimiter = findDelimiter(in);
     if (delimiter == '\x0') {
         std::string msg = TRANSLATE_ME("Cannot detect the delimiter, use comma (,) semicolon (;) or tabulator");
@@ -235,14 +215,14 @@ CsvMap CsvMap_from_istream(std::istream& in_)
     std::vector<std::vector<std::string>> data;
     {
         cxxtools::CsvDeserializer deserializer;
-        deserializer.read(in);
         deserializer.delimiter(delimiter);
         deserializer.readTitle(false);
+        deserializer.read(in);
         deserializer.deserialize(data);
     }
 
-    logDebug("== CsvMap_from_istream (data size: {})", data.size());
 #if 0
+    logDebug("== CsvMap_from_istream (data size: {})", data.size());
     int i = 0;
     for (const auto& row : data) {
         int j = 0;

@@ -56,8 +56,8 @@ AssetExpected<AssetManager::ImportList> AssetManager::importCsv(
 {
     // sanitize input string, *remove* \ufeff sbom
     std::string csvStr{csvStr_};
-    if (auto pos = csvStr.find("\ufeff") == 0)
-        { csvStr.replace(pos, 2, ""); }
+    if (csvStr.find("\ufeff") == 0)
+        { csvStr.replace(0, 2, ""); }
 
     std::function<std::string(const std::string&)> iso_8859_1_to_utf8 = [](const std::string& strIn)
     {
