@@ -22,8 +22,7 @@
 #include "fty_asset_accessor.h"
 
 #include <cxxtools/serializationinfo.h>
-
-#include <fty_common.h>
+#include <fty_common_json.h>
 #include <fty_common_messagebus.h>
 #include <fty/convert.h>
 #include <iomanip>
@@ -31,7 +30,7 @@
 #include <sstream>
 #include <thread>
 
-#define RECV_TIMEOUT 5  // messagebus request timeout
+#define RECV_TIMEOUT 5  // messagebus request timeout (seconds)
 
 namespace fty
 {
@@ -50,9 +49,10 @@ namespace fty
         std::string clientName = ss.str();
 
         std::unique_ptr<messagebus::MessageBus> interface(messagebus::MlmMessageBus(ENDPOINT, clientName));
-        messagebus::Message msg;
 
         interface->connect();
+
+        messagebus::Message msg;
 
         msg.metaData().emplace(messagebus::Message::CORRELATION_ID, messagebus::generateUuid());
         msg.metaData().emplace(messagebus::Message::SUBJECT, command);
@@ -75,9 +75,10 @@ namespace fty
         std::string clientName = ss.str();
 
         std::unique_ptr<messagebus::MessageBus> interface(messagebus::MlmMessageBus(ENDPOINT, clientName));
-        messagebus::Message msg;
 
         interface->connect();
+
+        messagebus::Message msg;
 
         msg.metaData().emplace(messagebus::Message::CORRELATION_ID, messagebus::generateUuid());
         msg.metaData().emplace(messagebus::Message::SUBJECT, command);
@@ -149,19 +150,9 @@ namespace fty
     {
         if(!iname.empty() && !oldStatus.empty() && !newStatus.empty()) {
             cxxtools::SerializationInfo si;
-            si.setCategory(cxxtools::SerializationInfo::Category::Object);
-
-            auto &inameSi = si.addMember("");
-            inameSi <<= iname;
-            inameSi.setName("iname");
-
-            auto &oldStatusSi = si.addMember("");
-            oldStatusSi <<= oldStatus;
-            oldStatusSi.setName("oldStatus");
-
-            auto &newStatusSi = si.addMember("");
-            newStatusSi <<= newStatus;
-            newStatusSi.setName("newStatus");
+            si.addMember("iname") <<= iname;
+            si.addMember("oldStatus") <<= oldStatus;
+            si.addMember("newStatus") <<= newStatus;
 
             std::string json = JSON::writeToString(si, false);
 

@@ -21,14 +21,15 @@
 
 #pragma once
 
-#include <cxxtools/serializationinfo.h>
 #include <string>
-// fwd declaration
+
 namespace fty {
-class Asset;
+class Asset; // fwd decl.
 } // namespace fty
 
-namespace fty { namespace conversion {
+namespace fty {
+namespace conversion {
     std::string toJson(const Asset& asset);
     void        fromJson(const std::string& json, fty::Asset& asset);
-}} // namespace fty::conversion
+}
+} // namespace fty::conversion

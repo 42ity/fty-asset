@@ -591,58 +591,54 @@ void AssetImpl::assetToSrr(const AssetImpl& asset, cxxtools::SerializationInfo& 
     si.addMember("subtype") <<= asset.getAssetSubtype();
     si.addMember("priority") <<= asset.getPriority();
     si.addMember("parent") <<= asset.getParentIname();
-
-    // linked assets
-    cxxtools::SerializationInfo& linked = si.addMember("");
-
-    cxxtools::SerializationInfo tmpSiLinks;
-    for (const auto& l : asset.getLinkedAssets()) {
-        cxxtools::SerializationInfo& link = tmpSiLinks.addMember("");
-        link.addMember("source") <<= l.sourceId();
-
-        if (!l.srcOut().empty()) {
-            link.addMember("src_out") <<= l.srcOut();
-        }
-        if (!l.destIn().empty()) {
-            link.addMember("dest_in") <<= l.destIn();
-        }
-
-        link.addMember("link_type") <<= l.linkType();
-
-        if (!l.ext().empty()) {
-            cxxtools::SerializationInfo& link_ext = link.addMember("");
-            cxxtools::SerializationInfo  tmp_link_ext;
-            for (const auto& e : l.ext()) {
-                cxxtools::SerializationInfo& link_ext_entry = tmp_link_ext.addMember(e.first);
-                link_ext_entry.addMember("value") <<= e.second.getValue();
-                link_ext_entry.addMember("readOnly") <<= e.second.isReadOnly();
-            }
-            tmp_link_ext.setCategory(cxxtools::SerializationInfo::Category::Object);
-            link_ext = tmp_link_ext;
-            link_ext.setName("ext");
-        }
-
-        link.setCategory(cxxtools::SerializationInfo::Category::Object);
-    }
-    tmpSiLinks.setCategory(cxxtools::SerializationInfo::Category::Array);
-    linked = tmpSiLinks;
-    linked.setName("linked");
-
     si.addMember("tag") <<= asset.getAssetTag();
     si.addMember("id_secondary") <<= asset.getSecondaryID();
 
-    // ext
-    cxxtools::SerializationInfo& ext = si.addMember("");
+    // linked assets (array)
+    {
+        cxxtools::SerializationInfo linked;
+        linked.setCategory(cxxtools::SerializationInfo::Category::Array);
 
-    cxxtools::SerializationInfo tmpSiExt;
-    for (const auto& e : asset.getExt()) {
-        cxxtools::SerializationInfo& entry = tmpSiExt.addMember(e.first);
-        entry.addMember("value") <<= e.second.getValue();
-        entry.addMember("readOnly") <<= e.second.isReadOnly();
+        for (const auto& l : asset.getLinkedAssets()) {
+            cxxtools::SerializationInfo link;
+            link.addMember("source") <<= l.sourceId();
+
+            if (!l.srcOut().empty()) {
+                link.addMember("src_out") <<= l.srcOut();
+            }
+            if (!l.destIn().empty()) {
+                link.addMember("dest_in") <<= l.destIn();
+            }
+
+            link.addMember("link_type") <<= l.linkType();
+
+            if (!l.ext().empty()) {
+                cxxtools::SerializationInfo object_ext;
+                for (const auto& e : l.ext()) {
+                    cxxtools::SerializationInfo& aux = object_ext.addMember(e.first);
+                    aux.addMember("value") <<= e.second.getValue();
+                    aux.addMember("readOnly") <<= e.second.isReadOnly();
+                }
+                link.addMember("ext") <<= object_ext;
+            }
+
+            linked.addMember("") <<= link;
+        }
+
+        si.addMember("linked") <<= linked;
     }
-    tmpSiExt.setCategory(cxxtools::SerializationInfo::Category::Object);
-    ext = tmpSiExt;
-    ext.setName("ext");
+
+    // extended attributes
+    {
+        cxxtools::SerializationInfo ext;
+        for (const auto& e : asset.getExt()) {
+            cxxtools::SerializationInfo& aux = ext.addMember(e.first);
+            aux.addMember("value") <<= e.second.getValue();
+            aux.addMember("readOnly") <<= e.second.isReadOnly();
+        }
+
+        si.addMember("ext") <<= ext;
+    }
 }
 
 void AssetImpl::srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& asset)
@@ -674,6 +670,14 @@ void AssetImpl::srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& ass
     si.getMember("parent") >>= tmpString;
     asset.setParentIname(tmpString);
 
+    // asset tag
+    si.getMember("tag") >>= tmpString;
+    asset.setAssetTag(tmpString);
+
+    // id secondary
+    si.getMember("id_secondary") >>= tmpString;
+    asset.setSecondaryID(tmpString);
+
     // linked assets
     const cxxtools::SerializationInfo linked = si.getMember("linked");
     for (const auto& link_si : linked) {
@@ -682,17 +686,17 @@ void AssetImpl::srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& ass
         int linkType = 0;
 
         link_si.getMember("source") >>= sourceId;
-        if(link_si.findMember("src_out") != NULL) {
+        if (link_si.findMember("src_out") != NULL) {
             link_si.getMember("src_out") >>= srcOut;
         }
-        if(link_si.findMember("dest_in") != NULL) {
+        if (link_si.findMember("dest_in") != NULL) {
             link_si.getMember("dest_in") >>= destIn;
         }
         link_si.getMember("link_type") >>= linkType;
 
         AssetLink::ExtMap linkAttributes;
 
-        if(link_si.findMember("ext") != NULL) {
+        if (link_si.findMember("ext") != NULL) {
             // link ext map
             const cxxtools::SerializationInfo link_ext = link_si.getMember("ext");
             for (const auto& link_ext_si : link_ext) {
@@ -711,17 +715,8 @@ void AssetImpl::srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& ass
         asset.addLink(sourceId, srcOut, destIn, linkType, linkAttributes);
     }
 
-    // asset tag
-    si.getMember("tag") >>= tmpString;
-    asset.setAssetTag(tmpString);
-
-    // id secondary
-    si.getMember("id_secondary") >>= tmpString;
-    asset.setSecondaryID(tmpString);
-
     // ext map
     const cxxtools::SerializationInfo ext = si.getMember("ext");
-
     for (const auto& siExt : ext) {
         std::string key = siExt.name();
         std::string val;
