@@ -30,7 +30,7 @@
 #include <sstream>
 #include <thread>
 
-#define RECV_TIMEOUT 5  // messagebus request timeout (seconds)
+#define RECV_TIMEOUT_S 5  // messagebus request timeout (seconds)
 
 namespace fty
 {
@@ -62,7 +62,7 @@ namespace fty
 
         msg.userData() = data;
 
-        return interface->request(ASSET_AGENT_QUEUE, msg, RECV_TIMEOUT);
+        return interface->request(ASSET_AGENT_QUEUE, msg, RECV_TIMEOUT_S);
     }
 
     /// static helper to send a MessageBus asynch request
