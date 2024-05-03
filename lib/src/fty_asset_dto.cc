@@ -31,8 +31,6 @@
 #include "conversion/json.h"
 #include "conversion/proto.h"
 #include <algorithm>
-#include <cxxtools/jsondeserializer.h>
-#include <cxxtools/jsonserializer.h>
 #include <fty_proto.h>
 #include <sstream>
 

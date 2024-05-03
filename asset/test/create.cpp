@@ -1,6 +1,7 @@
 #include "asset/asset-manager.h"
 #include <catch2/catch.hpp>
-#include <cxxtools/jsondeserializer.h>
+#include <cxxtools/serializationinfo.h>
+#include <fty_common_json.h>
 #include <fty_common_db_connection.h>
 #include <test-db/sample-db.h>
 
@@ -142,11 +143,8 @@ TEST_CASE("Create asset with SerializationInfo")
     })";
 
     cxxtools::SerializationInfo si;
-    std::stringstream           jsonIn;
     try {
-        jsonIn << json;
-        cxxtools::JsonDeserializer deserializer(jsonIn);
-        deserializer.deserialize(si);
+        JSON::readFromString(json, si);
     } catch (const std::exception& e) {
         REQUIRE(false);
     }
@@ -228,11 +226,8 @@ TEST_CASE("Create asset with SerializationInfo embeding ips member and ip.1 exte
     })";
 
     cxxtools::SerializationInfo si;
-    std::stringstream           jsonIn;
     try {
-        jsonIn << json;
-        cxxtools::JsonDeserializer deserializer(jsonIn);
-        deserializer.deserialize(si);
+        JSON::readFromString(json, si);
     } catch (const std::exception& e) {
         REQUIRE(false);
     }
