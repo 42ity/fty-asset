@@ -27,8 +27,10 @@ TEST_CASE("fty_asset_autoupdate test")
     {
         log_debug ("fty_asset_autoupdate:Test #1");
         zactor_t *self = zactor_new (fty_asset_autoupdate_server, static_cast<void*>( const_cast<char*>( "asset-autoupdate-test")));
+        REQUIRE(self);
         zclock_sleep (200);
         zactor_destroy (&self);
+        CHECK(!self);
         log_info ("fty-asset-server-test:Test #1: OK");
     }
 

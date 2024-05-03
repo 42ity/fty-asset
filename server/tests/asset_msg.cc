@@ -31,16 +31,16 @@ TEST_CASE("asset_msg test", "[.disabled]")
     //  @selftest
     //  Simple create/destroy test
     asset_msg_t *self = asset_msg_new (0);
-    assert (self);
+    CHECK(self);
     asset_msg_destroy (&self);
 
     //  Create pair of sockets we can send through
     zsock_t *input = zsock_new (ZMQ_ROUTER);
-    assert (input);
+    CHECK(input);
     zsock_connect (input, "inproc://selftest-asset_msg");
 
     zsock_t *output = zsock_new (ZMQ_DEALER);
-    assert (output);
+    CHECK(output);
     zsock_bind (output, "inproc://selftest-asset_msg");
 
     //  Encode/send/decode and verify each message type
@@ -50,7 +50,7 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_name (self, "Life is short but Now lasts for ever");
@@ -65,23 +65,23 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (streq (asset_msg_name (self), "Life is short but Now lasts for ever"));
-        assert (asset_msg_location (self) == 123);
-        assert (asset_msg_location_type (self) == 123);
-        assert (asset_msg_type (self) == 123);
-        assert (asset_msg_ext_size (self) == 2);
-        assert (streq (asset_msg_ext_string (self, "Name", "?"), "Brutus"));
-        assert (asset_msg_ext_number (self, "Age", 0) == 43);
+        CHECK(streq (asset_msg_name (self), "Life is short but Now lasts for ever"));
+        CHECK(asset_msg_location (self) == 123);
+        CHECK(asset_msg_location_type (self) == 123);
+        CHECK(asset_msg_type (self) == 123);
+        CHECK(asset_msg_ext_size (self) == 2);
+        CHECK(streq (asset_msg_ext_string (self, "Name", "?"), "Brutus"));
+        CHECK(asset_msg_ext_number (self, "Age", 0) == 43);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_DEVICE);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_device_type (self, "Life is short but Now lasts for ever");
@@ -102,28 +102,28 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (streq (asset_msg_device_type (self), "Life is short but Now lasts for ever"));
-        assert (asset_msg_groups_size (self) == 2);
-        assert (streq (asset_msg_groups_first (self), "Name: Brutus"));
-        assert (streq (asset_msg_groups_next (self), "Age: 43"));
-        assert (asset_msg_powers_size (self) == 2);
-        assert (streq (asset_msg_powers_first (self), "Name: Brutus"));
-        assert (streq (asset_msg_powers_next (self), "Age: 43"));
-        assert (streq (asset_msg_ip (self), "Life is short but Now lasts for ever"));
-        assert (streq (asset_msg_hostname (self), "Life is short but Now lasts for ever"));
-        assert (streq (asset_msg_fqdn (self), "Life is short but Now lasts for ever"));
-        assert (streq (asset_msg_mac (self), "Life is short but Now lasts for ever"));
-        assert (zmsg_size (asset_msg_msg (self)) == 1);
+        CHECK(streq (asset_msg_device_type (self), "Life is short but Now lasts for ever"));
+        CHECK(asset_msg_groups_size (self) == 2);
+        CHECK(streq (asset_msg_groups_first (self), "Name: Brutus"));
+        CHECK(streq (asset_msg_groups_next (self), "Age: 43"));
+        CHECK(asset_msg_powers_size (self) == 2);
+        CHECK(streq (asset_msg_powers_first (self), "Name: Brutus"));
+        CHECK(streq (asset_msg_powers_next (self), "Age: 43"));
+        CHECK(streq (asset_msg_ip (self), "Life is short but Now lasts for ever"));
+        CHECK(streq (asset_msg_hostname (self), "Life is short but Now lasts for ever"));
+        CHECK(streq (asset_msg_fqdn (self), "Life is short but Now lasts for ever"));
+        CHECK(streq (asset_msg_mac (self), "Life is short but Now lasts for ever"));
+        CHECK(zmsg_size (asset_msg_msg (self)) == 1);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_GET_ELEMENT);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -134,18 +134,18 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
-        assert (asset_msg_type (self) == 123);
+        CHECK(asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_type (self) == 123);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_RETURN_ELEMENT);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -158,18 +158,18 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
-        assert (zmsg_size (asset_msg_msg (self)) == 1);
+        CHECK(asset_msg_element_id (self) == 123);
+        CHECK(zmsg_size (asset_msg_msg (self)) == 1);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_UPDATE_ELEMENT);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -182,18 +182,18 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
-        assert (zmsg_size (asset_msg_msg (self)) == 1);
+        CHECK(asset_msg_element_id (self) == 123);
+        CHECK(zmsg_size (asset_msg_msg (self)) == 1);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_INSERT_ELEMENT);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     zmsg_t *insert_element_msg = zmsg_new ();
@@ -205,17 +205,17 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (zmsg_size (asset_msg_msg (self)) == 1);
+        CHECK(zmsg_size (asset_msg_msg (self)) == 1);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_DELETE_ELEMENT);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -226,18 +226,18 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
-        assert (asset_msg_type (self) == 123);
+        CHECK(asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_type (self) == 123);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_OK);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -247,17 +247,17 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_element_id (self) == 123);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_FAIL);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_error_id (self, 123);
@@ -267,17 +267,17 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_error_id (self) == 123);
+        CHECK(asset_msg_error_id (self) == 123);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_GET_ELEMENTS);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_type (self, 123);
@@ -287,17 +287,17 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_type (self) == 123);
+        CHECK(asset_msg_type (self) == 123);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_RETURN_ELEMENTS);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_element_ids_insert (self, "Name", "Brutus");
@@ -308,19 +308,19 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_ids_size (self) == 2);
-        assert (streq (asset_msg_element_ids_string (self, "Name", "?"), "Brutus"));
-        assert (asset_msg_element_ids_number (self, "Age", 0) == 43);
+        CHECK(asset_msg_element_ids_size (self) == 2);
+        CHECK(streq (asset_msg_element_ids_string (self, "Name", "?"), "Brutus"));
+        CHECK(asset_msg_element_ids_number (self, "Age", 0) == 43);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_GET_LOCATION_FROM);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -332,19 +332,19 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
-        assert (asset_msg_recursive (self) == 123);
-        assert (asset_msg_filter_type (self) == 123);
+        CHECK(asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_recursive (self) == 123);
+        CHECK(asset_msg_filter_type (self) == 123);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_GET_LOCATION_TO);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -354,17 +354,17 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_element_id (self) == 123);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_RETURN_LOCATION_TO);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -380,21 +380,21 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
-        assert (asset_msg_type (self) == 123);
-        assert (streq (asset_msg_name (self), "Life is short but Now lasts for ever"));
-        assert (streq (asset_msg_type_name (self), "Life is short but Now lasts for ever"));
-        assert (zmsg_size (asset_msg_msg (self)) == 1);
+        CHECK(asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_type (self) == 123);
+        CHECK(streq (asset_msg_name (self), "Life is short but Now lasts for ever"));
+        CHECK(streq (asset_msg_type_name (self), "Life is short but Now lasts for ever"));
+        CHECK(zmsg_size (asset_msg_msg (self)) == 1);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_RETURN_LOCATION_FROM);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -419,26 +419,26 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
-        assert (asset_msg_type (self) == 123);
-        assert (streq (asset_msg_name (self), "Life is short but Now lasts for ever"));
-        assert (streq (asset_msg_type_name (self), "Life is short but Now lasts for ever"));
-        assert (zframe_streq (asset_msg_dcs (self), "Captcha Diem"));
-        assert (zframe_streq (asset_msg_rooms (self), "Captcha Diem"));
-        assert (zframe_streq (asset_msg_rows (self), "Captcha Diem"));
-        assert (zframe_streq (asset_msg_racks (self), "Captcha Diem"));
-        assert (zframe_streq (asset_msg_devices (self), "Captcha Diem"));
-        assert (zframe_streq (asset_msg_grps (self), "Captcha Diem"));
+        CHECK(asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_type (self) == 123);
+        CHECK(streq (asset_msg_name (self), "Life is short but Now lasts for ever"));
+        CHECK(streq (asset_msg_type_name (self), "Life is short but Now lasts for ever"));
+        CHECK(zframe_streq (asset_msg_dcs (self), "Captcha Diem"));
+        CHECK(zframe_streq (asset_msg_rooms (self), "Captcha Diem"));
+        CHECK(zframe_streq (asset_msg_rows (self), "Captcha Diem"));
+        CHECK(zframe_streq (asset_msg_racks (self), "Captcha Diem"));
+        CHECK(zframe_streq (asset_msg_devices (self), "Captcha Diem"));
+        CHECK(zframe_streq (asset_msg_grps (self), "Captcha Diem"));
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_GET_POWER_FROM);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -448,17 +448,17 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_element_id (self) == 123);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_POWERCHAIN_DEVICE);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -470,19 +470,19 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
-        assert (streq (asset_msg_type_name (self), "Life is short but Now lasts for ever"));
-        assert (streq (asset_msg_name (self), "Life is short but Now lasts for ever"));
+        CHECK(asset_msg_element_id (self) == 123);
+        CHECK(streq (asset_msg_type_name (self), "Life is short but Now lasts for ever"));
+        CHECK(streq (asset_msg_name (self), "Life is short but Now lasts for ever"));
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_RETURN_POWER);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     zframe_t *return_power_devices = zframe_new ("Captcha Diem", 12);
@@ -495,20 +495,20 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (zframe_streq (asset_msg_devices (self), "Captcha Diem"));
-        assert (asset_msg_powers_size (self) == 2);
-        assert (streq (asset_msg_powers_first (self), "Name: Brutus"));
-        assert (streq (asset_msg_powers_next (self), "Age: 43"));
+        CHECK(zframe_streq (asset_msg_devices (self), "Captcha Diem"));
+        CHECK(asset_msg_powers_size (self) == 2);
+        CHECK(streq (asset_msg_powers_first (self), "Name: Brutus"));
+        CHECK(streq (asset_msg_powers_next (self), "Age: 43"));
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_GET_POWER_TO);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -518,17 +518,17 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_element_id (self) == 123);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_GET_POWER_GROUP);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -538,17 +538,17 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_element_id (self) == 123);
         asset_msg_destroy (&self);
     }
     self = asset_msg_new (ASSET_MSG_GET_POWER_DATACENTER);
 
     //  Check that _dup works on empty message
     copy = asset_msg_dup (self);
-    assert (copy);
+    CHECK(copy);
     asset_msg_destroy (&copy);
 
     asset_msg_set_element_id (self, 123);
@@ -558,10 +558,10 @@ TEST_CASE("asset_msg test", "[.disabled]")
 
     for (instance = 0; instance < 2; instance++) {
         self = asset_msg_recv (input);
-        assert (self);
-        assert (asset_msg_routing_id (self));
+        CHECK(self);
+        CHECK(asset_msg_routing_id (self));
 
-        assert (asset_msg_element_id (self) == 123);
+        CHECK(asset_msg_element_id (self) == 123);
         asset_msg_destroy (&self);
     }
 

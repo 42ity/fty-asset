@@ -38,7 +38,7 @@ TEST_CASE("fty_asset_inventory test")
     static const char* endpoint = "inproc://fty_asset_inventory_test";
 
     zactor_t *server = zactor_new (mlm_server, static_cast<void*>( const_cast<char*>( "Malamute")));
-    assert ( server != NULL );
+    CHECK( server != NULL );
     zstr_sendx (server, "BIND", endpoint, NULL);
 
     mlm_client_t *ui = mlm_client_new ();
@@ -60,7 +60,7 @@ TEST_CASE("fty_asset_inventory test")
                 "inventory",
                 NULL);
         int rv = mlm_client_send (ui, "inventory@dc-1", &msg);
-        assert (rv == 0);
+        CHECK(rv == 0);
         zclock_sleep (200);
         log_info ("fty-asset-server-test:Test #2: OK");
     }
