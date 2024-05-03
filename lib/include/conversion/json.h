@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include <cxxtools/serializationinfo.h>
 #include <string>
+
 // fwd declaration
 namespace fty {
 class Asset;

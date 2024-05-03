@@ -24,11 +24,10 @@ using namespace fty;
 TEST_CASE("Create fty::Asset object")
 {
     REQUIRE_NOTHROW([&]()
-    { 
+    {
         Asset asset;
-        
     }());
-    
+
 }
 
 TEST_CASE("Equality check - good case")
@@ -44,9 +43,9 @@ TEST_CASE("Equality check - good case")
 
     Asset asset2;
     asset2 = asset;
-    
+
     REQUIRE(asset == asset2);
-    
+
 }
 
 TEST_CASE("Equality check - bad case")
@@ -64,9 +63,9 @@ TEST_CASE("Equality check - bad case")
     asset2 = asset;
 
     asset2.setParentIname("wrong-name");
-    
+
     REQUIRE(asset != asset2);
-    
+
 }
 
 TEST_CASE("Priority set")
