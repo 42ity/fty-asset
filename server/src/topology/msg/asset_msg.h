@@ -760,11 +760,6 @@ zframe_t *
 void
     asset_msg_set_grps (asset_msg_t *self, zframe_t **frame_p);
 
-//  Self test of this class
-int
-    asset_msg_test (bool verbose);
-//  @end
-
 //  For backwards compatibility with old codecs
 #define asset_msg_dump      asset_msg_print
 

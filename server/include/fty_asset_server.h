@@ -26,6 +26,3 @@
 //  Asset server, that takes care about distribution of
 //  asset information across the system
 void fty_asset_server(zsock_t* pipe, void* args);
-
-//  Self test of this class
-void fty_asset_server_test(bool verbose);

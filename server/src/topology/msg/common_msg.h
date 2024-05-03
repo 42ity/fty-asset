@@ -856,11 +856,6 @@ void
 size_t
     common_msg_measurements_size (common_msg_t *self);
 
-//  Self test of this class
-int
-    common_msg_test (bool verbose);
-//  @end
-
 //  For backwards compatibility with old codecs
 #define common_msg_dump     common_msg_print
 

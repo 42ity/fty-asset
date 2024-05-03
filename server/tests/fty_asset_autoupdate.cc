@@ -15,30 +15,22 @@
 */
 
 #include <catch2/catch.hpp>
-
-#include "fty_asset_server.h"
-#include "fty_asset_inventory.h"
 #include "fty_asset_autoupdate.h"
-#include "dns.h"
+#include <fty_log.h>
+#include <iostream>
 
-static bool verbose = false;
-
-TEST_CASE("fty_asset_server_test")
+TEST_CASE("fty_asset_autoupdate test")
 {
-    fty_asset_server_test(verbose);
-}
+    std::cout << " * fty_asset_autoupdate: " << std::endl;
 
-TEST_CASE("fty_asset_inventory_test")
-{
-    fty_asset_inventory_test(verbose);
-}
+    //  Test #1: Simple create/destroy test
+    {
+        log_debug ("fty_asset_autoupdate:Test #1");
+        zactor_t *self = zactor_new (fty_asset_autoupdate_server, static_cast<void*>( const_cast<char*>( "asset-autoupdate-test")));
+        zclock_sleep (200);
+        zactor_destroy (&self);
+        log_info ("fty-asset-server-test:Test #1: OK");
+    }
 
-TEST_CASE("fty_asset_autoupdate_test")
-{
-    fty_asset_autoupdate_test(verbose);
-}
-
-TEST_CASE("dns")
-{
-    dns_test(verbose);
+    std::cout << "fty_asset_autoupdate: OK"  << std::endl;
 }
