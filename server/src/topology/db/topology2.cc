@@ -48,12 +48,10 @@
 #include <tntdb.h>
 #include <sstream>
 #include <cxxtools/split.h>
-#include <cxxtools/jsondeserializer.h>
-#include <cxxtools/jsonserializer.h>
 #include <cxxtools/serializationinfo.h>
 
 #include <fty_log.h>
-#include <fty_common.h>
+#include <fty_common_json.h>
 #include <fty_common_macros.h>
 #include <fty_common_db.h>
 
@@ -488,7 +486,7 @@ fctOrderByName (const Item &i1, const Item &i2)
 //             therefor simply change SQL SELECT to get devices with id_parent==id (fom)
 void
 topology2_from_json (
-    std::ostream &out,
+    std::ostream &out, // output
     tntdb::Result &res,
     const std::string &from,
     const std::string &filter,
@@ -553,11 +551,12 @@ topology2_from_json (
         topo.groups.insert (topo.groups.end (), groups.begin (), groups.end ());
     }
 
-    cxxtools::JsonSerializer serializer (out);
-    serializer.beautify (false);
-    serializer.inputUtf8(true);
     item_from.contains = topo;
-    serializer.serialize(item_from).finish();
+
+    // set OUT from ITEM_FROM json payload
+    cxxtools::SerializationInfo si;
+    si <<= item_from;
+    out << JSON::writeToString(si, false);
 }
 
 static void
@@ -613,7 +612,7 @@ s_should_filter_recursive (int query_type, int asset_type)
 
 void
 topology2_from_json_recursive (
-    std::ostream &out,
+    std::ostream &out, // output
     tntdb::Connection &conn,
     tntdb::Result &res,
     const std::string &from,
@@ -710,11 +709,12 @@ topology2_from_json_recursive (
     if (query_type == persist::asset_type::GROUP)
         topo.groups.insert (topo.groups.end (), groups.begin (), groups.end ());
 
-    cxxtools::JsonSerializer serializer (out);
-    serializer.beautify (false);
-    serializer.inputUtf8(true);
     it2.contains = topo;
-    serializer.serialize(it2).finish();
+
+    // set OUT from IT2 json payload
+    cxxtools::SerializationInfo si;
+    si <<= it2;
+    out << JSON::writeToString(si, false);
 }
 
 }// namespace persist

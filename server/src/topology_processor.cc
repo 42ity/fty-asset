@@ -32,11 +32,8 @@
 #include "topology_input_powerchain.h"
 
 #include <fty_log.h>
-#include <fty_common.h>
-
+#include <fty_common_json.h>
 #include <cxxtools/serializationinfo.h>
-#include <cxxtools/jsondeserializer.h>
-#include <cxxtools/jsonserializer.h>
 #include <map>
 
 // fwd decl.
@@ -336,19 +333,13 @@ static int json_string_beautify (std::string & s)
 static int si_to_string (const cxxtools::SerializationInfo & si, std::string & s, bool beautify)
 {
     try {
-        s = "";
-        std::ostringstream output;
-        cxxtools::JsonSerializer js;
-        js.beautify(beautify);
-        js.begin(output);
-        js.serialize(si);
-        js.finish();
-        s = output.str();
+        s = JSON::writeToString(si, beautify);
         return 0; // ok
     }
     catch (...) {
         log_error("Exception reached");
     }
+    s = "";
     return -1;
 }
 
@@ -360,9 +351,7 @@ static int string_to_si (const std::string & s, cxxtools::SerializationInfo & si
 {
     try {
         si.clear();
-        std::istringstream input(s);
-        cxxtools::JsonDeserializer deserializer(input);
-        deserializer.deserialize(si);
+        JSON::readFromString(s, si);
         return 0; // ok
     }
     catch (...) {
