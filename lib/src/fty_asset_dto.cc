@@ -31,8 +31,7 @@
 #include "conversion/json.h"
 #include "conversion/proto.h"
 #include <algorithm>
-#include <cxxtools/jsondeserializer.h>
-#include <cxxtools/jsonserializer.h>
+#include <cxxtools/serializationinfo.h>
 #include <fty_proto.h>
 #include <sstream>
 
@@ -159,6 +158,7 @@ void AssetLink::serialize(cxxtools::SerializationInfo& si) const
 {
     si.addMember(SI_LINK_SOURCE) <<= m_sourceId;
     si.addMember(SI_LINK_TYPE) <<= m_linkType;
+
     if (!m_srcOut.empty()) {
         si.addMember(SI_LINK_SRC_OUT) <<= m_srcOut;
     }
@@ -167,15 +167,12 @@ void AssetLink::serialize(cxxtools::SerializationInfo& si) const
     }
 
     if (!m_ext.empty()) {
-        cxxtools::SerializationInfo& ext = si.addMember("");
-        cxxtools::SerializationInfo  data;
+        cxxtools::SerializationInfo data;
         for (const auto& e : m_ext) {
-            cxxtools::SerializationInfo& entry = data.addMember(e.first);
-            entry <<= e.second;
+            data.addMember(e.first) <<= e.second;
         }
-        data.setCategory(cxxtools::SerializationInfo::Category::Object);
-        ext = data;
-        ext.setName(SI_LINK_EXT);
+
+        si.addMember(SI_LINK_EXT) <<= data;
     }
 
     if (!m_secondaryID.empty()) {
@@ -187,6 +184,7 @@ void AssetLink::deserialize(const cxxtools::SerializationInfo& si)
 {
     si.getMember(SI_LINK_SOURCE) >>= m_sourceId;
     si.getMember(SI_LINK_TYPE) >>= m_linkType;
+
     if (si.findMember(SI_LINK_SRC_OUT) != NULL) {
         si.getMember(SI_LINK_SRC_OUT) >>= m_srcOut;
     }
@@ -666,29 +664,19 @@ void Asset::serialize(cxxtools::SerializationInfo& si) const
     si.addMember(SI_PARENT) <<= m_parentIname;
 
     // linked assets
-    cxxtools::SerializationInfo& linked = si.addMember("");
-
-    cxxtools::SerializationInfo tmpSiLinks;
+    cxxtools::SerializationInfo linked;
+    linked.setCategory(cxxtools::SerializationInfo::Category::Array);
     for (const auto& l : m_linkedAssets) {
-        cxxtools::SerializationInfo& link = tmpSiLinks.addMember("");
-        link <<= l;
-        link.setCategory(cxxtools::SerializationInfo::Category::Object);
+        linked.addMember("") <<= l;
     }
-    tmpSiLinks.setCategory(cxxtools::SerializationInfo::Category::Array);
-    linked = tmpSiLinks;
-    linked.setName(SI_LINKED);
+    si.addMember(SI_LINKED) <<= linked;
 
-    // ext
-    cxxtools::SerializationInfo& ext = si.addMember("");
-
-    cxxtools::SerializationInfo data;
+    // ext attributes
+    cxxtools::SerializationInfo ext;
     for (const auto& e : m_ext) {
-        cxxtools::SerializationInfo& entry = data.addMember(e.first);
-        entry <<= e.second;
+        ext.addMember(e.first) <<= e.second;
     }
-    data.setCategory(cxxtools::SerializationInfo::Category::Object);
-    ext = data;
-    ext.setName(SI_EXT);
+    si.addMember(SI_EXT) <<= ext;
 
     if (!m_secondaryID.empty()) {
         si.addMember(SI_SECONDARY_ID) <<= m_secondaryID;
@@ -918,22 +906,17 @@ void UIAsset::serializeUI(cxxtools::SerializationInfo& si) const
 
     si.addMember(UI_PRIORITY) <<= "P" + std::to_string(m_priority);
 
-
     /*si.addMember(SI_LINKED) <<= m_linkedAssets;
 
     // ext
-    cxxtools::SerializationInfo& ext = si.addMember("");
-
-    cxxtools::SerializationInfo data;
+    cxxtools::SerializationInfo ext;
     for (const auto& e : m_ext) {
-        cxxtools::SerializationInfo& entry = data.addMember(e.first);
+        cxxtools::SerializationInfo& entry = ext.addMember(e.first);
         entry.addMember("value") <<= e.second.getValue();
         entry.addMember("readOnly") <<= e.second.isReadOnly();
         entry.addMember("updated") <<= e.second.wasUpdated();
     }
-    data.setCategory(cxxtools::SerializationInfo::Category::Object);
-    ext = data;
-    ext.setName(SI_EXT);
+    si.addMember(SI_EXT) <<= ext;
 
     if (m_parentsList.has_value()) {
         si.addMember(SI_PARENTS_LIST) <<= m_parentsList.value();
@@ -943,6 +926,5 @@ void UIAsset::serializeUI(cxxtools::SerializationInfo& si) const
 void UIAsset::deserializeUI(const cxxtools::SerializationInfo& /*si*/)
 {
 }
-
 
 } // namespace fty

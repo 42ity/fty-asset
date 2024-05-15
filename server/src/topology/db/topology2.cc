@@ -555,7 +555,7 @@ topology2_from_json (
 
     cxxtools::JsonSerializer serializer (out);
     serializer.beautify (false);
-    serializer.inputUtf8(true);
+    //serializer.inputUtf8(true);
     item_from.contains = topo;
     serializer.serialize(item_from).finish();
 }
@@ -712,7 +712,7 @@ topology2_from_json_recursive (
 
     cxxtools::JsonSerializer serializer (out);
     serializer.beautify (false);
-    serializer.inputUtf8(true);
+    //serializer.inputUtf8(true);
     it2.contains = topo;
     serializer.serialize(it2).finish();
 }

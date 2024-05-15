@@ -112,7 +112,7 @@ void TestDb::destroy()
         try {
             //std::cout << "== TestDb::destroy DB shutdown " << std::endl;
             fty::db::shutdown();
-			// DB client must breath a while to shutdown properly (may crash if not)
+            // DB client must breath a while to shutdown properly (may crash if not)
             sleep(1);
         }
         catch (const std::exception& e) {

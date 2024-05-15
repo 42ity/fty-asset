@@ -29,9 +29,10 @@ Example:
     buf << "RACK-02, rack,GR-01, GR-02,just my rack\n";
 
     std::vector<std::vector<std::string> > data;
-    cxxtools::CsvDeserializer deserializer(buf);
+    cxxtools::CsvDeserializer deserializer;
     deserializer.delimiter(',');
     deserializer.readTitle(false);
+    deserializer.read(buf);
     deserializer.deserialize(data);
 
     shared::CsvMap cm{data};

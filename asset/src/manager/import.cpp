@@ -82,7 +82,8 @@ AssetExpected<AssetManager::ImportList> AssetManager::importCsv(
         csv.setCreateUser(user);
         csv.setUpdateUser(user);
     }
-    catch (...) {
+    catch (const std::exception& e) {
+        //std::cout << "importCsv exception: " << e.what() << std::endl;
         return unexpected(error(fty::asset::Errors::BadRequestDocument).format("csv"));
     }
 

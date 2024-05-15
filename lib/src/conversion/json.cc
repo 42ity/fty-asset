@@ -22,37 +22,25 @@
 #include "conversion/json.h"
 
 #include <fty_asset_dto.h>
-#include <cxxtools/jsondeserializer.h>
-#include <cxxtools/jsonserializer.h>
-#include <sstream>
+#include <cxxtools/serializationinfo.h>
+#include <fty_common_json.h>
 
-namespace fty { namespace conversion {
+namespace fty {
+namespace conversion {
 
     std::string toJson(const Asset& asset)
     {
-        std::ostringstream output;
-
         cxxtools::SerializationInfo si;
-        cxxtools::JsonSerializer    serializer(output);
-
         si <<= asset;
-        serializer.serialize(si);
-
-        std::string json = output.str();
-
-        return json;
+        return JSON::writeToString(si, false);
     }
 
     void fromJson(const std::string& json, fty::Asset& asset)
     {
-        std::istringstream input(json);
-
         cxxtools::SerializationInfo si;
-        cxxtools::JsonDeserializer  deserializer(input);
-
-        deserializer.deserialize(si);
-
+        JSON::readFromString(json, si);
         si >>= asset;
     }
 
-}} // namespace fty::conversion
+}
+} // namespace fty::conversion
