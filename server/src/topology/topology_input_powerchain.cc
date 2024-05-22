@@ -47,13 +47,13 @@
 #include <string>
 #include <iostream>
 
-#include <cxxtools/jsonserializer.h>
-
 #include "fty_log.h"
 #include "utilspp.h"
 
 #include <fty_common_db.h>
-#include <fty_common.h>
+#include <fty_common_json.h>
+#include <cxxtools/serializationinfo.h>
+
 #include "assettopology.h"
 
 
@@ -241,11 +241,9 @@ int topology_input_powerchain (std::map<std::string, std::string> & param, std::
 
     // serialize topo (json)
     try {
-        std::ostringstream out;
-        cxxtools::JsonSerializer serializer (out);
-        //serializer.inputUtf8(true);
-        serializer.serialize(topo).finish();
-        json = out.str();
+        cxxtools::SerializationInfo si;
+        si <<= topo;
+        json = JSON::writeToString(si, true);
     }
     catch (...) {
         log_error ("internal-error, json serialization failed (raise exception)");

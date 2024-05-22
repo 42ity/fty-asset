@@ -15,30 +15,22 @@
 */
 
 #include <catch2/catch.hpp>
-
-#include "fty_asset_server.h"
-#include "fty_asset_inventory.h"
-#include "fty_asset_autoupdate.h"
 #include "dns.h"
+#include <iostream>
 
-static bool verbose = false;
-
-TEST_CASE("fty_asset_server_test")
+TEST_CASE("dns test")
 {
-    fty_asset_server_test(verbose);
-}
+    std::cout << " * dns:" << std::endl;
 
-TEST_CASE("fty_asset_inventory_test")
-{
-    fty_asset_inventory_test(verbose);
-}
+    {
+        int found = 0;
+        for (auto a : name_to_ip4 ("localhost")) {
+            if (a == "127.0.0.1") found++;
+        }
+        CHECK(found == 1);
+    }
 
-TEST_CASE("fty_asset_autoupdate_test")
-{
-    fty_asset_autoupdate_test(verbose);
-}
+    CHECK(! ip_to_name("127.0.0.1").empty ());
 
-TEST_CASE("dns")
-{
-    dns_test(verbose);
+    std::cout << "dns: OK" << std::endl;
 }

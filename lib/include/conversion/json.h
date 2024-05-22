@@ -23,8 +23,9 @@
 
 #include <string>
 
+// fwd declaration
 namespace fty {
-class Asset; // fwd decl.
+class Asset;
 } // namespace fty
 
 namespace fty {

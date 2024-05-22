@@ -23,8 +23,5 @@
 
 #include <czmq.h>
 
-//  bios_asset_autoupdate actor
+//  fty_asset_autoupdate actor function
 void fty_asset_autoupdate_server (zsock_t *pipe, void *args);
-
-//  Self test of this class
-void fty_asset_autoupdate_test (bool verbose);

@@ -371,20 +371,3 @@ fty_asset_autoupdate_server (zsock_t *pipe, void *args)
     zpoller_destroy (&poller);
     fty_asset_autoupdate_destroy (&self);
 }
-
-//  --------------------------------------------------------------------------
-//  Self test of this class
-
-void
-fty_asset_autoupdate_test (bool /*verbose*/)
-{
-    std::cout << " * fty_asset_autoupdate: " << std::endl;
-
-    //  Simple create/destroy test
-    fty_asset_autoupdate_t *self = fty_asset_autoupdate_new ();
-    assert (self);
-    fty_asset_autoupdate_destroy (&self);
-    assert (!self);
-
-    std::cout << "fty_asset_autoupdate: OK"  << std::endl;
-}

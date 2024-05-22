@@ -56,10 +56,15 @@ zlist_t* select_asset_device_links_all(tntdb::Connection &conn,
                 a_elmnt_id_t device_id, a_lnk_tp_id_t link_type_id)
 {
     log_info("start");
-    zlist_t* links = zlist_new();
-    zlist_autofree(links);
+    zlist_t* links = NULL;
 
     try {
+        links = zlist_new();
+        if (!links) {
+            throw std::runtime_error("zlist_new failed");
+        }
+        zlist_autofree(links);
+
         // Get information about the links the specified device
         // belongs to
         // Can return more than one row
@@ -97,8 +102,6 @@ zlist_t* select_asset_device_links_all(tntdb::Connection &conn,
                             set("link", link_type_id).
                             select();
         }
-        // TODO move 26 to constants
-        char buff[26];     // 10+3+3+10
 
         // Go through the selected links
         for ( auto &row: result )
@@ -121,7 +124,8 @@ zlist_t* select_asset_device_links_all(tntdb::Connection &conn,
             std::string dest_in = SRCOUT_DESTIN_IS_NULL;
             row[3].get(dest_in);
 
-            sprintf(buff, "%s:%" PRIu32 ":%s:%" PRIu32,
+            char buff[128];
+            snprintf(buff, sizeof(buff), "%s:%" PRIu32 ":%s:%" PRIu32,
                 src_out.c_str(),
                 element_id_src,
                 dest_in.c_str(),

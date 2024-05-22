@@ -34,5 +34,3 @@ std::set<std::string> name_to_ip (const char *name);
 std::string ip_to_name (const char *ip);
 
 std::map<std::string,std::set<std::string>> local_addresses();
-
-void dns_test (bool verbose);

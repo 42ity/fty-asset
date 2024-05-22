@@ -4,7 +4,8 @@
 #include "asset/asset-import.h"
 #include "asset/asset-manager.h"
 #include "asset/csv.h"
-#include <cxxtools/jsondeserializer.h>
+#include <cxxtools/serializationinfo.h>
+#include <fty_common_json.h>
 #include <fty_asset_dto.h>
 #include <fty_log.h>
 #include <mutex>
@@ -24,9 +25,7 @@ AssetExpected<uint32_t> AssetManager::createAsset(const std::string& json, const
     // Read json, transform to csv, use existing functionality
     cxxtools::SerializationInfo si;
     try {
-        std::stringstream          input(json, std::ios_base::in);
-        cxxtools::JsonDeserializer deserializer(input);
-        deserializer.deserialize(si);
+        JSON::readFromString(json, si);
     } catch (const std::exception& e) {
         logError(e.what());
         return unexpected(msg.format("", e.what()));

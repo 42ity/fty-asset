@@ -28,8 +28,8 @@
 
 #include "fty_common_asset.h"
 
-#include <cxxtools/jsonserializer.h>
-#include <cxxtools/jsondeserializer.h>
+#include <cxxtools/serializationinfo.h>
+#include <fty_common_json.h>
 #include <fty_common_mlm.h>
 #include <fty_common_asset_types.h>
 #include <fty_common_macros.h>
@@ -240,19 +240,23 @@ namespace fty {
 
     std::string BasicAsset::toJson() const
     {
-        cxxtools::SerializationInfo rootSi;
-        rootSi <<= *this;
-        std::ostringstream assetJsonStream;
-        cxxtools::JsonSerializer serializer (assetJsonStream);
-        serializer.serialize (rootSi).finish();
-        return assetJsonStream.str();
+        cxxtools::SerializationInfo si;
+        si <<= *this;
+        return JSON::writeToString(si, false);
     }
 
     bool BasicAsset::isPowerAsset () const
     {
         uint16_t type = type_subtype_.first;
         uint16_t subtype = type_subtype_.second;
-        return (type == persist::asset_type::DEVICE && (subtype == persist::asset_subtype::EPDU || subtype == persist::asset_subtype::GENSET || subtype == persist::asset_subtype::PDU || subtype == persist::asset_subtype::STS || subtype == persist::asset_subtype::UPS));
+        return (type == persist::asset_type::DEVICE
+            && (subtype == persist::asset_subtype::EPDU
+                || subtype == persist::asset_subtype::GENSET
+                || subtype == persist::asset_subtype::PDU
+                || subtype == persist::asset_subtype::STS
+                || subtype == persist::asset_subtype::UPS
+            )
+        );
     }
 
     ExtendedAsset::ExtendedAsset ()
@@ -319,12 +323,9 @@ namespace fty {
 
     std::string ExtendedAsset::toJson() const
     {
-        cxxtools::SerializationInfo rootSi;
-        rootSi <<= *this;
-        std::ostringstream assetJsonStream;
-        cxxtools::JsonSerializer serializer (assetJsonStream);
-        serializer.serialize (rootSi).finish();
-        return assetJsonStream.str();
+        cxxtools::SerializationInfo si;
+        si <<= *this;
+        return JSON::writeToString(si, false);
     }
 
     bool ExtendedAsset::operator == (const ExtendedAsset &asset) const
@@ -488,12 +489,9 @@ namespace fty {
 
     std::string FullAsset::toJson() const
     {
-        cxxtools::SerializationInfo rootSi;
-        rootSi <<= *this;
-        std::ostringstream assetJsonStream;
-        cxxtools::JsonSerializer serializer (assetJsonStream);
-        serializer.serialize (rootSi).finish();
-        return assetJsonStream.str();
+        cxxtools::SerializationInfo si;
+        si <<= *this;
+        return JSON::writeToString(si, false);
     }
 
     bool FullAsset::operator == (const FullAsset &asset) const
@@ -645,189 +643,3 @@ namespace fty {
     {
         asset.serialize (si);
     }
-//  --------------------------------------------------------------------------
-//  Self test of this class
-
-// If your selftest reads SCMed fixture data, please keep it in
-// src/selftest-ro; if your test creates filesystem objects, please
-// do so under src/selftest-rw.
-// The following pattern is suggested for C selftest code:
-//    char *filename = NULL;
-//    filename = zsys_sprintf ("%s/%s", SELFTEST_DIR_RO, "mytemplate.file");
-//    assert (filename);
-//    ... use the "filename" for I/O ...
-//    zstr_free (&filename);
-// This way the same "filename" variable can be reused for many subtests.
-#define SELFTEST_DIR_RO "src/selftest-ro"
-#define SELFTEST_DIR_RW "src/selftest-rw"
-
-void
-fty_common_asset_test (bool /* verbose */)
-{
-    printf (" * fty_common_asset: ");
-
-    //  @selftest
-    try {
-        //fty::BasicAsset a; // this causes g++ error, as expected
-        fty::BasicAsset b ("id-1", "active", "device", "rackcontroller");
-        assert (b.getId () == "id-1");
-        assert (b.getStatus () == fty::BasicAsset::Status::Active);
-        assert (b.getType () == persist::asset_type::DEVICE);
-        assert (b.getSubtype () == persist::asset_subtype::RACKCONTROLLER);
-        assert (b.getStatusString () == "active");
-        assert (b.getTypeString () == "device");
-        assert (b.getSubtypeString () == "rackcontroller");
-        b.setStatus ("nonactive");
-        assert (b.getStatus () == fty::BasicAsset::Status::Nonactive);
-        b.setType ("vm");
-        assert (b.getType () == persist::asset_type::VIRTUAL_MACHINE);
-        b.setSubtype ("vmwarevm");
-        assert (b.getSubtype () == persist::asset_subtype::VMWARE_VM);
-        fty::BasicAsset bb (b);
-        assert (b == bb);
-        assert (bb.getId () == "id-1");
-        assert (bb.getType () == persist::asset_type::VIRTUAL_MACHINE);
-        bb.setType ("device");
-        assert (bb.getType () == persist::asset_type::DEVICE);
-        assert (b.getType () == persist::asset_type::VIRTUAL_MACHINE);
-        assert (b != bb);
-
-        fty::BasicAsset bJson1 ("id-1", "active", "device", "rackcontroller");
-        cxxtools::SerializationInfo rootSi;
-        rootSi <<= bJson1;
-        std::ostringstream assetJsonStream;
-        cxxtools::JsonSerializer serializer (assetJsonStream);
-        serializer.serialize (rootSi).finish();
-        std::cerr << assetJsonStream.str () << std::endl;
-
-        fty::BasicAsset bJson2;
-        rootSi >>= bJson2;
-        assert (bJson1.getId() == bJson2.getId());
-        assert (bJson1.getStatusString() == bJson2.getStatusString());
-        assert (bJson1.getTypeString() == bJson2.getTypeString());
-        assert (bJson1.getSubtypeString() == bJson2.getSubtypeString());
-
-    } catch (std::exception &e) {
-        assert (false); // exception not expected
-    }
-    try {
-        fty::BasicAsset c ("id-2", "invalid", "device", "rackcontroller");
-        assert (false); // exception expected
-    } catch (std::exception &e) {
-        // exception is expected
-    }
-    try {
-        fty::BasicAsset d ("id-3", "active", "invalid", "rackcontroller");
-        assert (false); // exception expected
-    } catch (std::exception &e) {
-        // exception is expected
-    }
-    try {
-        fty::BasicAsset e ("id-4", "active", "device", "invalid");
-        assert (false); // exception expected
-    } catch (std::exception &e) {
-        // exception is expected
-    }
-    try {
-        fty::ExtendedAsset f ("id-5", "active", "device", "rackcontroller", "MyRack", "id-1", 1);
-        assert (f.getName () == "MyRack");
-        assert (f.getParentId () == "id-1");
-        assert (f.getPriority () == 1);
-        assert (f.getPriorityString () == "P1");
-        fty::ExtendedAsset g ("id-6", "active", "device", "rackcontroller", "MyRack", "parent-1", "P2");
-        assert (f != g);
-        assert (g.getPriority () == 2);
-        assert (g.getPriorityString () == "P2");
-        g.setName ("MyNewRack");
-        assert (g.getName () == "MyNewRack");
-        g.setParentId ("parent-2");
-        assert (g.getParentId () == "parent-2");
-        g.setPriority ("P3");
-        assert (g.getPriority () == 3);
-        g.setPriority (4);
-        assert (g.getPriority () == 4);
-        fty::ExtendedAsset gg (g);
-        assert (g == gg);
-        assert (gg.getId () == "id-6");
-        assert (gg.getName () == "MyNewRack");
-        gg.setName ("MyOldRack");
-        assert (gg.getName () == "MyOldRack");
-        assert (g.getName () == "MyNewRack");
-        assert (g != gg);
-
-        fty::ExtendedAsset fJson1 ("id-5", "active", "device", "rackcontroller", "MyRack", "id-1", 1);
-        cxxtools::SerializationInfo rootSi;
-        rootSi <<= fJson1;
-        std::ostringstream assetJsonStream;
-        cxxtools::JsonSerializer serializer (assetJsonStream);
-        serializer.serialize (rootSi).finish ();
-        std::cerr << assetJsonStream.str () << std::endl;
-
-        fty::ExtendedAsset fJson2;
-        rootSi >>= fJson2;
-        assert (fJson1.getId() == fJson2.getId());
-        assert (fJson1.getStatusString() == fJson2.getStatusString());
-        assert (fJson1.getTypeString() == fJson2.getTypeString());
-        assert (fJson1.getSubtypeString() == fJson2.getSubtypeString());
-        assert (fJson1.getName() == fJson2.getName());
-        assert (fJson1.getParentId() == fJson2.getParentId());
-        assert (fJson1.getPriority() == fJson2.getPriority());
-
-    } catch (std::exception &e) {
-        assert (false); // exception not expected
-    }
-    try {
-        fty::FullAsset h ("id-7", "active", "device", "rackcontroller", "MyRack", "id-1", 1, {{"aux1", "aval1"},
-                {"aux2", "aval2"}}, {});
-        assert (h.getAuxItem ("aux2") == "aval2");
-        assert (h.getAuxItem ("aval3").empty ());
-        assert (h.getExtItem ("eval1").empty ());
-        h.setAuxItem ("aux4", "aval4");
-        assert (h.getAuxItem ("aux4") == "aval4");
-        h.setExtItem ("ext5", "eval5");
-        assert (h.getExtItem ("ext5") == "eval5");
-        h.setExt ({{"ext1", "eval1"}});
-        assert (h.getExtItem ("ext1") == "eval1");
-        assert (h.getExtItem ("ext5") != "eval5");
-        assert (h.getItem ("aux2") == "aval2");
-        assert (h.getItem ("ext1") == "eval1");
-        assert (h.getItem ("notthere").empty ());
-        fty::FullAsset hh (h);
-        assert (h == hh);
-        assert (hh.getExtItem ("ext1") == "eval1");
-        assert (hh.getExtItem ("ext6").empty ());
-        hh.setExtItem ("ext6", "eval6");
-        assert (hh.getExtItem ("ext6") == "eval6");
-        assert (h.getExtItem ("ext6").empty ());
-        assert (h != hh);
-
-        fty::FullAsset hJson1 ("id-7", "active", "device", "rackcontroller", "MyRack", "id-1", 1, {{"parent", "1"},{"parent_name.1","id-1"}}, {{"name","MyRack"}});
-        cxxtools::SerializationInfo rootSi;
-        rootSi <<= hJson1;
-        std::ostringstream assetJsonStream;
-        cxxtools::JsonSerializer serializer (assetJsonStream);
-        serializer.serialize (rootSi).finish ();
-        std::cerr << assetJsonStream.str () << std::endl;
-
-        fty::FullAsset hJson2;
-        rootSi >>= hJson2;
-
-        assert (hJson1.getId() == hJson2.getId());
-        assert (hJson1.getStatusString() == hJson2.getStatusString());
-        assert (hJson1.getTypeString() == hJson2.getTypeString());
-        assert (hJson1.getSubtypeString() == hJson2.getSubtypeString());
-        assert (hJson1.getName() == hJson2.getName());
-        assert (hJson1.getParentId() == hJson2.getParentId());
-        assert (hJson1.getPriority() == hJson2.getPriority());
-
-        assert (hJson1.getAuxItem("parent") == hJson2.getAuxItem("parent"));
-        assert (hJson1.getAuxItem("parent_name.1") == hJson2.getAuxItem("parent_name.1"));
-        assert (hJson1.getExtItem("name") == hJson2.getExtItem("name"));
-
-    } catch (std::exception &e) {
-        assert (false); // exception not expected
-    }
-    //  @end
-
-    printf ("OK\n");
-}

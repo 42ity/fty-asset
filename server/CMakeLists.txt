@@ -55,7 +55,12 @@ etn_test_target(${PROJECT_NAME}-server
         tests/selftest-ro/*
     SOURCES
         tests/main.cc
-        tests/fty_asset_selftest.cc
+        tests/dns.cc
+        tests/common_msg.cc
+        tests/asset_msg.cc
+        tests/fty_asset_autoupdate.cc
+        tests/fty_asset_inventory.cc
+        tests/fty_asset_server.cc
     INCLUDE_DIRS
         include
         src/

@@ -25,6 +25,3 @@
 
 //  fty_asset_inventory actor function
 void fty_asset_inventory_server (zsock_t *pipe, void *args);
-
-//  Self test of this class
-void fty_asset_inventory_test (bool verbose);

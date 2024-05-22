@@ -191,23 +191,3 @@ std::map<std::string,std::set<std::string>> local_addresses()
     return result;
 }
 
-//  --------------------------------------------------------------------------
-//  Self test of this class
-
-void dns_test (bool /*verbose*/)
-{
-    std::cout << " * dns:" << std::endl;
-
-    {
-        int found = 0;
-        for (auto a : name_to_ip4 ("localhost")) {
-            if (a == "127.0.0.1") found++;
-        }
-        assert (found == 1);
-    }
-
-    assert (! ip_to_name("127.0.0.1").empty ());
-
-    std::cout << "dns: OK" << std::endl;
-}
-

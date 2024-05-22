@@ -31,10 +31,8 @@
 #include "conversion/json.h"
 #include "conversion/proto.h"
 #include <algorithm>
-#include <cxxtools/serializationinfo.h>
 #include <fty_proto.h>
 #include <sstream>
-
 
 namespace fty {
 
