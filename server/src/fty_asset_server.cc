@@ -1103,24 +1103,9 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
             zmsg_addstr(reply, "OK");
             zmsg_addstr(reply, asset.getInternalName().c_str());
 
-            // before update
-            cxxtools::SerializationInfo tmpSi;
-            tmpSi <<= currentAsset;
-
             cxxtools::SerializationInfo si;
-            cxxtools::SerializationInfo& before = si.addMember("");
-            before.setCategory(cxxtools::SerializationInfo::Category::Object);
-            before = tmpSi;
-            before.setName("before");
-
-            // after update
-            tmpSi.clear();
-            tmpSi <<= asset;
-
-            cxxtools::SerializationInfo& after = si.addMember("");
-            after.setCategory(cxxtools::SerializationInfo::Category::Object);
-            after = tmpSi;
-            after.setName("after");
+            si.addMember("before") <<= currentAsset;
+            si.addMember("after") <<= asset;
 
             auto notification = fty::assetutils::createMessage(FTY_ASSET_SUBJECT_UPDATED, "",
                 server.getAgentNameNg(), "", messagebus::STATUS_OK, JSON::writeToString(si, false));

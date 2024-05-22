@@ -706,8 +706,9 @@ topology2_from_json_recursive (
         nm,
         im);
 
-    if (query_type == persist::asset_type::GROUP)
+    if (query_type == persist::asset_type::GROUP) {
         topo.groups.insert (topo.groups.end (), groups.begin (), groups.end ());
+    }
 
     it2.contains = topo;
 

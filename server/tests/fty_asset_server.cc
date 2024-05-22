@@ -24,6 +24,7 @@
 #include <malamute.h>
 #include <czmq.h>
 #include <iostream>
+#include <sstream>
 
 // stores correlationID : asset JSON for each message received
 static std::map<std::string, std::string> assetTestMap;

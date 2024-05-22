@@ -473,9 +473,8 @@ void AssetServer::createAsset(const messagebus::Message& msg)
             m_agentNameNg, "", messagebus::STATUS_OK, asset.getInternalName());
         sendNotification(notification_l);
 
-
     } catch (const std::exception& e) {
-        log_error(e.what());
+        log_error("%s", e.what());
         // create response (error)
         auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_CREATE,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
@@ -556,7 +555,7 @@ void AssetServer::updateAsset(const messagebus::Message& msg)
 
         notifyAssetUpdate(currentAsset, asset);
     } catch (const std::exception& e) {
-        log_error(e.what());
+        log_error("%s", e.what());
         // create response (error)
         auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_UPDATE,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
@@ -662,7 +661,7 @@ void AssetServer::getAsset(const messagebus::Message& msg, bool getFromUuid)
         log_debug("sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
         m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
     } catch (const std::exception& e) {
-        log_error(e.what());
+        log_error("%s", e.what());
         // create response (error)
         auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_GET,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
@@ -737,7 +736,7 @@ void AssetServer::listAsset(const messagebus::Message& msg)
         log_debug("sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
         m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
     } catch (const std::exception& e) {
-        log_error(e.what());
+        log_error("%s", e.what());
         // create response (error)
         auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_LIST,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
@@ -769,7 +768,7 @@ void AssetServer::getAssetID(const messagebus::Message& msg)
         log_debug("sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
         m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
     } catch (const std::exception& e) {
-        log_error(e.what());
+        log_error("%s", e.what());
         // create response (error)
         auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_GET_ID,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
@@ -801,7 +800,7 @@ void AssetServer::getAssetIname(const messagebus::Message& msg)
         log_debug("sending response to %s", msg.metaData().find(messagebus::Message::FROM)->second.c_str());
         m_assetMsgQueue->sendReply(msg.metaData().find(messagebus::Message::REPLY_TO)->second, response);
     } catch (const std::exception& e) {
-        log_error(e.what());
+        log_error("%s", e.what());
         // create response (error)
         auto response = assetutils::createMessage(FTY_ASSET_SUBJECT_GET_INAME,
             msg.metaData().find(messagebus::Message::CORRELATION_ID)->second, m_agentNameNg,
@@ -851,7 +850,7 @@ void AssetServer::notifyStatusUpdate(const messagebus::Message& msg)
             }
         }
     } catch (const std::exception& e) {
-        log_error(e.what());
+        log_error("%s", e.what());
     }
 }
 
@@ -888,33 +887,16 @@ void AssetServer::notifyAsset(const messagebus::Message& msg)
         sendNotification(notification_l);
 
     } catch (const std::exception& e) {
-        log_error(e.what());
+        log_error("%s", e.what());
     }
 }
 
 void AssetServer::notifyAssetUpdate(const Asset& before, const Asset& after)
 {
     try {
-
         cxxtools::SerializationInfo si;
-
-        // before update
-        cxxtools::SerializationInfo tmpSi;
-        tmpSi <<= before;
-
-        cxxtools::SerializationInfo& beforeSi = si.addMember("");
-        beforeSi.setCategory(cxxtools::SerializationInfo::Category::Object);
-        beforeSi = tmpSi;
-        beforeSi.setName("before");
-
-        // after update
-        tmpSi.clear();
-        tmpSi <<= after;
-
-        cxxtools::SerializationInfo& afterSi = si.addMember("");
-        afterSi.setCategory(cxxtools::SerializationInfo::Category::Object);
-        afterSi = tmpSi;
-        afterSi.setName("after");
+        si.addMember("before") <<= before;
+        si.addMember("after") <<= after;
 
         // full notification
         messagebus::Message notification = assetutils::createMessage(FTY_ASSET_SUBJECT_UPDATED, "",
@@ -927,7 +909,7 @@ void AssetServer::notifyAssetUpdate(const Asset& before, const Asset& after)
         sendNotification(notification_l);
 
     } catch (const std::exception& e) {
-        log_error(e.what());
+        log_error("%s", e.what());
     }
 }
 
@@ -1049,7 +1031,7 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si, bool tryA
                 }
             }
         } catch (const std::exception& e) {
-            log_error(e.what());
+            log_error("%s", e.what());
         }
     }
 
@@ -1059,7 +1041,7 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si, bool tryA
             // save links
             a.update();
         } catch (const std::exception& e) {
-            log_error(e.what());
+            log_error("%s", e.what());
         }
     }
 }

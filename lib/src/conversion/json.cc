@@ -21,11 +21,12 @@
 
 #include "conversion/json.h"
 
+#include <fty_asset_dto.h>
 #include <cxxtools/serializationinfo.h>
 #include <fty_common_json.h>
-#include <fty_asset_dto.h>
 
-namespace fty { namespace conversion {
+namespace fty {
+namespace conversion {
 
     std::string toJson(const Asset& asset)
     {
@@ -41,4 +42,5 @@ namespace fty { namespace conversion {
         si >>= asset;
     }
 
-}} // namespace fty::conversion
+}
+} // namespace fty::conversion

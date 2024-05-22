@@ -43,7 +43,10 @@ struct HasRead<T, decltype(std::declval<T>().read, void())> : std::true_type
 {
 };
 
-/* Workaround for a fact a) std::transform to do a strip and lower is weird, b) it breaks the map somehow*/
+/* Workaround for a fact
+ * a) std::transform to do a strip and lower is weird,
+ * b) it breaks the map somehow
+ **/
 static const std::string _ci_strip(const std::string& str)
 {
     std::ostringstream b;
@@ -211,17 +214,30 @@ CsvMap CsvMap_from_istream(std::istream& in)
 
     std::vector<std::vector<std::string>> data;
     {
-        cxxtools::CsvDeserializer deserializer(in);
+        cxxtools::CsvDeserializer deserializer;
         deserializer.delimiter(delimiter);
         deserializer.readTitle(false);
+        deserializer.read(in);
         deserializer.deserialize(data);
     }
+
+#if 0
+    logDebug("== CsvMap_from_istream (data size: {})", data.size());
+    int i = 0;
+    for (const auto& row : data) {
+        int j = 0;
+        for (const auto& col : row) {
+            logDebug("== ({},{}) : {}", i, j, col);
+            j++;
+        }
+        i++;
+    }
+#endif
 
     CsvMap cm{data};
     cm.deserialize();
     return cm;
 }
-
 
 static void process_powers_key(
     const cxxtools::SerializationInfo& powers_si, std::vector<std::vector<std::string>>& data)

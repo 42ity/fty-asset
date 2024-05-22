@@ -28,7 +28,9 @@ namespace fty {
 class Asset;
 } // namespace fty
 
-namespace fty { namespace conversion {
+namespace fty {
+namespace conversion {
     std::string toJson(const Asset& asset);
     void        fromJson(const std::string& json, fty::Asset& asset);
-}} // namespace fty::conversion
+}
+} // namespace fty::conversion
