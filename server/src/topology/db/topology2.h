@@ -52,12 +52,11 @@ struct Item
         Topology () {}
 
         size_t empty () const {
-            return \
-            rooms.empty () && \
-            rows.empty () && \
-            racks.empty () && \
-            devices.empty () && \
-            groups.empty ();
+            return rooms.empty ()
+                && rows.empty ()
+                && racks.empty ()
+                && devices.empty ()
+                && groups.empty ();
         }
 
         void push_back (const Item &it) {
@@ -111,7 +110,7 @@ struct Item
     std::string subtype;
     std::string type;
     Topology contains;
-    int asset_order;
+    int asset_order{0};
     friend void operator<<= (cxxtools::SerializationInfo &si, const Item &asset);
 }; //Item
 

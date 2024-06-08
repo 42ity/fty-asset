@@ -573,7 +573,7 @@ s_topo_recursive (
         Item it;
         try {
             it = im.at (id);
-        } catch (std::exception &e) {
+        } catch (...) {
             continue;
         }
         std::set <std::string> kids;
