@@ -44,45 +44,6 @@ static constexpr const char* EXT_MODEL        = "model";
 static constexpr const char* EXT_MANUFACTURER = "manufacturer";
 static constexpr const char* EXT_SERIAL_NO    = "serial_no";
 
-// WARNING keep consistent with DB table t_bios_asset_link_type
-// clang-format off
-static constexpr const char* LINK_POWER_CHAIN                         = "power chain";                      //  1
-static constexpr const char* LINK_VMWARE_VCENTER_MONITORS_ESXI        = "vmware.vcenter.monitors.esxi";     //  2
-static constexpr const char* LINK_VMWARE_CLUSTER_CONTAINS_ESXI        = "vmware.cluster.contains.esxi";     //  3
-static constexpr const char* LINK_VMWARE_ESXI_HOSTS_VM                = "vmware.esxi.hosts.vm";             //  4
-static constexpr const char* LINK_VMWARE_STANDALONE_ESXI_HOSTS_VM     = "vmware.standalone.esxi.hosts.vm";  //  5
-static constexpr const char* LINK_VMWARE_VCENTER_MONITORS_CLUSTER     = "vmware.vcenter.monitors.cluster";  //  6
-static constexpr const char* LINK_VMWARE_VCENTER_MONITORS_VAPP        = "vmware.vcenter.monitors.vapp";     //  7
-static constexpr const char* LINK_CITRIX_ZENSERVER_HOSTS_VM           = "citrix.zenserver.hosts.vm";        //  8
-static constexpr const char* LINK_CITRIX_POOL_MONITORS_XENSERVER      = "citrix.pool.monitors.xenserver";   //  9
-static constexpr const char* LINK_CITRIX_POOL_MONITORS_VAPP           = "citrix.pool.monitors.vapp";        // 10
-static constexpr const char* LINK_CITRIX_POOL_MONITORS_TASK           = "citrix.pool.monitors.task";        // 11
-static constexpr const char* LINK_CITRIX_POOL_MONITORS_HALTED_VM      = "citrix.pool.monitors.halted.vm";   // 12
-static constexpr const char* LINK_HP_IT_RACK_LINK_SERVER              = "hp.it.rack.link.server";           // 13
-static constexpr const char* LINK_HP_IT_MANAGER_MONITOR_SERVER        = "hp.it.manager.monitor.server";     // 14
-static constexpr const char* LINK_HP_IT_MANAGER_MONITOR_RACK          = "hp.it.manager.monitor.rack";       // 15
-static constexpr const char* LINK_MICROSOFT_HYPERV_HOSTS_VM           = "microsoft.hyperv.hosts.vm";        // 16
-static constexpr const char* LINK_NETAPP_CLUSTER_CONTAINS_NODE        = "netapp.cluster.contains.node";     // 17
-static constexpr const char* LINK_NUTANIX_CLUSTER_CONTAINS_NODE       = "nutanix.cluster.contains.node";    // 18
-static constexpr const char* LINK_NUTANIX_NODE_HOSTS_VM               = "nutanix.node.hosts.vm";            // 19
-static constexpr const char* LINK_NUTANIX_PROXY_MONITORS_CLUSTER      = "nutanix.proxy.monitors.cluster";   // 20
-static constexpr const char* LINK_NUTANIX_PROXY_MONITORS_NODE         = "nutanix.proxy.monitors.node";      // 21
-static constexpr const char* LINK_NUTANIX_PROXY_MONITORS_VM           = "nutanix.proxy.monitors.vm";        // 22
-static constexpr const char* LINK_IPMINFRA_SERVER_HOSTS_HYPERVISOR    = "ipminfra.server.hosts.hypervisor"; // 23
-static constexpr const char* LINK_NUTANIX_CONNECTED_TO_PRISM          = "nutanix.connected.to.prism";       // 24
-static constexpr const char* LINK_MICROSOFT_CONNECTED_TO_SERVER       = "microsoft.connected.to.server";    // 25
-static constexpr const char* LINK_HP_IT_CONNECTED_TO_ONEVIEW          = "hp.it.connected.to.oneview";       // 26
-static constexpr const char* LINK_VMWARE_CONNECTED_TO_VCENTER         = "vmware.connected.to.vcenter";      // 27
-static constexpr const char* LINK_VMWARE_CONNECTED_TO_ESXI            = "vmware.connected.to.esxi";         // 28
-static constexpr const char* LINK_NETAPP_CONNECTED_TO_ONTAP           = "netapp.connected.to.ontap";        // 29
-static constexpr const char* LINK_NETAPP_ONTAP_MONITOR_CLUSTER        = "netapp.ontap.monitor.cluster";     // 30
-static constexpr const char* LINK_VMWARE_VCENTER_MANAGES_SRM          = "vmware.vcenter.manages.srm";       // 31
-static constexpr const char* LINK_VMWARE_SRM_HAS_PLAN                 = "vmware.srm.has.plan";              // 32
-static constexpr const char* LINK_SERVER_HOSTS_HYPERVISOR             = "server.hosts.hypervisor";          // 33
-static constexpr const char* LINK_DELL_VXRAIL_CONNECTED_TO_MANAGER    = "dell.vxrail.connected.to.manager"; // 34
-static constexpr const char* LINK_MICROSOFT_SERVER_HAS_HYPERV_SERVICE = "microsoft.server.has.hyperv.service"; // 35
-// clang-format on
-
 /// List of valid asset statuses
 enum class AssetStatus
 {
