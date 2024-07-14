@@ -257,7 +257,7 @@ AssetExpected<db::AssetElement> Import::processRow(
     }
 
     unusedColumns.erase("id");
-    m_operation = persist::asset_operation::INSERT;
+    m_operation = persist::asset_operation::CREATE;
     uint32_t id = 0;
 
     if (!idStr.empty()) {
