@@ -928,7 +928,7 @@ cxxtools::SerializationInfo AssetServer::saveAssets(bool saveVirtualAssets)
         AssetImpl a(assetName);
 
         if (a.isVirtual() && !saveVirtualAssets) {
-            log_info("Asset %s is virtual, will not be saved", a.getInternalName().c_str());
+            log_debug("Save: skip virtual asset %s (id_secondary: %s)", a.getInternalName().c_str(), a.getSecondaryID().c_str());
             continue;
         }
 
@@ -994,6 +994,12 @@ void AssetServer::restoreAssets(const cxxtools::SerializationInfo& si, bool tryA
     for (auto it = assets.begin(); it != assets.end(); ++it) {
         AssetImpl a;
         AssetImpl::srrToAsset(*it, a);
+
+        // IPMPROG-8971/IPMPROG-9035: do not restore virtual assets saved by mistake
+        if (a.isVirtual()) {
+            log_debug("Restore: skip virtual asset %s (id_secondary: %s)", a.getInternalName().c_str(), a.getSecondaryID().c_str());
+            continue;
+        }
 
         assetsToRestore.push_back(a);
     }
