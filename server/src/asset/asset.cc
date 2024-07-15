@@ -231,7 +231,9 @@ bool AssetImpl::hasLogicalAsset() const
 
 bool AssetImpl::isVirtual() const
 {
-    return persist::is_virtual(getAssetType());
+    // IPMPROG-8971/IPMPROG-9035: enforce criteria
+    // virtual asset always has a non-empty "id_secondary"
+    return persist::is_virtual(getAssetType()) || !getSecondaryID().empty();
 }
 
 bool AssetImpl::hasLinkedAssets() const
