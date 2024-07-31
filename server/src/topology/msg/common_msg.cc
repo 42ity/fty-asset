@@ -202,7 +202,7 @@ struct _common_msg_t {
 }
 
 #if CZMQ_VERSION_MAJOR == 4
-static int zsocket_type (void *socket) {
+static int zsocket_type ([[maybe_unused]] void *socket) {
     assert (socket);
     assert (zsock_is (socket));
     assert (streq (zsock_type_str (static_cast<zsock_t*>(socket)), "ROUTER"));

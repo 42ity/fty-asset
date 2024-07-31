@@ -32,6 +32,7 @@
 #include "topology_input_powerchain.h"
 
 #include <fty_log.h>
+#include <fty_common_macros.h> //TR_ME
 #include <fty_common_json.h>
 #include <cxxtools/serializationinfo.h>
 #include <map>
