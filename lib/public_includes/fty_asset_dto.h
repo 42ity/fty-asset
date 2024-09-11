@@ -23,7 +23,6 @@
 
 #include "fty_common_asset.h"
 
-#include <cxxtools/serializationinfo.h>
 #include <fty_common_asset_types.h>
 #include <map>
 #include <optional>
@@ -31,6 +30,10 @@
 
 // fwd declaration
 struct fty_proto_t;
+
+namespace cxxtools {
+    class SerializationInfo;
+}
 
 namespace fty {
 // extended properties

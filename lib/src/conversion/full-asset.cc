@@ -26,9 +26,10 @@
 
 struct fty_proto_t;
 
-namespace fty { namespace conversion {
+namespace fty {
+namespace conversion {
 
-    fty::FullAsset toFullAsset(const fty::Asset& asset)
+    fty::FullAsset toFullAsset(const Asset& asset)
     {
         fty::FullAsset::HashMap auxMap; // does not exist in new Asset implementation
         fty::FullAsset::HashMap extMap;
@@ -46,4 +47,5 @@ namespace fty { namespace conversion {
         return fa;
     }
 
-}} // namespace fty::conversion
+}
+} // namespace fty::conversion

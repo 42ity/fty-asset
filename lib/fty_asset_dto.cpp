@@ -14,23 +14,21 @@
     ========================================================================
 */
 
-#define CATCH_CONFIG_MAIN
 #include <catch2/catch.hpp>
 
 #include "fty_asset_dto.h"
 
 using namespace fty;
 
-TEST_CASE("Create fty::Asset object")
+TEST_CASE("fty::Asset Create object")
 {
     REQUIRE_NOTHROW([&]()
     {
         Asset asset;
     }());
-
 }
 
-TEST_CASE("Equality check - good case")
+TEST_CASE("fty::Asset Equality check - good case")
 {
     Asset asset;
     asset.setInternalName("dc-0");
@@ -48,7 +46,7 @@ TEST_CASE("Equality check - good case")
 
 }
 
-TEST_CASE("Equality check - bad case")
+TEST_CASE("fty::Asset Equality check - bad case")
 {
     Asset asset;
     asset.setInternalName("dc-0");
@@ -68,7 +66,7 @@ TEST_CASE("Equality check - bad case")
 
 }
 
-TEST_CASE("Priority set")
+TEST_CASE("fty::Asset Priority set")
 {
     FullAsset asset;
     CHECK_NOTHROW(asset.setPriority(1));

@@ -28,7 +28,8 @@
 #include <fty_proto.h>
 #include <string>
 
-namespace fty { namespace conversion {
+namespace fty {
+namespace conversion {
 
     // fty-proto/Asset conversion
     // return a valid fty_proto_t* object, else throw exception
@@ -133,4 +134,5 @@ namespace fty { namespace conversion {
         }//
     }
 
-}} // namespace fty::conversion
+}
+} // namespace fty::conversion
