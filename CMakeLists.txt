@@ -21,4 +21,3 @@ add_subdirectory(accessor)
 
 # fty-asset-server
 add_subdirectory(server)
-
