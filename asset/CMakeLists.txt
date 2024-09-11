@@ -112,7 +112,7 @@ etn_target(shared ${PROJECT_NAME}-test-db
 
 ########################################################################################################################
 
-etn_test_target(fty-asset-libng
+etn_test_target(${PROJECT_NAME}-libng
     SOURCES
         test/main.cpp
         test/sampledb.cpp

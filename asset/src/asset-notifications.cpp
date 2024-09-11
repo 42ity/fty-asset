@@ -4,6 +4,7 @@
 #include "messagebus/message.h"
 
 namespace fty::asset {
+
 Expected<void> sendStreamNotification(const std::string& stream, const std::string& subject, const std::string& payload)
 {
     auto actor = generateMlmClientId("asset.notification");
@@ -25,4 +26,5 @@ Expected<void> sendStreamNotification(const std::string& stream, const std::stri
 
     return {};
 }
+
 } // namespace fty::asset

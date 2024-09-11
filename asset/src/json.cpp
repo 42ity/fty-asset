@@ -29,7 +29,7 @@
 
 namespace fty::asset {
 
- using Outlet = std::map<std::string, std::pair<std::string, bool>>;
+using Outlet = std::map<std::string, std::pair<std::string, bool>>;
 
 static double s_rack_realpower_nominal(const std::string& name)
 {
