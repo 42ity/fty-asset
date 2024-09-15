@@ -7,6 +7,9 @@ etn_target(shared ${PROJECT_NAME}
         src/conversion/*.cc
     PUBLIC_INCLUDE_DIR
         public_includes
+    PUBLIC
+        fty_asset_dto.h
+        fty_common_asset.h
     USES_PRIVATE
         czmq
         cxxtools
@@ -32,5 +35,7 @@ etn_test_target(${PROJECT_NAME}
         -DCATCH_CONFIG_FAST_COMPILE
 )
 
-#private private headers required for test
+if(BUILD_TESTING)
+#locate private headers (required for test)
 target_include_directories(${PROJECT_NAME}-test AFTER PRIVATE src/)
+endif()
