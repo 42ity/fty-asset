@@ -56,7 +56,6 @@ etn_target(shared ${PROJECT_NAME}-libng
     USES
         fty-asset
         fty_shm
-        fty_common_rest
         fty_proto
         fty_security_wallet
         fty_common_dto

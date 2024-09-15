@@ -24,8 +24,8 @@
 #include <fty/string-utils.h>
 #include <fty_common.h>
 #include <fty_common_db_asset.h>
-#include <fty_common_rest.h>
 #include <fty_shm.h>
+#include <fty_log.h>
 
 namespace fty::asset {
 
@@ -47,6 +47,17 @@ static double s_rack_realpower_nominal(const std::string& name)
     return std::nan("");
 }
 
+// property json (name, value) serializer (<string>, <bool>)
+static std::string s_jsonify(const std::string& name, const std::string& value)
+{
+    return "\"" + name + "\":\"" + value + "\"";
+}
+static std::string s_jsonify(const std::string& name, bool value)
+{
+    return "\"" + name + "\":" + (value ? "true" : "false");
+}
+
+// asset json serializer
 std::string getJsonAsset(uint32_t elemId)
 {
     // Get informations from database
@@ -70,13 +81,12 @@ std::string getJsonAsset(uint32_t elemId)
     std::string json = "{";
     json.reserve(1024 * 6); // experimental max value (to limit memory realloc)
 
-    json += utils::json::jsonify("id", tmp->name) + ",";
-    json += utils::json::jsonify("name", asset_ext_name) + ",";
-    json += utils::json::jsonify("status", tmp->status) + ",";
-    json += utils::json::jsonify("priority", "P" + std::to_string(tmp->priority)) + ",";
-    json += utils::json::jsonify("type", tmp->typeName) + ",";
-
-    json += "\"power_devices_in_uri\": \"/api/v1/assets\?in=" + (tmp->name) + "&sub_type=epdu,pdu,feed,genset,ups,sts,rackcontroller\",";
+    json += s_jsonify("id", tmp->name)
+         + "," + s_jsonify("name", asset_ext_name)
+         + "," + s_jsonify("status", tmp->status)
+         + "," + s_jsonify("priority", "P" + std::to_string(tmp->priority))
+         + "," + s_jsonify("type", tmp->typeName)
+         + "," + s_jsonify("power_devices_in_uri", "/api/v1/assets\?in=" + tmp->name + "&sub_type=epdu,pdu,feed,genset,ups,sts,rackcontroller");
 
     // if element is located, then print the location
     if (tmp->parentId != 0) {
@@ -88,22 +98,21 @@ std::string getJsonAsset(uint32_t elemId)
                 parent_ext_name = parent_names->second; // parent friendly name
             }
         }
-
-        json += utils::json::jsonify("location_uri", "/api/v1/asset/" + parent_name) + ",";
-        json += utils::json::jsonify("location_id", parent_name) + ",";
-        json += utils::json::jsonify("location", parent_ext_name) + ",";
-
         // Get informations from database
         auto parentAsset = AssetManager::getItem(tmp->parentId);
-        json += utils::json::jsonify("location_type", trimmed(parentAsset->typeName)) + ",";
+
+        json += "," + s_jsonify("location_uri", "/api/v1/asset/" + parent_name)
+             + "," + s_jsonify("location_id", parent_name)
+             + "," + s_jsonify("location", parent_ext_name)
+             + "," + s_jsonify("location_type", trimmed(parentAsset->typeName));
     }
     else {
-        json += "\"location\":\"\",";
-        json += "\"location_type\":\"\",";
+        json += "," + s_jsonify("location", "")
+             + "," + s_jsonify("location_type", "");
     }
 
     // every element (except groups) can be placed in some group
-    json += "\"groups\": [";
+    json += ", \"groups\": [";
     if (!tmp->groups.empty()) {
         bool first = true;
         for (const auto& group : tmp->groups) {
@@ -113,10 +122,10 @@ std::string getJsonAsset(uint32_t elemId)
                 return "";
             }
 
-            json += std::string{first ? "" : ","} + "{";
-            json += utils::json::jsonify("id", group.second) + ","; // assetId
-            json += utils::json::jsonify("name", names.second); // ext. name
-            json += "}";
+            json += std::string{first ? "" : ","} + "{"
+                 + s_jsonify("id", group.second) // assetId
+                 + "," + s_jsonify("name", names.second) // ext. name
+                 + "}";
             first = false;
         }
     }
@@ -135,14 +144,14 @@ std::string getJsonAsset(uint32_t elemId)
                     return "";
                 }
 
-                json += std::string{first ? "" : ","} + "{";
-                json += utils::json::jsonify("src_name", link_names->second) + ",";
-                json += utils::json::jsonify("src_id", oneLink.srcName);
+                json += std::string{first ? "" : ","} + "{"
+                     + s_jsonify("src_name", link_names->second)
+                     + "," + s_jsonify("src_id", oneLink.srcName);
                 if (!oneLink.srcSocket.empty()) {
-                    json += "," + utils::json::jsonify("src_socket", oneLink.srcSocket);
+                    json += "," + s_jsonify("src_socket", oneLink.srcSocket);
                 }
                 if (!oneLink.destSocket.empty()) {
-                    json += "," + utils::json::jsonify("dest_socket", oneLink.destSocket);
+                    json += "," + s_jsonify("dest_socket", oneLink.destSocket);
                 }
                 json += "}";
                 first = false;
@@ -156,12 +165,12 @@ std::string getJsonAsset(uint32_t elemId)
     if (tmp->typeId == persist::asset_type::GROUP) {
         auto it = tmp->extAttributes.find("type");
         if (it != tmp->extAttributes.end()) {
-            json += "," + utils::json::jsonify("sub_type", trimmed(it->second.value));
+            json += "," + s_jsonify("sub_type", trimmed(it->second.value));
             tmp->extAttributes.erase(it);
         }
     }
     else {
-        json += "," + utils::json::jsonify("sub_type", trimmed(tmp->subtypeName));
+        json += "," + s_jsonify("sub_type", trimmed(tmp->subtypeName));
 
         json += ", \"parents\": [";
         bool first = true;
@@ -172,12 +181,12 @@ std::string getJsonAsset(uint32_t elemId)
                 return "";
             }
 
-            json += std::string{first ? "" : ","} + "{";
-            json += utils::json::jsonify("id", std::get<1>(it));
-            json += "," + utils::json::jsonify("name", it_names.second); // ext. name
-            json += "," + utils::json::jsonify("type", std::get<2>(it));
-            json += "," + utils::json::jsonify("sub_type", std::get<3>(it));
-            json += "}";
+            json += std::string{first ? "" : ","} + "{"
+                 + s_jsonify("id", std::get<1>(it))
+                 + "," + s_jsonify("name", it_names.second) // ext. name
+                 + "," + s_jsonify("type", std::get<2>(it))
+                 + "," + s_jsonify("sub_type", std::get<3>(it))
+                 + "}";
             first = false;
         }
         json += "]";
@@ -199,8 +208,10 @@ std::string getJsonAsset(uint32_t elemId)
         bool firstExtAttribute = true;
 
         if (!tmp->assetTag.empty()) {
-            json += std::string{firstExtAttribute ? "" : ","};
-            json += "{" + utils::json::jsonify("asset_tag", tmp->assetTag) + ",\"read_only\": false}";
+            json += std::string{firstExtAttribute ? "" : ","} + "{"
+                 + s_jsonify("asset_tag", tmp->assetTag)
+                 + "," + s_jsonify("read_only", false)
+                 + "}";
             firstExtAttribute = false;
         }
 
@@ -218,7 +229,7 @@ std::string getJsonAsset(uint32_t elemId)
             for (const auto& oneExt : tmp->extAttributes) {
                 const std::string attrName = oneExt.first; // key
                 const std::string attrValue = oneExt.second.value;
-                bool isReadOnly = oneExt.second.readOnly;
+                const bool isReadOnly = oneExt.second.readOnly;
 
                 // filter attributes printed yet
                 if ((attrName == "name") || (attrName == "location_type")) {
@@ -272,9 +283,10 @@ std::string getJsonAsset(uint32_t elemId)
 
                 // If we are here then this attribute is not special
                 // and should be returned as "ext"
-                json += std::string{firstExtAttribute ? "" : ","};
-                json += "{" + utils::json::jsonify(attrName, attrValue)
-                     + ",\"read_only\":" + (isReadOnly ? "true" : "false") + "}";
+                json += std::string{firstExtAttribute ? "" : ","} + "{"
+                     + s_jsonify(attrName, attrValue)
+                     + "," + s_jsonify("read_only", isReadOnly)
+                     + "}";
                 firstExtAttribute = false;
             }
         }
@@ -289,9 +301,9 @@ std::string getJsonAsset(uint32_t elemId)
             const int outletCount = std::atoi(it->second.value.c_str());
             // construct each missing outlet, e.g for N outlets:
             // "outlets":{
-            //  "1":[{name: "label", value: "Outlet 1", read_only: "true"}],
+            //  "1":[{name: "label", value: "Outlet 1", read_only: true}],
             //   ...
-            //  "N":[{name: "label", value: "Outlet N", read_only: "true"}],
+            //  "N":[{name: "label", value: "Outlet N", read_only: true}],
             // }
             for (int iOutlet = 1; iOutlet <= outletCount; iOutlet++) {
                 const std::string outletId = std::to_string(iOutlet);
@@ -308,13 +320,13 @@ std::string getJsonAsset(uint32_t elemId)
     auto printVS = [&json](const std::string& name, const std::vector<std::string>& vs) -> void
     {
         if (vs.empty()) { return; }
-        json += ", \"" + name + "\": [";
+        std::string aux;
         bool first = true;
         for (const auto& s : vs) {
-            json += std::string{first ? "" : ","} + "\"" + s + "\"";
+            aux += std::string{first ? "" : ","} + "\"" + s + "\"";
             first = false;
         }
-        json += "]";
+        json += ", \"" + name + "\": [" + aux + "]";
     };
 
     // Print "ips"
@@ -334,18 +346,21 @@ std::string getJsonAsset(uint32_t elemId)
         json += ", \"outlets\": {";
         bool firstOutlet = true;
         for (const auto& oneOutlet : outlets) {
-            json += std::string{firstOutlet ? "" : ","};
-            json += "\"" + oneOutlet.first + "\": [";
+            json += std::string{firstOutlet ? "" : ","}
+                 + "\"" + oneOutlet.first + "\": [";
 
             // loop on outlet keys
             bool firstKey = true;
             for (const auto& it : oneOutlet.second) {
-                const std::string key = it.first;
+                const std::string name = it.first; // key
                 const std::string value = it.second.first;
-                const std::string readOnly = it.second.second ? "true" : "false";
+                const bool isReadOnly = it.second.second;
 
-                json += std::string{firstKey ? "" : ","};
-                json += "{\"name\":\"" + key + "\"," + utils::json::jsonify("value", value) + ",\"read_only\":" + readOnly + "}";
+                json += std::string{firstKey ? "" : ","} + "{"
+                     + s_jsonify("name", name)
+                     + "," + s_jsonify("value", value)
+                     + "," + s_jsonify("read_only", isReadOnly)
+                     + "}";
                 firstKey = false;
             }
 
@@ -368,14 +383,14 @@ std::string getJsonAsset(uint32_t elemId)
             return "";
         }
 
-        json += "\"freeusize\":" + (freeusize >= 0 ? std::to_string(freeusize) : "null");
-        json += ",\"realpower.nominal\":" + (!std::isnan(realpower_nominal) ? std::to_string(realpower_nominal) : "null");
+        json += "\"freeusize\":" + (freeusize >= 0 ? std::to_string(freeusize) : "null")
+             + "," + "\"realpower.nominal\":" + (!std::isnan(realpower_nominal) ? std::to_string(realpower_nominal) : "null");
 
         json += ",\"outlet.available\": {";
         bool first = true;
         for (const auto& it : outlets_available) {
-            json += std::string{first ? "" : ","};
-            json += "\"" + it.first + "\":" + ((it.second >= 0) ? std::to_string(it.second) : "null");
+            json += std::string{first ? "" : ","}
+                 + "\"" + it.first + "\":" + ((it.second >= 0) ? std::to_string(it.second) : "null");
             first = false;
         }
         json += "}";
@@ -384,6 +399,7 @@ std::string getJsonAsset(uint32_t elemId)
 
     json += "}"; // end json
 
+    //log_debug("=== getJsonAsset '%s': %s", tmp->name.c_str(), json.c_str());
     return json;
 }
 
