@@ -874,7 +874,7 @@ void operator>>=(const cxxtools::SerializationInfo& si, ExtMapElement& e)
     e.deserialize(si);
 }
 
-
+#if 0
 UIAsset::UIAsset(const Asset& a)
     : Asset(a)
 {
@@ -924,5 +924,6 @@ void UIAsset::serializeUI(cxxtools::SerializationInfo& si) const
 void UIAsset::deserializeUI(const cxxtools::SerializationInfo& /*si*/)
 {
 }
+#endif
 
 } // namespace fty

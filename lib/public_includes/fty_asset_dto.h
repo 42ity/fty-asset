@@ -279,7 +279,7 @@ protected:
 void operator<<=(cxxtools::SerializationInfo& si, const fty::Asset& asset);
 void operator>>=(const cxxtools::SerializationInfo& si, fty::Asset& asset);
 
-
+#if 0
 class UIAsset : public Asset
 {
 public:
@@ -289,5 +289,6 @@ public:
     void serializeUI(cxxtools::SerializationInfo& si) const;
     void deserializeUI(const cxxtools::SerializationInfo& si);
 };
+#endif
 
 } // namespace fty
