@@ -37,7 +37,7 @@ namespace fty
     static constexpr const char *ASSET_AGENT = "asset-agent-ng";
     static constexpr const char *ASSET_AGENT_QUEUE = "FTY.Q.ASSET.QUERY";
     static constexpr const char *ACCESSOR_NAME = "fty-asset-accessor";
-    static constexpr const char *ENDPOINT = "ipc://@/malamute";
+    static constexpr const char *ENDPOINT = MLM_DEFAULT_ENDPOINT;
 
     /// static helper to send a MessageBus synchronous request
     static messagebus::Message sendSyncReq(const std::string& command, messagebus::UserData data)
