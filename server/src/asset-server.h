@@ -205,7 +205,7 @@ private:
     void notifyAssetUpdate(const Asset& before, const Asset& after);
 
     // SRR
-    cxxtools::SerializationInfo saveAssets(bool saveVirtualAssets = false);
+    cxxtools::SerializationInfo saveAssets(bool saveVirtualAssets = false) const;
     void                        restoreAssets(const cxxtools::SerializationInfo& si, bool tryActivate = true);
 
 private:
@@ -215,33 +215,33 @@ private:
 
 
 private:
-    bool         m_testMode        = false;
-    std::string  m_agentName       = "asset-agent";
-    std::string  m_mailboxEndpoint = "ipc://@/malamute";
-    std::string  m_streamEndpoint  = "ipc://@/malamute";
-    int          m_maxActivePowerDevices;
-    int          m_globalConfigurability;
-    MlmClientPtr m_mailboxClient;
-    MlmClientPtr m_streamClient;
+    bool         m_testMode{false};
+    std::string  m_agentName{"asset-agent"};
+    std::string  m_mailboxEndpoint{MLM_DEFAULT_ENDPOINT};
+    std::string  m_streamEndpoint{MLM_DEFAULT_ENDPOINT};
+    int          m_maxActivePowerDevices{0};
+    int          m_globalConfigurability{0};
+    MlmClientPtr m_mailboxClient{nullptr, &AssetServer::destroyMlmClient};
+    MlmClientPtr m_streamClient{nullptr, &AssetServer::destroyMlmClient};
 
     // new generation interface
-    std::string m_agentNameNg = "asset-agent-ng";
-    MsgBusPtr   m_assetMsgQueue;
-    MsgBusPtr   m_publisherCreate;
-    MsgBusPtr   m_publisherCreateLight;
-    MsgBusPtr   m_publisherUpdate;
-    MsgBusPtr   m_publisherUpdateLight;
-    MsgBusPtr   m_publisherDelete;
-    MsgBusPtr   m_publisherDeleteLight;
+    std::string m_agentNameNg{"asset-agent-ng"};
+    MsgBusPtr   m_assetMsgQueue{nullptr};
+    MsgBusPtr   m_publisherCreate{nullptr};
+    MsgBusPtr   m_publisherCreateLight{nullptr};
+    MsgBusPtr   m_publisherUpdate{nullptr};
+    MsgBusPtr   m_publisherUpdateLight{nullptr};
+    MsgBusPtr   m_publisherDelete{nullptr};
+    MsgBusPtr   m_publisherDeleteLight{nullptr};
 
     // topic handlers
     void handleAssetManipulationReq(const messagebus::Message& msg);
     void handleAssetSrrReq(const messagebus::Message& msg);
 
     // SRR
-    std::string                 m_srrEndpoint  = "ipc://@/malamute";
-    std::string                 m_srrAgentName = "asset-agent-srr";
-    MsgBusPtr                   m_srrClient;
+    std::string                 m_srrEndpoint{MLM_DEFAULT_ENDPOINT};
+    std::string                 m_srrAgentName{"asset-agent-srr"};
+    MsgBusPtr                   m_srrClient{nullptr};
     std::mutex                  m_srrLock;
     dto::srr::SrrQueryProcessor m_srrProcessor;
 
