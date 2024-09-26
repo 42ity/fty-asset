@@ -39,7 +39,7 @@ std::list<CredentialMapping> getCredentialMappings(const ExtMap& extMap)
     auto found = std::find_if(extMap.begin(), extMap.end(), findCredKey);
 
     // create mapping
-    while(found != extMap.end()) {
+    while (found != extMap.end()) {
         CredentialMapping c;
         c.credentialId = found->second.getValue();
 
@@ -81,7 +81,8 @@ void deleteMappings(const std::string& assetInternalName)
             log_debug("Deleting mapping %s : %s", m.m_serviceId.c_str(), m.m_protocol.c_str());
             camAccessor.removeMapping(m.m_assetId, m.m_serviceId, m.m_protocol);
         }
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Asset mappings could not be removed: %s", e.what());
     }
 }
@@ -98,7 +99,8 @@ void deleteAllMappings(const std::string& assetInternalName)
             log_debug("Deleting mapping %s : %s (%s)", m.m_serviceId.c_str(), m.m_protocol.c_str(), m.m_serviceId.c_str());
             camAccessor.removeMapping(m.m_assetId, m.m_serviceId, m.m_protocol);
         }
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Asset mappings could not be removed: %s", e.what());
     }
 }

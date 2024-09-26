@@ -44,7 +44,7 @@ public:
     fty::Expected<uint32_t> getID(const std::string& internalName);
     uint32_t getTypeID(const std::string& type);
     uint32_t getSubtypeID(const std::string& subtype);
-    bool verifyID(std::string& id);
+    bool verifyID(const std::string& id);
 
     uint32_t getLinkID(const uint32_t destId, const AssetLink& l);
     void saveLink(const uint32_t destId, const AssetLink& l);

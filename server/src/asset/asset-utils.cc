@@ -29,6 +29,7 @@
 #include "asset-utils.h"
 
 namespace fty { namespace assetutils {
+
     // create response (data is a single string)
     messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
         const std::string& from, const std::string& to, const std::string& status, const std::string& data)

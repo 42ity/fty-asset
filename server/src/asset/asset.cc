@@ -108,7 +108,8 @@ void operator>>=(const cxxtools::SerializationInfo& si, AssetFilters& filters)
                 filters["status"].push_back('"' + val + '"');
             }
         }
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Invalid filter for status: %s", e.what());
     }
 
@@ -129,7 +130,8 @@ void operator>>=(const cxxtools::SerializationInfo& si, AssetFilters& filters)
                 }
             }
         }
-    } catch (std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Invalid filter type: %s", e.what());
     }
 
@@ -144,12 +146,14 @@ void operator>>=(const cxxtools::SerializationInfo& si, AssetFilters& filters)
                 uint32_t subtypeId = getStorage().getSubtypeID(val);
                 if (subtypeId) {
                     filters["id_subtype"].push_back(std::to_string(subtypeId));
-                } else {
+                }
+                else {
                     log_error("Invalid subtype filter: %s subtype does not exist", val.c_str());
                 }
             }
         }
-    } catch (std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Invalid filter sub_type: %s", e.what());
     }
 
@@ -164,7 +168,8 @@ void operator>>=(const cxxtools::SerializationInfo& si, AssetFilters& filters)
                 filters["priority"].push_back(std::to_string(val));
             }
         }
-    } catch (std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Invalid filter priority: %s", e.what());
     }
 
@@ -184,7 +189,8 @@ void operator>>=(const cxxtools::SerializationInfo& si, AssetFilters& filters)
                 }
             }
         }
-    } catch (std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Invalid filter parent: %s", e.what());
     }
 }
@@ -278,23 +284,27 @@ void AssetImpl::remove(bool removeLastDC)
             m_storage.removeFromGroups(*this);
             m_storage.removeFromRelations(*this);
             m_storage.removeAsset(*this);
-        } else if (isAnyOf(getAssetType(), TYPE_GROUP)) {
+        }
+        else if (isAnyOf(getAssetType(), TYPE_GROUP)) {
             m_storage.clearGroup(*this);
             m_storage.removeExtMap(*this);
             m_storage.removeAsset(*this);
-        } else if (isAnyOf(getAssetType(), TYPE_DEVICE)) {
+        }
+        else if (isAnyOf(getAssetType(), TYPE_DEVICE)) {
             m_storage.removeFromGroups(*this);
             m_storage.unlinkAll(*this);
             m_storage.removeFromRelations(*this);
             m_storage.removeExtMap(*this);
             m_storage.removeAsset(*this);
-        } else {
+        }
+        else {
             m_storage.removeExtMap(*this);
             m_storage.removeAsset(*this);
         }
 
         log_debug("Asset %s removed", internalName.c_str());
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         m_storage.rollbackTransaction();
 
         // reactivate is previous status was active
@@ -304,6 +314,7 @@ void AssetImpl::remove(bool removeLastDC)
         log_debug("Asset could not be removed: %s", e.what());
         throw std::runtime_error("Asset could not be removed: " + std::string(e.what()));
     }
+
     m_storage.commitTransaction();
 }
 
@@ -326,15 +337,7 @@ static std::string generateRandomID()
 // generate asset name
 static std::string createAssetName(const std::string& type, const std::string& subtype, const std::string& id)
 {
-    std::string assetName;
-
-    if (type == fty::TYPE_DEVICE) {
-        assetName = subtype + "-" + id;
-    } else {
-        assetName = type + "-" + id;
-    }
-
-    return assetName;
+    return ((type == fty::TYPE_DEVICE) ? subtype : type) + "-" + id;
 }
 
 void AssetImpl::create()
@@ -351,10 +354,9 @@ void AssetImpl::create()
                 randomId = generateRandomID();
                 valid = m_storage.verifyID(randomId);
                 log_debug("Checking ID %s validty", randomId.c_str());
-
             } while (!valid && (retry++ < MAX_CREATE_RETRY));
 
-            if(!valid) {
+            if (!valid) {
                 throw std::runtime_error("Multiple Asset ID collisions - impossible to create asset");
             }
 
@@ -373,8 +375,8 @@ void AssetImpl::create()
         m_storage.insert(*this);
         m_storage.saveLinkedAssets(*this);
         m_storage.saveExtMap(*this);
-
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         m_storage.rollbackTransaction();
         throw std::runtime_error(std::string(e.what()));
     }
@@ -384,10 +386,10 @@ void AssetImpl::create()
     try {
         auto credentialList = getCredentialMappings(getExt());
         createMappings(getInternalName(), credentialList);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Failed to update CAM: %s", e.what());
     }
-
 }
 
 void AssetImpl::update()
@@ -403,7 +405,8 @@ void AssetImpl::update()
         m_storage.update(*this);
         m_storage.saveLinkedAssets(*this);
         m_storage.saveExtMap(*this);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         m_storage.rollbackTransaction();
         throw std::runtime_error(std::string(e.what()));
     }
@@ -414,7 +417,8 @@ void AssetImpl::update()
         deleteMappings(getInternalName());
         auto credentialList = getCredentialMappings(getExt());
         createMappings(getInternalName(), credentialList);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Failed to update CAM: %s", e.what());
     }
 }
@@ -435,8 +439,8 @@ void AssetImpl::restore(bool restoreLinks)
         if (restoreLinks) {
             m_storage.saveLinkedAssets(*this);
         }
-
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         m_storage.rollbackTransaction();
         log_debug("AssetImpl::save() got EXCEPTION : %s", e.what());
         throw e.what();
@@ -447,7 +451,8 @@ void AssetImpl::restore(bool restoreLinks)
     try {
         auto credentialList = getCredentialMappings(getExt());
         createMappings(getInternalName(), credentialList);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Failed to update CAM: %s", e.what());
     }
 }
@@ -463,16 +468,14 @@ static std::vector<std::string> sendActivationReq(const std::string & command, c
 
     std::vector<std::string> receivedFrames = client.syncRequestWithReply(payload);
 
-    //check if the first frame we get is an error
-    if(receivedFrames[0] == "ERROR")
+    // Check if the first frame we get is an error
+    if (receivedFrames[0] == "ERROR")
     {
-        //It's an error and we will throw directly the exceptions
-        if(receivedFrames.size() == 2)
-        {
+        // It's an error and we will throw directly the exceptions
+        if (receivedFrames.size() == 2) {
             throw std::runtime_error(receivedFrames.at(1));
         }
-        else
-        {
+        else {
             throw std::runtime_error("Missing data for error");
         }
     }
@@ -486,68 +489,68 @@ bool AssetImpl::isActivable()
         return true;
     }
 
-    bool ret = false;
-
-    if (getAssetType() == TYPE_DEVICE) {
-        try
-        {
-            auto payload = sendActivationReq(COMMAND_IS_ASSET_ACTIVABLE, {Asset::toFullAsset(*this).toJson()});
-            std::istringstream isActivableStr (payload[0]);
-            isActivableStr >> std::boolalpha >> ret;
-            log_debug ("asset is activable = %s", payload[0].c_str ());
-        }
-        catch (const std::exception& e)
-        {
-            log_info ("Request failed: %s", e.what());
-            return false;
-        }
-        return ret;
-    } else {
+    if (getAssetType() != TYPE_DEVICE) {
         return true;
     }
+
+    // asset is a device
+    try {
+        auto payload = sendActivationReq(COMMAND_IS_ASSET_ACTIVABLE, {Asset::toFullAsset(*this).toJson()});
+        std::istringstream isActivableStr (payload[0]);
+        bool ret = false;
+        isActivableStr >> std::boolalpha >> ret;
+        log_debug ("asset is activable = %s", payload[0].c_str ());
+        return ret;
+    }
+    catch (const std::exception& e) {
+        log_info ("Request failed: %s", e.what());
+    }
+    return false;
 }
 
 void AssetImpl::activate()
 {
-    if (!g_testMode) {
-        if (getAssetType() == TYPE_DEVICE) {
-            try
-            {
-                auto payload = sendActivationReq(COMMAND_ACTIVATE_ASSET, {Asset::toFullAsset(*this).toJson()});
-                setAssetStatus(fty::AssetStatus::Active);
-                m_storage.update(*this);
-                log_debug ("Asset %s activated", m_internalName.c_str());
-            }
-            catch (const std::exception& e)
-            {
-                log_error ("Asset %s activation failed", m_internalName.c_str());
-            }
-        } else {
+    if (g_testMode) {
+        return; // nop
+    }
+
+    if (getAssetType() == TYPE_DEVICE) {
+        try {
+            auto payload = sendActivationReq(COMMAND_ACTIVATE_ASSET, {Asset::toFullAsset(*this).toJson()});
             setAssetStatus(fty::AssetStatus::Active);
             m_storage.update(*this);
+            log_debug ("Asset %s activated", m_internalName.c_str());
         }
+        catch (const std::exception& e) {
+            log_error ("Asset %s activation failed", m_internalName.c_str());
+        }
+    }
+    else {
+        setAssetStatus(fty::AssetStatus::Active);
+        m_storage.update(*this);
     }
 }
 
 void AssetImpl::deactivate()
 {
-    if (!g_testMode) {
-        if (getAssetType() == TYPE_DEVICE) {
-            try
-            {
-                auto payload = sendActivationReq(COMMAND_DEACTIVATE_ASSET, {Asset::toFullAsset(*this).toJson()});
-                setAssetStatus(fty::AssetStatus::Nonactive);
-                m_storage.update(*this);
-                log_debug ("Asset %s deactivated", m_internalName.c_str());
-            }
-            catch (const std::exception& e)
-            {
-                log_error ("Asset %s deactivation failed", m_internalName.c_str());
-            }
-        } else {
+    if (g_testMode) {
+        return; // nop
+    }
+
+    if (getAssetType() == TYPE_DEVICE) {
+        try {
+            auto payload = sendActivationReq(COMMAND_DEACTIVATE_ASSET, {Asset::toFullAsset(*this).toJson()});
             setAssetStatus(fty::AssetStatus::Nonactive);
             m_storage.update(*this);
+            log_debug ("Asset %s deactivated", m_internalName.c_str());
         }
+        catch (const std::exception& e) {
+            log_error ("Asset %s deactivation failed", m_internalName.c_str());
+        }
+    }
+    else {
+        setAssetStatus(fty::AssetStatus::Nonactive);
+        m_storage.update(*this);
     }
 }
 
@@ -573,7 +576,9 @@ static std::vector<fty::Asset> buildParentsList(const std::string iname)
         parents.push_back(a);
 
         // secure, avoid infinite loop
-        if (parents.size() > 32) break;
+        if (parents.size() > 32) {
+            break;
+        }
     }
 
     return parents;
@@ -773,10 +778,12 @@ static void addSubTree(const std::string& internalName, std::vector<AssetImpl>& 
             if (found == toDel.end()) {
                 toDel.push_back(ref);
             }
-        } else {
+        }
+        else {
             if (stack.empty()) {
                 end = true;
-            } else {
+            }
+            else {
                 ref  = stack.back().first;
                 next = static_cast<unsigned int>(stack.back().second);
                 stack.pop_back();
@@ -803,7 +810,8 @@ DeleteStatus AssetImpl::deleteList(const std::vector<std::string>& assets, bool 
             if (recursive) {
                 addSubTree(iname, toDel);
             }
-        } catch (std::exception& e) {
+        }
+        catch (const std::exception& e) {
             log_warning("Error while loading asset %s. %s", iname.c_str(), e.what());
         }
     }
@@ -860,10 +868,12 @@ DeleteStatus AssetImpl::deleteList(const std::vector<std::string>& assets, bool 
             // remove all CAM mappings
             try {
                 deleteAllMappings(d.getInternalName());
-            } catch (const std::exception& e) {
+            }
+            catch (const std::exception& e) {
                 log_error("Failed to update CAM: %s", e.what());
             }
-        } catch (std::exception& e) {
+        }
+        catch (const std::exception& e) {
             log_error("Asset could not be removed: %s", e.what());
             deleted.push_back({d, "Asset could not be removed: " + std::string(e.what())});
         }
@@ -889,7 +899,7 @@ uint32_t AssetImpl::getIDFromIname(const std::string& iname)
 {
     log_debug("Request ID for asset %s", iname.c_str());
     auto id = getStorage().getID(iname);
-    if(!id) {
+    if (!id) {
         throw std::runtime_error(id.error());
     }
     return *id;
@@ -900,9 +910,10 @@ std::string AssetImpl::getInameFromID(const uint32_t id)
 {
     log_debug("Request internal name for asset with ID %lu", id);
     std::string iname;
-    try{
+    try {
         iname = selectAssetProperty<std::string>("name", "id_asset_element", fty::convert<std::string>(id));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         throw std::runtime_error(e.what());
     }
     return iname;

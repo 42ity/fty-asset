@@ -30,10 +30,13 @@ namespace fty { namespace assetutils {
     // create messages
     messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
         const std::string& from, const std::string& to, const std::string& status, const std::string& data);
+
     messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
         const std::string& from, const std::string& to, const std::string& status,
         const std::vector<std::string>& data);
+
     messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
         const std::string& from, const std::string& to, const std::string& status,
         const messagebus::UserData& data);
+
 }} // namespace fty::assetutils

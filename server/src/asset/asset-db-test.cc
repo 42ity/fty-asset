@@ -79,7 +79,6 @@ void DBTest::loadLinkedAssets(Asset& asset)
     asset.setLinkedAssets(links);
 }
 
-
 bool DBTest::isLastDataCenter(Asset& asset)
 {
     std::cout << "DBTest::isLastDataCenter" << std::endl;
@@ -129,7 +128,7 @@ uint32_t DBTest::getSubtypeID(const std::string& subtype)
     return 1;
 }
 
-bool DBTest::verifyID(std::string& id)
+bool DBTest::verifyID(const std::string& id)
 {
     std::cout << "DBTest::verifyID " << id << std::endl;
     return true;
@@ -216,13 +215,7 @@ std::vector<std::string> DBTest::listAssets(std::map<std::string, std::vector<st
 std::vector<std::string> DBTest::listAllAssets()
 {
     std::cout << "DBTest::listAllAssets" << std::endl;
-    std::vector<std::string> assetList;
-
-    assetList.push_back("asset-1");
-    assetList.push_back("asset-2");
-    assetList.push_back("asset-3");
-
-    return assetList;
+    return listAssets({}); // list assets without filter
 }
 
 } // namespace fty
