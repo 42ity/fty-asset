@@ -39,9 +39,9 @@
 
 class ShortAssetInfo {
 public:
-    uint32_t asset_id;
+    uint32_t asset_id{0};
     std::string asset_name;
-    uint16_t subtype_id;
+    uint16_t subtype_id{0};
 
     ShortAssetInfo (uint32_t aasset_id, const std::string &aasset_name, uint16_t asubtype_id)
     {
@@ -53,39 +53,23 @@ public:
 
 inline bool operator<(const ShortAssetInfo& lhs, const ShortAssetInfo& rhs)
 {
-  return lhs.asset_id < rhs.asset_id;
+    return lhs.asset_id < rhs.asset_id;
 }
 
 /**
  * \brief Simple wrapper to make code more readable
  */
-static bool
-    is_ups (
-        const ShortAssetInfo &device
-    )
+static bool is_ups (const ShortAssetInfo &device)
 {
-    if ( device.subtype_id == persist::asset_subtype::UPS ) {
-        return true;
-    }
-    else {
-        return false;
-    }
+    return device.subtype_id == persist::asset_subtype::UPS;
 }
 
 /**
  * \brief Simple wrapper to make code more readable
  */
-static bool
-    is_epdu (
-        const ShortAssetInfo &device
-    )
+static bool is_epdu (const ShortAssetInfo &device)
 {
-    if ( device.subtype_id == persist::asset_subtype::EPDU ) {
-        return true;
-    }
-    else {
-        return false;
-    }
+    return device.subtype_id == persist::asset_subtype::EPDU;
 }
 
 /**
@@ -101,11 +85,7 @@ static bool
  *
  *  \return a set of powered devices. It can be empty.
  */
-static std::set<uint32_t>
-    find_dests (
-        const std::set <std::pair<uint32_t, uint32_t> > &links,
-        uint32_t element_id
-    )
+static std::set<uint32_t> find_dests (const std::set <std::pair<uint32_t, uint32_t> > &links, uint32_t element_id)
 {
     std::set<uint32_t> dests;
 
@@ -116,6 +96,7 @@ static std::set<uint32_t>
     }
     return dests;
 }
+
 /**
  *  \brief Checks if some power device is directly powering devices
  *          in some other racks.
@@ -128,12 +109,11 @@ static std::set<uint32_t>
  *
  *  \return true or false
  */
-static bool
-    is_powering_other_rack (
-        const ShortAssetInfo &device,
-        const std::map <uint32_t, ShortAssetInfo> &devices_in_container,
-        const std::set <std::pair<uint32_t, uint32_t> > &links
-    )
+static bool is_powering_other_rack (
+    const ShortAssetInfo &device,
+    const std::map <uint32_t, ShortAssetInfo> &devices_in_container,
+    const std::set <std::pair<uint32_t, uint32_t> > &links
+)
 {
     auto adevice_dests = find_dests (links, device.asset_id);
     for ( auto &adevice: adevice_dests )
@@ -161,12 +141,11 @@ static bool
  *                          belongs to the devices in the container
  *  \param[in][out] border_devices - list of border devices to be updated
  */
-static void
-    update_border_devices (
-        const std::map <uint32_t, ShortAssetInfo> &container_devices,
-        const std::set <std::pair<uint32_t, uint32_t> > &links,
-        std::set <ShortAssetInfo> &border_devices
-    )
+static void update_border_devices (
+    const std::map <uint32_t, ShortAssetInfo> &container_devices,
+    const std::set <std::pair<uint32_t, uint32_t> > &links,
+    std::set <ShortAssetInfo> &border_devices
+)
 {
     std::set<ShortAssetInfo> new_border_devices;
     for ( auto &border_device: border_devices )
@@ -188,8 +167,7 @@ static void
         }
     }
     border_devices.clear();
-    border_devices.insert(new_border_devices.begin(),
-                          new_border_devices.end());
+    border_devices.insert(new_border_devices.begin(), new_border_devices.end());
 }
 
 /**
@@ -212,11 +190,10 @@ static void
  *  \return a list of power devices names. It there are no power devices the
  *          list is empty.
  */
-static std::vector<std::string>
-    total_power_v2 (
-        const std::map <uint32_t, ShortAssetInfo> &devices_in_container,
-        const std::set <std::pair<uint32_t, uint32_t> > &links
-    )
+static std::vector<std::string> total_power_v2 (
+    const std::map <uint32_t, ShortAssetInfo> &devices_in_container,
+    const std::set <std::pair<uint32_t, uint32_t> > &links
+)
 {
 
     // the set of all border devices ("starting points")
@@ -309,12 +286,11 @@ static std::vector<std::string>
  *          -1 - in case of internal error
  *          -2 - in case the requested asset was not found
  */
-static int
-    select_total_power_by_id (
-        tntdb::Connection &conn,
-        uint32_t assetId,
-        std::vector<std::string> &powerDevices
-    )
+static int select_total_power_by_id (
+    tntdb::Connection &conn,
+    uint32_t assetId,
+    std::vector<std::string> &powerDevices
+)
 {
     // at the beginning clear
     powerDevices.clear();
@@ -391,12 +367,11 @@ static int
     return 0;
 }
 
-int
-    select_devices_total_power(
-        const std::string &assetName,
-        std::vector<std::string> &powerDevices,
-        bool test
-    )
+int select_devices_total_power(
+    const std::string &assetName,
+    std::vector<std::string> &powerDevices,
+    bool test
+)
 {
     if (test) {
         log_debug("[select_devices_total_power]: runs in test mode");

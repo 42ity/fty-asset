@@ -38,8 +38,7 @@
 #include <vector>
 #include <iostream>
 
-void
-fty_asset_inventory_server (zsock_t *pipe, void *args)
+void fty_asset_inventory_server (zsock_t *pipe, void *args)
 {
     assert(args);
 
@@ -153,6 +152,8 @@ fty_asset_inventory_server (zsock_t *pipe, void *args)
             fty_proto_destroy (&proto);
         }
     }
+
+    log_info ("%s:\tEnded", actor_name);
 
     zstr_free (&actor_name);
     zpoller_destroy (&poller);

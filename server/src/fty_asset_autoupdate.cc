@@ -49,8 +49,7 @@ struct fty_asset_autoupdate_t {
 //  --------------------------------------------------------------------------
 //  Destroy the fty_asset_autoupdate
 
-static void
-fty_asset_autoupdate_destroy (fty_asset_autoupdate_t **self_p)
+static void fty_asset_autoupdate_destroy (fty_asset_autoupdate_t **self_p)
 {
     if (self_p && *self_p) {
         fty_asset_autoupdate_t *self = *self_p;
@@ -67,8 +66,7 @@ fty_asset_autoupdate_destroy (fty_asset_autoupdate_t **self_p)
 //  --------------------------------------------------------------------------
 //  Create a new fty_asset_autoupdate
 
-static fty_asset_autoupdate_t *
-fty_asset_autoupdate_new (void)
+static fty_asset_autoupdate_t *fty_asset_autoupdate_new ()
 {
     fty_asset_autoupdate_t *self = new (fty_asset_autoupdate_t); //due to std::vector<>
     if (!self) {
@@ -87,8 +85,7 @@ fty_asset_autoupdate_new (void)
 #define is_ipv6(X) (X.find(':') != std::string::npos)
 #define icase_streq(X,Y) (strcasecmp ((X),(Y)) == 0)
 
-static void
-autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &assetName)
+static void autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &assetName)
 {
     if (!self) return;
 
@@ -166,8 +163,7 @@ autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &asse
     zhash_destroy (&aux);
 }
 
-static void
-autoupdate_update_rc_information (fty_asset_autoupdate_t *self)
+static void autoupdate_update_rc_information (fty_asset_autoupdate_t *self)
 {
     if (!self) return;
 
@@ -209,8 +205,7 @@ autoupdate_update_rc_information (fty_asset_autoupdate_t *self)
     }
 }
 
-static void
-autoupdate_request_all_rcs (fty_asset_autoupdate_t *self)
+static void autoupdate_request_all_rcs (fty_asset_autoupdate_t *self)
 {
     if (!self) return;
 
@@ -227,14 +222,12 @@ autoupdate_request_all_rcs (fty_asset_autoupdate_t *self)
     zmsg_destroy (&msg);
 }
 
-static void
-autoupdate_update (fty_asset_autoupdate_t *self)
+static void autoupdate_update (fty_asset_autoupdate_t *self)
 {
     autoupdate_update_rc_information (self);
 }
 
-static void
-autoupdate_handle_message (fty_asset_autoupdate_t *self, zmsg_t *message)
+static void autoupdate_handle_message (fty_asset_autoupdate_t *self, zmsg_t *message)
 {
     if (!self || !message ) return;
 
@@ -263,8 +256,7 @@ autoupdate_handle_message (fty_asset_autoupdate_t *self, zmsg_t *message)
     }
 }
 
-void
-fty_asset_autoupdate_server (zsock_t *pipe, void *args)
+void fty_asset_autoupdate_server (zsock_t *pipe, void *args)
 {
     assert(args);
 

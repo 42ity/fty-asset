@@ -20,6 +20,7 @@
 */
 
 #pragma once
+
 #include "asset/asset.h"
 #include <malamute.h>
 #include <fty_srr_dto.h>
