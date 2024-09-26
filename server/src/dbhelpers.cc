@@ -32,13 +32,6 @@
 #include <fty_log.h>
 #include <fty_proto.h>
 #include <fty_asset_dto.h>
-#include <cxxtools/jsonserializer.h>
-
-#define INPUT_POWER_CHAIN     1
-#define AGENT_ASSET_ACTIVATOR "etn-licensing-credits"
-
-// for test purposes
-std::map<std::string, std::string> test_map_asset_state;
 
 /**
  *  \brief Wrapper for select_assets_by_container_cb
@@ -172,18 +165,18 @@ int select_assets(std::function<void(const tntdb::Row&)>& cb, bool test)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#define SQL_EXT_ATT_INVENTORY                                                                                \
-    " INSERT INTO"                                                                                           \
-    "   t_bios_asset_ext_attributes"                                                                         \
-    "   (keytag, value, id_asset_element, read_only)"                                                        \
-    " VALUES"                                                                                                \
-    "  ( :keytag, :value, (SELECT id_asset_element FROM t_bios_asset_element WHERE name=:device_name), "     \
-    ":readonly)"                                                                                             \
-    " ON DUPLICATE KEY"                                                                                      \
-    "   UPDATE "                                                                                             \
-    "       value = VALUES (value),"                                                                         \
-    "       read_only = :readonly,"                                                                          \
+static const std::string SQL_EXT_ATT_INVENTORY{                                                                              \
+    " INSERT INTO"
+    "   t_bios_asset_ext_attributes"
+    "   (keytag, value, id_asset_element, read_only)"
+    " VALUES"
+    "  (:keytag, :value, (SELECT id_asset_element FROM t_bios_asset_element WHERE name=:device_name), :readonly)"
+    " ON DUPLICATE KEY"
+    "   UPDATE "
+    "       value = VALUES (value),"
+    "       read_only = :readonly,"
     "       id_asset_ext_attribute = LAST_INSERT_ID(id_asset_ext_attribute)"
+};
 
 /**
  *  \brief Inserts ext attributes from inventory message into DB
@@ -204,13 +197,15 @@ int process_insert_inventory(
         return 0;
     }
 
-    if (!ext_attributes || (zhash_size(ext_attributes) == 0))
+    if (!ext_attributes || (zhash_size(ext_attributes) == 0)) {
         return 0;
+    }
 
     tntdb::Connection conn;
     try {
         conn = tntdb::connectCached(DBConn::url);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("DB: cannot connect, %s", e.what());
         return -1;
     }
@@ -220,24 +215,32 @@ int process_insert_inventory(
 
     for (void* it = zhash_first(ext_attributes); it != NULL; it = zhash_next(ext_attributes)) {
 
-        const char* value     = static_cast<const char*>(it);
-        const char* keytag    = zhash_cursor(ext_attributes);
-        bool        readonlyV = readonly;
+        const char* value  = static_cast<const char*>(it);
+        const char* keytag = zhash_cursor(ext_attributes);
 
-        if (strcmp(keytag, "name") == 0 || strcmp(keytag, "description") == 0 ||
-            strcmp(keytag, "ip.1") == 0) {
-            readonlyV = false;
+        bool readonlyV = readonly;
+        if (readonlyV) {
+            if (streq(keytag, "name")
+                || streq(keytag, "description")
+                || streq(keytag, "ip.1")
+            ) {
+                readonlyV = false;
+            }
         }
-        if (strcmp(keytag, "uuid") == 0) {
-            readonlyV = true;
+        else {
+            if (streq(keytag, "uuid")) {
+                readonlyV = true;
+            }
         }
+
         try {
             st.set("keytag", keytag)
                 .set("value", value)
                 .set("device_name", device_name)
                 .set("readonly", readonlyV)
                 .execute();
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e) {
             log_warning("%s:\texception on updating %s {%s, %s}\n\t%s", "", device_name.c_str(), keytag,
                 value, e.what());
             continue;
@@ -270,13 +273,15 @@ int process_insert_inventory(const std::string& device_name, zhash_t* ext_attrib
         return 0;
     }
 
-    if (!ext_attributes || (zhash_size(ext_attributes) == 0))
+    if (!ext_attributes || (zhash_size(ext_attributes) == 0)) {
         return 0;
+    }
 
     tntdb::Connection conn;
     try {
         conn = tntdb::connectCached(DBConn::url);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("DB: cannot connect, %s", e.what());
         return -1;
     }
@@ -285,25 +290,35 @@ int process_insert_inventory(const std::string& device_name, zhash_t* ext_attrib
     tntdb::Statement   st = conn.prepareCached(SQL_EXT_ATT_INVENTORY);
 
     for (void* it = zhash_first(ext_attributes); it != NULL; it = zhash_next(ext_attributes)) {
-        const char* value     = static_cast<const char*>(it);
-        const char* keytag    = zhash_cursor(ext_attributes);
-        bool        readonlyV = readonly;
-        if (strcmp(keytag, "name") == 0 || strcmp(keytag, "description") == 0)
-            readonlyV = false;
+        const char* value  = static_cast<const char*>(it);
+        const char* keytag = zhash_cursor(ext_attributes);
+
+        bool readonlyV = readonly;
+        if (readonlyV) {
+            if (streq(keytag, "name")
+                || streq(keytag, "description")
+            ) {
+                readonlyV = false;
+            }
+        }
 
         std::string cache_key = device_name;
         cache_key.append(":").append(keytag).append(readonlyV ? "1" : "0");
         auto el = map_cache.find(cache_key);
-        if (el != map_cache.end() && el->second == value)
+        if (el != map_cache.end() && el->second == value) {
             continue;
+        }
+
         try {
             st.set("keytag", keytag)
                 .set("value", value)
                 .set("device_name", device_name)
                 .set("readonly", readonlyV)
                 .execute();
+
             map_cache[cache_key] = value;
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e) {
             log_warning("%s:\texception on updating %s {%s, %s}\n\t%s", "", device_name.c_str(), keytag,
                 value, e.what());
             continue;
@@ -313,6 +328,7 @@ int process_insert_inventory(const std::string& device_name, zhash_t* ext_attrib
     trans.commit();
     return 0;
 }
+
 /**
  *  \brief Selects user-friendly name for given asset name
  *
@@ -323,7 +339,7 @@ int process_insert_inventory(const std::string& device_name, zhash_t* ext_attrib
  *  \return  0 - in case of success
  *          -1 - in case of some unexpected error
  */
-int select_ename_from_iname(std::string& iname, std::string& ename, bool test)
+int select_ename_from_iname(const std::string& iname, std::string& ename, bool test)
 {
     if (test) {
         log_debug("[select_ename_from_iname]: runs in test mode");
@@ -356,44 +372,20 @@ int select_ename_from_iname(std::string& iname, std::string& ename, bool test)
     return -1;
 }
 
-
-/**
- *  \brief Get number of active power devices
- *
- *  \return  X - number of active power devices
- */
-
-int get_active_power_devices(bool test)
-{
-    if (test) {
-        log_debug("[get_active_power_devices]: runs in test mode");
-        int count = 0;
-        for (auto const& as : test_map_asset_state) {
-            if ("active" == as.second) {
-                ++count;
-            }
-        }
-        return count;
-    }
-
-    tntdb::Connection conn = tntdb::connectCached(DBConn::url);
-    return DBAssets::get_active_power_devices(conn);
-}
-
 bool should_activate(std::string operation, std::string current_status, std::string new_status)
 {
-    bool rv = (((operation == FTY_PROTO_ASSET_OP_CREATE) || (operation == "create-force")) &&
-               (new_status == "active"));
-    rv |= (operation == FTY_PROTO_ASSET_OP_UPDATE && current_status == "nonactive" && new_status == "active");
+    bool rv = (operation == FTY_PROTO_ASSET_OP_CREATE || operation == "create-force") && new_status == "active";
+
+    rv |= operation == FTY_PROTO_ASSET_OP_UPDATE && current_status == "nonactive" && new_status == "active";
 
     return rv;
 }
 
 bool should_deactivate(std::string operation, std::string current_status, std::string new_status)
 {
-    bool rv =
-        (operation == FTY_PROTO_ASSET_OP_UPDATE && current_status == "active" && new_status == "nonactive");
-    rv |= (operation == FTY_PROTO_ASSET_OP_DELETE);
+    bool rv = operation == FTY_PROTO_ASSET_OP_UPDATE && current_status == "active" && new_status == "nonactive";
+
+    rv |= operation == FTY_PROTO_ASSET_OP_DELETE;
 
     return rv;
 }
