@@ -279,16 +279,4 @@ protected:
 void operator<<=(cxxtools::SerializationInfo& si, const fty::Asset& asset);
 void operator>>=(const cxxtools::SerializationInfo& si, fty::Asset& asset);
 
-#if 0
-class UIAsset : public Asset
-{
-public:
-    explicit UIAsset(const Asset& a = Asset());
-
-    // serialization / deserialization for cxxtools
-    void serializeUI(cxxtools::SerializationInfo& si) const;
-    void deserializeUI(const cxxtools::SerializationInfo& si);
-};
-#endif
-
 } // namespace fty
