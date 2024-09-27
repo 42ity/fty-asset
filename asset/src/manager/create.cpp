@@ -1,3 +1,19 @@
+/*  ========================================================================
+    Copyright (C) 2020 Eaton
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ========================================================================
+*/
+
 #include "asset/asset-cam.h"
 #include "asset/asset-configure-inform.h"
 #include "asset/asset-helpers.h"
@@ -16,7 +32,7 @@ namespace fty::asset {
 #define CREATE_MODE_ONE_ASSET 1
 #define CREATE_MODE_CSV       2
 
-// ensure only 1 request is process at the time
+// ensure only 1 request is processed at the time
 static std::mutex g_modification;
 
 AssetExpected<uint32_t> AssetManager::createAsset(const std::string& json, const std::string& user, bool sendNotify)
@@ -87,18 +103,18 @@ AssetExpected<uint32_t> AssetManager::importAsset(
     }
     // If descriminant are available, check to not duplicate asset.
     if (cm.hasTitle("manufacturer") && cm.hasTitle("model") && cm.hasTitle("serial_no")) {
-      logDebug("All discriminant data are available, checking to not duplicate asset");
+        logDebug("All discriminant data are available, checking to not duplicate asset");
 
-      std::string ipAddr = cm.hasTitle("ip.1") ? cm.get(1, "ip.1") : "";
-      AssetFilter assetFilter{cm.get(1, "manufacturer"), cm.get(1, "model"), cm.get(1, "serial_no"), ipAddr};
+        std::string ipAddr = cm.hasTitle("ip.1") ? cm.get(1, "ip.1") : "";
+        AssetFilter assetFilter{cm.get(1, "manufacturer"), cm.get(1, "model"), cm.get(1, "serial_no"), ipAddr};
 
-      auto ret = checkDuplicatedAsset(assetFilter);
-      if (!ret) {
-        return unexpected(msg.format(itemName, ret.error()));
-      }
+        auto ret = checkDuplicatedAsset(assetFilter);
+        if (!ret) {
+            return unexpected(msg.format(itemName, ret.error()));
+        }
     }
     else {
-      logError("Discriminant data are not availables, can not check duplicated asset");
+        logError("Discriminant data are not availables, can not check duplicated asset");
     }
 
     if (sendNotify) {

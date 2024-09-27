@@ -95,18 +95,14 @@ namespace fty
     fty::Expected<uint32_t> AssetAccessor::assetInameToID(const std::string &iname)
     {
         messagebus::Message ret;
-
-        try
-        {
+        try {
             ret = sendSyncReq("GET_ID", {iname});
         }
-        catch (messagebus::MessageBusException &e)
-        {
+        catch (messagebus::MessageBusException &e) {
             return fty::unexpected("MessageBus request failed: {}", e.what());
         }
 
-        if (ret.metaData().at(messagebus::Message::STATUS) != messagebus::STATUS_OK)
-        {
+        if (ret.metaData().at(messagebus::Message::STATUS) != messagebus::STATUS_OK) {
             return fty::unexpected("Request of ID from iname failed");
         }
 
@@ -114,7 +110,6 @@ namespace fty
         JSON::readFromString(ret.userData().front(), si);
 
         std::string data;
-
         si >>= data;
 
         return fty::convert<uint32_t>(data);
@@ -124,18 +119,14 @@ namespace fty
     fty::Expected<fty::Asset> AssetAccessor::getAsset(const std::string& iname)
     {
         messagebus::Message ret;
-
-        try
-        {
+        try {
             ret = sendSyncReq("GET", {iname});
         }
-        catch (messagebus::MessageBusException &e)
-        {
+        catch (messagebus::MessageBusException &e) {
             return fty::unexpected("MessageBus request failed: {}", e.what());
         }
 
-        if (ret.metaData().at(messagebus::Message::STATUS) != messagebus::STATUS_OK)
-        {
+        if (ret.metaData().at(messagebus::Message::STATUS) != messagebus::STATUS_OK) {
             return fty::unexpected("Request of fty::FullAsset from iname failed");
         }
 
@@ -148,16 +139,15 @@ namespace fty
     /// triggers an update notification. It receives the DTOs of the asset before and after the update
     void AssetAccessor::notifyStatusUpdate(const std::string& iname, const std::string& oldStatus, const std::string& newStatus)
     {
-        if(!iname.empty() && !oldStatus.empty() && !newStatus.empty()) {
+        if (!iname.empty() && !oldStatus.empty() && !newStatus.empty()) {
             cxxtools::SerializationInfo si;
             si.addMember("iname") <<= iname;
             si.addMember("oldStatus") <<= oldStatus;
             si.addMember("newStatus") <<= newStatus;
 
-            std::string json = JSON::writeToString(si, false);
-
-            sendAsyncReq("STATUS_UPDATE", {json});
-        } else {
+            sendAsyncReq("STATUS_UPDATE", {JSON::writeToString(si, false)});
+        }
+        else {
             log_error("Invalid data. Update status notification will not be requested");
         }
     }
@@ -169,8 +159,6 @@ namespace fty
         si.addMember("before") <<= oldAsset;
         si.addMember("after") <<= newAsset;
 
-        std::string json = JSON::writeToString(si, false);
-
-        sendAsyncReq("NOTIFY", {json});
+        sendAsyncReq("NOTIFY", {JSON::writeToString(si, false)});
     }
 } // namespace fty
