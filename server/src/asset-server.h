@@ -32,7 +32,6 @@ static constexpr const char* FTY_ASSET_MAILBOX = "FTY.Q.ASSET.QUERY";
 static constexpr const char* FTY_ASSET_SUBJECT_CREATE      = "CREATE";
 static constexpr const char* FTY_ASSET_SUBJECT_UPDATE      = "UPDATE";
 static constexpr const char* FTY_ASSET_SUBJECT_DELETE      = "DELETE";
-static constexpr const char* FTY_ASSET_SUBJECT_DELETE_LIST = "DELETE_LIST";
 static constexpr const char* FTY_ASSET_SUBJECT_GET         = "GET";
 static constexpr const char* FTY_ASSET_SUBJECT_GET_BY_UUID = "GET_BY_UUID";
 static constexpr const char* FTY_ASSET_SUBJECT_LIST        = "LIST";
@@ -185,35 +184,43 @@ public:
     void connectPublisherClientNg();
 
     // notifications
-    void sendNotification(const messagebus::Message&) const;
+    void sendNotification(const std::string& subject, const std::string& data) const;
 
     // SRR
     void initSrr(const std::string& queue);
     void resetSrrClient();
 
 private:
-    void createAsset(const messagebus::Message& msg);
-    void updateAsset(const messagebus::Message& msg);
-    void deleteAsset(const messagebus::Message& msg);
-    void getAsset(const messagebus::Message& msg, bool getFromUuid);
-    void listAsset(const messagebus::Message& msg);
-    void getAssetID(const messagebus::Message& msg);
-    void getAssetIname(const messagebus::Message& msg);
-    void notifyStatusUpdate(const messagebus::Message& msg);
-    void notifyAsset(const messagebus::Message& msg);
+    // topic handlers
+    void handleAssetManipulationReq(const messagebus::Message& msg);
+    void handleAssetSrrReq(const messagebus::Message& msg);
+
+    // request handlers
+    void createAsset(const messagebus::Message& msg) const;
+    void updateAsset(const messagebus::Message& msg) const;
+    void deleteAsset(const messagebus::Message& msg) const;
+    void getAsset(const messagebus::Message& msg) const;
+    void listAsset(const messagebus::Message& msg) const;
+    void getAssetID(const messagebus::Message& msg) const;
+    void getAssetIname(const messagebus::Message& msg) const;
+    void notifyStatusUpdate(const messagebus::Message& msg) const;
+    void notifyAsset(const messagebus::Message& msg) const;
 
     // notifications
-    void notifyAssetUpdate(const Asset& before, const Asset& after);
+    void notifyAssetUpdate(const Asset& before, const Asset& after) const;
+    void sendNotification(const messagebus::Message&) const;
 
-    // SRR
+    // SRR handlers
+    dto::srr::SaveResponse    handleSave(const dto::srr::SaveQuery& query);
+    dto::srr::RestoreResponse handleRestore(const dto::srr::RestoreQuery& query);
+    dto::srr::ResetResponse   handleReset(const dto::srr::ResetQuery& query);
     cxxtools::SerializationInfo saveAssets(bool saveVirtualAssets = false) const;
-    void                        restoreAssets(const cxxtools::SerializationInfo& si, bool tryActivate = true);
+    void restoreAssets(const cxxtools::SerializationInfo& si, bool tryActivate = true);
 
 private:
     static void destroyMlmClient(mlm_client_t* client);
 
     using MlmClientPtr = std::unique_ptr<mlm_client_t, decltype(&AssetServer::destroyMlmClient)>;
-
 
 private:
     bool         m_testMode{false};
@@ -235,21 +242,12 @@ private:
     MsgBusPtr   m_publisherDelete{nullptr};
     MsgBusPtr   m_publisherDeleteLight{nullptr};
 
-    // topic handlers
-    void handleAssetManipulationReq(const messagebus::Message& msg);
-    void handleAssetSrrReq(const messagebus::Message& msg);
-
     // SRR
     std::string                 m_srrEndpoint{MLM_DEFAULT_ENDPOINT};
     std::string                 m_srrAgentName{"asset-agent-srr"};
     MsgBusPtr                   m_srrClient{nullptr};
     std::mutex                  m_srrLock;
     dto::srr::SrrQueryProcessor m_srrProcessor;
-
-    // SRR handlers
-    dto::srr::SaveResponse    handleSave(const dto::srr::SaveQuery& query);
-    dto::srr::RestoreResponse handleRestore(const dto::srr::RestoreQuery& query);
-    dto::srr::ResetResponse   handleReset(const dto::srr::ResetQuery& query);
 };
 
 } // namespace fty

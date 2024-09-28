@@ -28,90 +28,51 @@
 
 #include "asset-utils.h"
 
-namespace fty { namespace assetutils {
+namespace fty {
+namespace assetutils {
 
-    // create response (data is a single string)
-    messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
-        const std::string& from, const std::string& to, const std::string& status, const std::string& data)
+    // create message (data is a single string)
+    messagebus::Message createMessage(
+        const std::string& subject,
+        const std::string& correlationID,
+        const std::string& from,
+        const std::string& to,
+        const std::string& status,
+        const std::string& data)
     {
-        messagebus::Message msg;
+        messagebus::UserData userData;
+        userData.push_back(data);
 
-        if (!subject.empty()) {
-            msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
-        }
-        if (!from.empty()) {
-            msg.metaData().emplace(messagebus::Message::FROM, from);
-        }
-        if (!to.empty()) {
-            msg.metaData().emplace(messagebus::Message::TO, to);
-        }
-        if (!correlationID.empty()) {
-            msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
-        }
-        if (!status.empty()) {
-            msg.metaData().emplace(messagebus::Message::STATUS, status);
-        }
-
-        msg.userData().push_back(data);
-
-        return msg;
+        return createMessage(subject, correlationID, from, to, status, userData);
     }
 
-    // create response (data is a vector of strings)
-    messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
-        const std::string& from, const std::string& to, const std::string& status,
-        const std::vector<std::string>& data)
-    {
-        messagebus::Message msg;
-
-        if (!subject.empty()) {
-            msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
-        }
-        if (!from.empty()) {
-            msg.metaData().emplace(messagebus::Message::FROM, from);
-        }
-        if (!to.empty()) {
-            msg.metaData().emplace(messagebus::Message::TO, to);
-        }
-        if (!correlationID.empty()) {
-            msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
-        }
-        if (!status.empty()) {
-            msg.metaData().emplace(messagebus::Message::STATUS, status);
-        }
-
-        for (const auto& e : data) {
-            msg.userData().push_back(e);
-        }
-
-        return msg;
-    }
-
-    // create response (data is messagebus::UserData)
-    messagebus::Message createMessage(const std::string& subject, const std::string& correlationID,
-        const std::string& from, const std::string& to, const std::string& status,
+    // create message (data is messagebus::UserData)
+    messagebus::Message createMessage(
+        const std::string& subject,
+        const std::string& correlationID,
+        const std::string& from,
+        const std::string& to,
+        const std::string& status,
         const messagebus::UserData& data)
     {
-        messagebus::Message msg;
+        messagebus::MetaData metadata;
 
         if (!subject.empty()) {
-            msg.metaData().emplace(messagebus::Message::SUBJECT, subject);
-        }
-        if (!from.empty()) {
-            msg.metaData().emplace(messagebus::Message::FROM, from);
-        }
-        if (!to.empty()) {
-            msg.metaData().emplace(messagebus::Message::TO, to);
+            metadata.emplace(messagebus::Message::SUBJECT, subject);
         }
         if (!correlationID.empty()) {
-            msg.metaData().emplace(messagebus::Message::CORRELATION_ID, correlationID);
+            metadata.emplace(messagebus::Message::CORRELATION_ID, correlationID);
+        }
+        if (!from.empty()) {
+            metadata.emplace(messagebus::Message::FROM, from);
+        }
+        if (!to.empty()) {
+            metadata.emplace(messagebus::Message::TO, to);
         }
         if (!status.empty()) {
-            msg.metaData().emplace(messagebus::Message::STATUS, status);
+            metadata.emplace(messagebus::Message::STATUS, status);
         }
 
-        msg.userData() = data;
-
-        return msg;
+        return messagebus::Message{metadata, data};
     }
 }} // namespace fty::assetutils

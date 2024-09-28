@@ -213,7 +213,7 @@ int process_insert_inventory(
     tntdb::Transaction trans(conn);
     tntdb::Statement   st = conn.prepareCached(SQL_EXT_ATT_INVENTORY);
 
-    for (void* it = zhash_first(ext_attributes); it != NULL; it = zhash_next(ext_attributes)) {
+    for (void* it = zhash_first(ext_attributes); it; it = zhash_next(ext_attributes)) {
 
         const char* value  = static_cast<const char*>(it);
         const char* keytag = zhash_cursor(ext_attributes);
@@ -241,9 +241,9 @@ int process_insert_inventory(
                 .execute();
         }
         catch (const std::exception& e) {
-            log_warning("%s:\texception on updating %s {%s, %s}\n\t%s", "", device_name.c_str(), keytag,
+            log_warning("%s:\texception on updating %s {%s, %s}\n\t%s", "",
+                device_name.c_str(), keytag,
                 value, e.what());
-            continue;
         }
     }
 
@@ -289,7 +289,7 @@ int process_insert_inventory(const std::string& device_name, zhash_t* ext_attrib
     tntdb::Transaction trans(conn);
     tntdb::Statement   st = conn.prepareCached(SQL_EXT_ATT_INVENTORY);
 
-    for (void* it = zhash_first(ext_attributes); it != NULL; it = zhash_next(ext_attributes)) {
+    for (void* it = zhash_first(ext_attributes); it; it = zhash_next(ext_attributes)) {
         const char* value  = static_cast<const char*>(it);
         const char* keytag = zhash_cursor(ext_attributes);
 
@@ -319,9 +319,9 @@ int process_insert_inventory(const std::string& device_name, zhash_t* ext_attrib
             map_cache[cache_key] = value;
         }
         catch (const std::exception& e) {
-            log_warning("%s:\texception on updating %s {%s, %s}\n\t%s", "", device_name.c_str(), keytag,
+            log_warning("%s:\texception on updating %s {%s, %s}\n\t%s", "",
+                device_name.c_str(), keytag,
                 value, e.what());
-            continue;
         }
     }
 
@@ -370,22 +370,4 @@ int select_ename_from_iname(const std::string& iname, std::string& ename, bool t
         log_error("exception caught %s for element '%s'", e.what(), ename.c_str());
     }
     return -1;
-}
-
-bool should_activate(std::string operation, std::string current_status, std::string new_status)
-{
-    bool rv = (operation == FTY_PROTO_ASSET_OP_CREATE || operation == "create-force") && new_status == "active";
-
-    rv |= operation == FTY_PROTO_ASSET_OP_UPDATE && current_status == "nonactive" && new_status == "active";
-
-    return rv;
-}
-
-bool should_deactivate(std::string operation, std::string current_status, std::string new_status)
-{
-    bool rv = operation == FTY_PROTO_ASSET_OP_UPDATE && current_status == "active" && new_status == "nonactive";
-
-    rv |= operation == FTY_PROTO_ASSET_OP_DELETE;
-
-    return rv;
 }
