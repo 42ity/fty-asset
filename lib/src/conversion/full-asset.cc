@@ -24,27 +24,27 @@
 #include <fty_asset_dto.h>
 #include <fty_common_asset.h>
 
-struct fty_proto_t;
-
 namespace fty {
 namespace conversion {
 
     fty::FullAsset toFullAsset(const Asset& asset)
     {
-        fty::FullAsset::HashMap auxMap; // does not exist in new Asset implementation
+        // FullAsset ext map has no readOnly parameter
         fty::FullAsset::HashMap extMap;
-
         for (const auto& element : asset.getExt()) {
-            // FullAsset hash map has no readOnly parameter
             extMap[element.first] = element.second.getValue();
         }
 
-        fty::FullAsset fa(asset.getInternalName(), fty::assetStatusToString(asset.getAssetStatus()),
-            asset.getAssetType(), asset.getAssetSubtype(),
+        return fty::FullAsset{
+            asset.getInternalName(),
+            fty::assetStatusToString(asset.getAssetStatus()),
+            asset.getAssetType(),
+            asset.getAssetSubtype(),
             asset.getExtEntry(fty::EXT_NAME), // asset name is stored in ext structure
-            asset.getParentIname(), asset.getPriority(), auxMap, extMap);
-
-        return fa;
+            asset.getParentIname(),
+            asset.getPriority(),
+            fty::FullAsset::HashMap{}, // no aux map in new Asset implementation
+            extMap};
     }
 
 }

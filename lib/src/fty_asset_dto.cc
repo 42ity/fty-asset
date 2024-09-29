@@ -223,7 +223,6 @@ void operator>>=(const cxxtools::SerializationInfo& si, AssetLink& l)
     l.deserialize(si);
 }
 
-
 const std::string assetStatusToString(AssetStatus status)
 {
     std::string retVal;
@@ -423,8 +422,7 @@ void Asset::setExtEntry(const std::string& key, const std::string& value, bool r
     }
 }
 
-void Asset::addLink(
-    const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType, const AssetLink::ExtMap& attributes)
+void Asset::addLink(const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType, const AssetLink::ExtMap& attributes)
 {
     AssetLink l(sourceId, scrOut, destIn, linkType);
     l.setExt(attributes);
@@ -452,6 +450,21 @@ void Asset::setSecondaryID(const std::string& secondaryID)
     m_secondaryID = secondaryID;
 }
 
+const std::string& Asset::getAddress(uint8_t index) const
+{
+    return getExtEntry("ip." + std::to_string(index));
+}
+
+void Asset::setAddress(uint8_t index, const std::string& address)
+{
+    setExtEntry("ip." + std::to_string(index), address);
+}
+
+void Asset::removeAddress(uint8_t index)
+{
+    setAddress(index, "");
+}
+
 // wrapper for address
 Asset::AddressMap Asset::getAddressMap() const
 {
@@ -466,21 +479,6 @@ Asset::AddressMap Asset::getAddressMap() const
     }
 
     return addresses;
-}
-
-const std::string& Asset::getAddress(uint8_t index) const
-{
-    return getExtEntry("ip." + std::to_string(index));
-}
-
-void Asset::setAddress(uint8_t index, const std::string& address)
-{
-    setExtEntry("ip." + std::to_string(index), address);
-}
-
-void Asset::removeAddress(uint8_t index)
-{
-    setAddress(index, "");
 }
 
 // Wrapper for Endpoints
@@ -585,12 +583,12 @@ void Asset::setEndpointData(uint8_t index, const std::string& field, const std::
 // friendly name
 const std::string& Asset::getFriendlyName() const
 {
-    return getExtEntry("name");
+    return getExtEntry(EXT_NAME);
 }
 
 void Asset::setFriendlyName(const std::string& friendlyName)
 {
-    setExtEntry("name", friendlyName);
+    setExtEntry(EXT_NAME, friendlyName);
 }
 
 void Asset::dump(std::ostream& os)
@@ -631,9 +629,16 @@ void Asset::dump(std::ostream& os)
 bool Asset::operator==(const Asset& asset) const
 {
     return (
-        m_internalName == asset.m_internalName && m_assetStatus == asset.m_assetStatus && m_assetType == asset.m_assetType &&
-        m_assetSubtype == asset.m_assetSubtype && m_parentIname == asset.m_parentIname && m_priority == asset.m_priority &&
-        m_assetTag == asset.m_assetTag && m_ext == asset.m_ext && m_linkedAssets == asset.m_linkedAssets);
+        m_internalName == asset.m_internalName
+        && m_assetStatus == asset.m_assetStatus
+        && m_assetType == asset.m_assetType
+        && m_assetSubtype == asset.m_assetSubtype
+        && m_parentIname == asset.m_parentIname
+        && m_priority == asset.m_priority
+        && m_assetTag == asset.m_assetTag
+        && m_ext == asset.m_ext
+        && m_linkedAssets == asset.m_linkedAssets
+    );
 }
 
 bool Asset::operator!=(const Asset& asset) const

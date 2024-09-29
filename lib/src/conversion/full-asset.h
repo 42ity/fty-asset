@@ -27,6 +27,10 @@ class Asset;
 class FullAsset;
 } // namespace fty
 
-namespace fty { namespace conversion {
+namespace fty {
+namespace conversion {
+
     fty::FullAsset toFullAsset(const Asset& asset);
-}} // namespace fty::conversion
+
+}
+} // namespace fty::conversion
