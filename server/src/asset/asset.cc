@@ -34,17 +34,17 @@
 #include <fty_common_agents.h>
 #include <map>
 
-#define AGENT_ASSET_ACTIVATOR "etn-licensing-credits"
-
 #define MAX_CREATE_RETRY 10
 
-#define COMMAND_IS_ASSET_ACTIVABLE  "GET_IS_ASSET_ACTIVABLE"
-#define COMMAND_ACTIVATE_ASSET      "ACTIVATE_ASSET"
-#define COMMAND_DEACTIVATE_ASSET    "DEACTIVATE_ASSET"
+#define AGENT_ASSET_ACTIVATOR "etn-licensing-credits"
+
+#define COMMAND_IS_ASSET_ACTIVABLE_INAME "IS_ASSET_ACTIVABLE_INAME"
+#define COMMAND_ACTIVATE_ASSET_INAME     "ACTIVATE_ASSET_INAME"
+#define COMMAND_DEACTIVATE_ASSET_INAME   "DEACTIVATE_ASSET_INAME"
 
 namespace fty {
 
-  using namespace fty::asset;
+using namespace fty::asset;
 
 //============================================================================================================
 
@@ -457,19 +457,18 @@ void AssetImpl::restore(bool restoreLinks)
     }
 }
 
-static std::vector<std::string> sendActivationReq(const std::string & command, const std::vector<std::string> & frames)
+static std::vector<std::string> sendActivationReq(const std::string& command, const std::string& data)
 {
     mlm::MlmSyncClient client(AGENT_FTY_ASSET, AGENT_ASSET_ACTIVATOR);
 
-    log_debug("Sending %s request to %s", command.c_str(), AGENT_ASSET_ACTIVATOR);
+    logDebug("Request {}, command({}), data({})", AGENT_ASSET_ACTIVATOR, command, data);
 
-    std::vector<std::string> payload = {command};
-    std::copy(frames.begin(), frames.end(), back_inserter(payload));
+    std::vector<std::string> payload = {command, data};
 
     std::vector<std::string> receivedFrames = client.syncRequestWithReply(payload);
 
     // Check if the first frame we get is an error
-    if (receivedFrames[0] == "ERROR")
+    if (receivedFrames.empty() || receivedFrames[0] == "ERROR")
     {
         // It's an error and we will throw directly the exceptions
         if (receivedFrames.size() == 2) {
@@ -483,7 +482,7 @@ static std::vector<std::string> sendActivationReq(const std::string & command, c
     return receivedFrames;
 }
 
-bool AssetImpl::isActivable()
+bool AssetImpl::isActivable() const
 {
     if (g_testMode) {
         return true;
@@ -495,15 +494,17 @@ bool AssetImpl::isActivable()
 
     // asset is a device
     try {
-        auto payload = sendActivationReq(COMMAND_IS_ASSET_ACTIVABLE, {Asset::toFullAsset(*this).toJson()});
-        std::istringstream isActivableStr (payload[0]);
+        const std::string quotedIName{"\"" + getInternalName() + "\""}; // json compliant (single string)
+        auto payload = sendActivationReq(COMMAND_IS_ASSET_ACTIVABLE_INAME, quotedIName);
+        log_debug ("Asset isActivable %s/%s", getInternalName().c_str(), payload[0].c_str());
+
         bool ret = false;
+        std::istringstream isActivableStr(payload[0]);
         isActivableStr >> std::boolalpha >> ret;
-        log_debug ("asset is activable = %s", payload[0].c_str ());
         return ret;
     }
     catch (const std::exception& e) {
-        log_info ("Request failed: %s", e.what());
+        log_error ("Request failed: %s", e.what());
     }
     return false;
 }
@@ -514,20 +515,23 @@ void AssetImpl::activate()
         return; // nop
     }
 
-    if (getAssetType() == TYPE_DEVICE) {
-        try {
-            auto payload = sendActivationReq(COMMAND_ACTIVATE_ASSET, {Asset::toFullAsset(*this).toJson()});
-            setAssetStatus(fty::AssetStatus::Active);
-            m_storage.update(*this);
-            log_debug ("Asset %s activated", m_internalName.c_str());
-        }
-        catch (const std::exception& e) {
-            log_error ("Asset %s activation failed", m_internalName.c_str());
-        }
-    }
-    else {
+    if (getAssetType() != TYPE_DEVICE) {
         setAssetStatus(fty::AssetStatus::Active);
         m_storage.update(*this);
+        return;
+    }
+
+    // asset is a device
+    try {
+        const std::string listIName{"[\"" + getInternalName() + "\"]"}; // json compliant (string list)
+        auto payload = sendActivationReq(COMMAND_ACTIVATE_ASSET_INAME, listIName);
+        log_debug ("Asset activate %s/%s", getInternalName().c_str(), payload[0].c_str());
+
+        setAssetStatus(fty::AssetStatus::Active);
+        m_storage.update(*this);
+    }
+    catch (const std::exception& e) {
+        log_error ("Asset %s activation failed (e: %s)", getInternalName().c_str(), e.what());
     }
 }
 
@@ -537,20 +541,23 @@ void AssetImpl::deactivate()
         return; // nop
     }
 
-    if (getAssetType() == TYPE_DEVICE) {
-        try {
-            auto payload = sendActivationReq(COMMAND_DEACTIVATE_ASSET, {Asset::toFullAsset(*this).toJson()});
-            setAssetStatus(fty::AssetStatus::Nonactive);
-            m_storage.update(*this);
-            log_debug ("Asset %s deactivated", m_internalName.c_str());
-        }
-        catch (const std::exception& e) {
-            log_error ("Asset %s deactivation failed", m_internalName.c_str());
-        }
-    }
-    else {
+    if (getAssetType() != TYPE_DEVICE) {
         setAssetStatus(fty::AssetStatus::Nonactive);
         m_storage.update(*this);
+        return;
+    }
+
+    // asset is a device
+    try {
+        const std::string listIName{"[\"" + getInternalName() + "\"]"}; // json compliant (string list)
+        auto payload = sendActivationReq(COMMAND_DEACTIVATE_ASSET_INAME, listIName);
+        log_debug ("Asset deactivate %s/%s", getInternalName().c_str(), payload[0].c_str());
+
+        setAssetStatus(fty::AssetStatus::Nonactive);
+        m_storage.update(*this);
+    }
+    catch (const std::exception& e) {
+        log_error ("Asset %s deactivation failed (e: %s)", getInternalName().c_str(), e.what());
     }
 }
 
@@ -577,6 +584,7 @@ static std::vector<fty::Asset> buildParentsList(const std::string iname)
 
         // secure, avoid infinite loop
         if (parents.size() > 32) {
+            log_warning("buildParentsList: secure break");
             break;
         }
     }

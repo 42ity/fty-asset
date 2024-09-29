@@ -176,9 +176,8 @@ AssetExpected<db::AssetElement> AssetManager::deleteAsset(const db::AssetElement
 
     // make the device inactive first
     if (asset.status == "active" && sendNotify) {
-        std::string asset_json = getJsonAsset(asset.id);
-        if (auto ret = activation::deactivate(asset_json); !ret) {
-            logError("Error during asset deactivation - {}", ret.error());
+        if (auto ret = activation::deactivate(asset.name); !ret) {
+            logError("Error during asset deactivation for '{}' - {}", asset.name, ret.error());
             return unexpected(ret.error());
         }
     }
@@ -207,10 +206,8 @@ AssetExpected<db::AssetElement> AssetManager::deleteAsset(const db::AssetElement
 
     // in case of error we need to try to activate the asset again.
     if (!ret && asset.status == "active" && sendNotify) {
-        std::string asset_json = getJsonAsset(asset.id);
-
-        if (auto res = activation::activate(asset_json); !res) {
-            logError("Error during asset activation - {}", res.error());
+        if (auto res = activation::activate(asset.name); !res) {
+            logError("Error during asset activation for '{}' - {}", asset.name, res.error());
         }
     }
 

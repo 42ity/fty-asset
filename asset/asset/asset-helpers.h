@@ -53,9 +53,9 @@ namespace activation {
     AssetExpected<bool> isActivable(const FullAsset& asset);
     AssetExpected<void> activate(const FullAsset& asset);
     AssetExpected<void> deactivate(const FullAsset& asset);
-    AssetExpected<bool> isActivable(const std::string& assetJson);
-    AssetExpected<void> activate(const std::string& assetJson);
-    AssetExpected<void> deactivate(const std::string& assetJson);
+    AssetExpected<bool> isActivable(const std::string& assetIName);
+    AssetExpected<void> activate(const std::string& assetIName);
+    AssetExpected<void> deactivate(const std::string& assetIName);
 } // namespace activation
 
 AssetExpected<std::string> normName(const std::string& name, uint32_t maxLen, uint32_t assetId = 0);
