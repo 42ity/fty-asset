@@ -31,7 +31,7 @@
 namespace fty {
 namespace assetutils {
 
-    // create message (data is a single string)
+    // create message (user data is a single string)
     messagebus::Message createMessage(
         const std::string& subject,
         const std::string& correlationID,
@@ -40,39 +40,32 @@ namespace assetutils {
         const std::string& status,
         const std::string& data)
     {
-        messagebus::UserData userData;
-        userData.push_back(data);
-
-        return createMessage(subject, correlationID, from, to, status, userData);
+        return createMessage(subject, correlationID, from, to, status, messagebus::UserData{{data}});
     }
 
-    // create message (data is messagebus::UserData)
+    // create message
     messagebus::Message createMessage(
         const std::string& subject,
         const std::string& correlationID,
         const std::string& from,
         const std::string& to,
         const std::string& status,
-        const messagebus::UserData& data)
+        const messagebus::UserData& userdata)
     {
         messagebus::MetaData metadata;
 
-        if (!subject.empty()) {
-            metadata.emplace(messagebus::Message::SUBJECT, subject);
-        }
-        if (!correlationID.empty()) {
-            metadata.emplace(messagebus::Message::CORRELATION_ID, correlationID);
-        }
-        if (!from.empty()) {
-            metadata.emplace(messagebus::Message::FROM, from);
-        }
-        if (!to.empty()) {
-            metadata.emplace(messagebus::Message::TO, to);
-        }
-        if (!status.empty()) {
-            metadata.emplace(messagebus::Message::STATUS, status);
-        }
+        auto metaAdd = [&metadata](const std::string& key, const std::string& value) {
+            if (!value.empty()) {
+                metadata.emplace(key, value);
+            }
+        };
 
-        return messagebus::Message{metadata, data};
+        metaAdd(messagebus::Message::SUBJECT, subject);
+        metaAdd(messagebus::Message::CORRELATION_ID, correlationID);
+        metaAdd(messagebus::Message::FROM, from);
+        metaAdd(messagebus::Message::TO, to);
+        metaAdd(messagebus::Message::STATUS, status);
+
+        return messagebus::Message{metadata, userdata};
     }
 }} // namespace fty::assetutils

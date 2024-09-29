@@ -43,6 +43,6 @@ namespace assetutils {
         const std::string& from,
         const std::string& to,
         const std::string& status,
-        const messagebus::UserData& data);
+        const messagebus::UserData& userdata);
 
 }} // namespace fty::assetutils
