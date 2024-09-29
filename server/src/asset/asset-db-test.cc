@@ -192,7 +192,7 @@ void DBTest::saveExtMap(Asset& /*asset*/)
     std::cout << "DBTest::saveExtMap" << std::endl;
 }
 
-std::vector<std::string> DBTest::listAssets(std::map<std::string, std::vector<std::string>> filters)
+std::vector<std::string> DBTest::listAssets(const std::map<std::string, std::vector<std::string>>& filters)
 {
     std::cout << "DBTest::listAssets" << std::endl;
 

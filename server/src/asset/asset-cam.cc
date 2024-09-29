@@ -21,9 +21,9 @@
 
 #include "asset-cam.h"
 
+#include <fty_security_wallet.h>
 #include <fty_asset_dto.h>
 #include <fty_log.h>
-#include <fty_security_wallet.h>
 
 std::list<CredentialMapping> getCredentialMappings(const ExtMap& extMap)
 {
@@ -63,7 +63,7 @@ std::list<CredentialMapping> getCredentialMappings(const ExtMap& extMap)
 void createMappings(const std::string& assetInternalName, const std::list<CredentialMapping>& credentialList)
 {
     cam::Accessor camAccessor(CAM_CLIENT_ID, CAM_TIMEOUT_MS, MALAMUTE_ENDPOINT);
-    for(const auto& c :credentialList) {
+    for (const auto& c :credentialList) {
         log_debug("Create new mapping to credential with ID %s", c.credentialId.c_str());
         camAccessor.createMapping(assetInternalName, c.serviceId, c.protocol, c.port, c.credentialId, cam::Status::UNKNOWN /*, empty map */);
     }
@@ -75,9 +75,9 @@ void deleteMappings(const std::string& assetInternalName)
         log_debug("Deleting monitoring mappings for asset %s", assetInternalName.c_str());
         // remove CAM mappings
         cam::Accessor camAccessor(CAM_CLIENT_ID, CAM_TIMEOUT_MS, MALAMUTE_ENDPOINT);
-        //delete only my mapping
+        // delete only my mapping
         auto mappings = camAccessor.getMappings(assetInternalName, CAM_SERVICE_ID);
-        for(const auto& m : mappings) {
+        for (const auto& m : mappings) {
             log_debug("Deleting mapping %s : %s", m.m_serviceId.c_str(), m.m_protocol.c_str());
             camAccessor.removeMapping(m.m_assetId, m.m_serviceId, m.m_protocol);
         }
@@ -93,9 +93,9 @@ void deleteAllMappings(const std::string& assetInternalName)
         log_debug("Deleting all mappings for asset %s", assetInternalName.c_str());
         // remove CAM mappings
         cam::Accessor camAccessor(CAM_CLIENT_ID, CAM_TIMEOUT_MS, MALAMUTE_ENDPOINT);
-        //delete only my mapping
+        // delete only my mapping
         auto mappings = camAccessor.getAssetMappings(assetInternalName);
-        for(const auto& m : mappings) {
+        for (const auto& m : mappings) {
             log_debug("Deleting mapping %s : %s (%s)", m.m_serviceId.c_str(), m.m_protocol.c_str(), m.m_serviceId.c_str());
             camAccessor.removeMapping(m.m_assetId, m.m_serviceId, m.m_protocol);
         }

@@ -73,7 +73,7 @@ public:
     std::string inameById(uint32_t id);
     std::string inameByUuid(const std::string& uuid);
 
-    std::vector<std::string> listAssets(std::map<std::string, std::vector<std::string>> filters);
+    std::vector<std::string> listAssets(const std::map<std::string, std::vector<std::string>>& filters);
     std::vector<std::string> listAllAssets();
 
 private:

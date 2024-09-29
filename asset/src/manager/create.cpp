@@ -80,10 +80,10 @@ AssetExpected<uint32_t> AssetManager::importAsset(
         cm.setCreateUser(user);
         cm.setCreateMode(CREATE_MODE_ONE_ASSET);
     } catch (const std::invalid_argument& e) {
-        logError(e.what());
+        logError("{}", e.what());
         return unexpected(msg.format(itemName, e.what()));
     } catch (const std::exception& e) {
-        logError(e.what());
+        logError("{}", e.what());
         return unexpected(msg.format(itemName, e.what()));
     }
 
@@ -119,20 +119,19 @@ AssetExpected<uint32_t> AssetManager::importAsset(
 
     if (sendNotify) {
         try {
-            FullAsset asset(si);
-            if (auto ret = activation::isActivable(asset)) {
+            if (auto ret = activation::isActivable(itemName)) {
                 if (!*ret) {
                     return unexpected(msg.format(itemName, "Asset cannot be activated"_tr));
                 }
             } else {
-                logError(ret.error());
+                logError("{}", ret.error());
                 return unexpected(msg.format(itemName, ret.error()));
             }
         } catch (const std::invalid_argument& e) {
-            logError(e.what());
+            logError("{}", e.what());
             return unexpected(msg.format(itemName, e.what()));
         } catch (const std::exception& e) {
-            logError(e.what());
+            logError("{}", e.what());
             return unexpected(msg.format(itemName, e.what()));
         }
     }
@@ -156,7 +155,7 @@ AssetExpected<uint32_t> AssetManager::importAsset(
                 // be unique at the every moment
                 std::string agent_name = generateMlmClientId("web.asset_post");
                 if (auto sent = sendConfigure(*(imported.at(1)), import.operation(), agent_name); !sent) {
-                    logError(sent.error());
+                    logError("{}", sent.error());
                     return unexpected(
                         "Error during configuration sending of asset change notification. Consult system log."_tr);
                 }
@@ -165,7 +164,7 @@ AssetExpected<uint32_t> AssetManager::importAsset(
                 // process results
                 auto ret = db::idToNameExtName(imported.at(1)->id);
                 if (!ret) {
-                    logError(ret.error());
+                    logError("{}", ret.error());
                     return unexpected(msg.format(itemName, "Database failure"_tr));
                 }
                 try {

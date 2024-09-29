@@ -69,7 +69,7 @@ public:
     std::string inameById(uint32_t id) override;
     std::string inameByUuid(const std::string& uuid) override;
 
-    std::vector<std::string> listAssets(std::map<std::string, std::vector<std::string>> filters) override;
+    std::vector<std::string> listAssets(const std::map<std::string, std::vector<std::string>>& filters) override;
     std::vector<std::string> listAllAssets() override;
 
 private:

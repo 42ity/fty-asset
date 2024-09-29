@@ -1363,7 +1363,7 @@ static void addFilter(std::stringstream& qs, const std::string& filter, const st
     qs << " ) ";
 }
 
-std::vector<std::string> DB::listAssets(std::map<std::string, std::vector<std::string>> filters)
+std::vector<std::string> DB::listAssets(const std::map<std::string, std::vector<std::string>>& filters)
 {
     std::stringstream qs;
 
