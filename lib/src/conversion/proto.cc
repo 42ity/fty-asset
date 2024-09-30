@@ -97,7 +97,7 @@ namespace conversion {
         }
         else {
             std::string parentId(fty_proto_aux_string(proto, "parent", ""));
-            if(parentId != "0") {
+            if (parentId != "0") {
                 try {
                     auto parentIname = DBAssets::id_to_name_ext_name(fty::convert<uint32_t>(parentId)).first;
                     if (parentIname.empty()) {
@@ -125,7 +125,7 @@ namespace conversion {
             asset.setExtEntry("name", asset.getExtEntry("name"), false);
             asset.setExtEntry("ip.1", asset.getExtEntry("ip.1"), false);
             // all endpoint attribs are RW
-            for(const auto& att : asset.getExt()) {
+            for (const auto& att : asset.getExt()) {
                 //An endpoint is always "endpoint.<params>"
                 if(att.first.find("endpoint.") == 0) {
                     asset.setExtEntry(att.first, att.second.getValue(), false);

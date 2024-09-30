@@ -524,7 +524,7 @@ Expected<void> itemsByContainers(Connection& conn, const std::vector<uint32_t>& 
                 )
             )";
 
-    // replace token by value in string
+    // replace token by value in S string
     std::function<void(std::string& s, const std::string&, const std::string&)> strReplace =
     [] (std::string& s, const std::string& token, const std::string& value)
     {

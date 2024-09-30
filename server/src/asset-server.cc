@@ -945,6 +945,8 @@ void AssetServer::notifyStatusUpdate(const messagebus::Message& msg) const
     catch (const std::exception& e) {
         log_error("Unexpected error: '%s'", e.what());
     }
+
+    // no response sent !?
 }
 
 void AssetServer::notifyAsset(const messagebus::Message& msg) const
@@ -974,6 +976,8 @@ void AssetServer::notifyAsset(const messagebus::Message& msg) const
     catch (const std::exception& e) {
         log_error("Unexpected error: '%s'", e.what());
     }
+
+    // no response sent !?
 }
 
 void AssetServer::notifyAssetUpdate(const Asset& before, const Asset& after) const
