@@ -78,7 +78,7 @@ namespace conversion {
 
     void fromFtyProto(fty_proto_t* proto, fty::Asset& asset, bool extAttributeReadOnly, bool test)
     {
-        if (fty_proto_id(proto) != FTY_PROTO_ASSET) {
+        if (!proto || fty_proto_id(proto) != FTY_PROTO_ASSET) {
             log_error("proto is not a FTY_PROTO_ASSET");
             throw std::invalid_argument("Wrong message type");
         }
@@ -91,7 +91,7 @@ namespace conversion {
         asset.setAssetSubtype(fty_proto_aux_string(proto, "subtype", ""));
         asset.setPriority(static_cast<int>(fty_proto_aux_number(proto, "priority", 5)));
 
-        //parent
+        // parent
         if (test) {
             asset.setParentIname("test-parent");
         }
@@ -113,10 +113,12 @@ namespace conversion {
             }
         }
 
-        zhash_t* hash = fty_proto_ext(proto);
-
-        for (auto* item = zhash_first(hash); item; item = zhash_next(hash)) {
-            asset.setExtEntry(zhash_cursor(hash), static_cast<const char*>(item), extAttributeReadOnly);
+        // extended attributes
+        {
+            zhash_t* ext = fty_proto_ext(proto);
+            for (auto* item = zhash_first(ext); item; item = zhash_next(ext)) {
+                asset.setExtEntry(zhash_cursor(ext), static_cast<const char*>(item), extAttributeReadOnly);
+            }
         }
 
         // force RW for specific attributes (if default is read only)
@@ -124,14 +126,15 @@ namespace conversion {
             // PQSWPRG-7607 HOTFIX: force RW for friendly name ('name' ext. attribute) and also for ip.1
             asset.setExtEntry("name", asset.getExtEntry("name"), false);
             asset.setExtEntry("ip.1", asset.getExtEntry("ip.1"), false);
+
             // all endpoint attribs are RW
             for (const auto& att : asset.getExt()) {
-                //An endpoint is always "endpoint.<params>"
-                if(att.first.find("endpoint.") == 0) {
+                // An endpoint is always "endpoint.<params>"
+                if (att.first.find("endpoint.") == 0) {
                     asset.setExtEntry(att.first, att.second.getValue(), false);
                 }
             }
-        }//
+        }
     }
 
 }

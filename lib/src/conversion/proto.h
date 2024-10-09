@@ -22,14 +22,17 @@
 #pragma once
 
 #include <string>
+struct fty_proto_t;
 
 // fwd declaration
-struct fty_proto_t;
 namespace fty {
 class Asset;
 }
 
-namespace fty { namespace conversion {
+namespace fty {
+namespace conversion {
+
     fty_proto_t* toFtyProto(const fty::Asset& asset, const std::string& operation, bool test = false);
     void fromFtyProto(fty_proto_t* proto, fty::Asset& asset, bool extAttributeReadOnly, bool test = false);
+
 }} // namespace fty::conversion

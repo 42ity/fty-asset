@@ -47,5 +47,4 @@ namespace conversion {
             extMap};
     }
 
-}
-} // namespace fty::conversion
+}} // namespace fty::conversion

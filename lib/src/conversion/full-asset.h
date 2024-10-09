@@ -32,5 +32,4 @@ namespace conversion {
 
     fty::FullAsset toFullAsset(const Asset& asset);
 
-}
-} // namespace fty::conversion
+}} // namespace fty::conversion

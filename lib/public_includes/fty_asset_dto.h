@@ -89,8 +89,8 @@ public:
 
 private:
     std::string m_value;
-    bool        m_readOnly   = false;
-    bool        m_wasUpdated = false;
+    bool m_readOnly{false};
+    bool m_wasUpdated{false};
 };
 
 void operator<<=(cxxtools::SerializationInfo& si, const ExtMapElement& e);
@@ -132,7 +132,7 @@ private:
     std::string m_sourceId;
     std::string m_srcOut;
     std::string m_destIn;
-    int         m_linkType = 0;
+    int         m_linkType{0};
     ExtMap      m_ext;
     std::string m_secondaryID;
 };
@@ -260,7 +260,7 @@ protected:
     // direct parent iname
     std::string m_parentIname;
     // priority 1..5 (1 is most, 5 is least)
-    int m_priority = 5;
+    int m_priority{5};
     // asset tag
     std::string m_assetTag;
     // secondary ID
