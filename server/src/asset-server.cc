@@ -69,9 +69,6 @@ static V value(const std::map<K, V>& map, const typename identify<K>::type& key,
 
 // ===========================================================================================================
 
-
-// ===========================================================================================================
-
 void AssetServer::destroyMlmClient(mlm_client_t* client)
 {
     if (client) {
@@ -659,7 +656,7 @@ void AssetServer::deleteAsset(const messagebus::Message& msg) const
             messagebus::STATUS_OK,
             serializeDeleteStatus(deleted));
 
-        // send one notification for each asset deleted
+        // send one notification for each deleted asset
         for (const auto& status : deleted) {
             if (status.second == "OK") {
                 // full notification

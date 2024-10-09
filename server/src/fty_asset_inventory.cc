@@ -82,8 +82,7 @@ void fty_asset_inventory_server (zsock_t *pipe, void *args)
                 zmsg_destroy (&msg);
                 break;
             }
-            else
-            if (streq (cmd, "CONNECT")) {
+            else if (streq (cmd, "CONNECT")) {
                 char* endpoint = zmsg_popstr (msg);
                 int rv = mlm_client_connect (client, endpoint, 1000, actor_name);
                 if (rv == -1) {
@@ -92,8 +91,7 @@ void fty_asset_inventory_server (zsock_t *pipe, void *args)
                 zstr_free (&endpoint);
                 zsock_signal (pipe, 0);
             }
-            else
-            if (streq (cmd, "PRODUCER")) {
+            else if (streq (cmd, "PRODUCER")) {
                 char* stream = zmsg_popstr (msg);
                 int rv = mlm_client_set_producer (client, stream);
                 if (rv == -1) {
@@ -102,8 +100,7 @@ void fty_asset_inventory_server (zsock_t *pipe, void *args)
                 zstr_free (&stream);
                 zsock_signal (pipe, 0);
             }
-            else
-            if (streq (cmd, "CONSUMER")) {
+            else if (streq (cmd, "CONSUMER")) {
                 char* stream = zmsg_popstr (msg);
                 char* pattern = zmsg_popstr (msg);
                 test = streq (stream, "ASSETS-TEST");
@@ -136,7 +133,8 @@ void fty_asset_inventory_server (zsock_t *pipe, void *args)
                     if (rv != 0) {
                         log_error ("Could not insert inventory data into DB");
                     }
-                } else if (streq (operation, "delete")) {
+                }
+                else if (streq (operation, "delete")) {
                     //  Vacuum the cache
                     //  The keys are formatted as asset_name:keytag[01]
                     device_name.append(":");

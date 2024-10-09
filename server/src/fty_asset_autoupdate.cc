@@ -87,7 +87,9 @@ static fty_asset_autoupdate_t *fty_asset_autoupdate_new ()
 
 static void autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &assetName)
 {
-    if (!self) return;
+    if (!self) {
+        return;
+    }
 
     zhash_t *inventory = zhash_new ();
     zhash_t *aux = zhash_new ();
@@ -166,10 +168,13 @@ static void autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::
 
 static void autoupdate_update_rc_information (fty_asset_autoupdate_t *self)
 {
-    if (!self) return;
-
-    if (self->rcs.empty() )
+    if (!self) {
         return;
+    }
+
+    if (self->rcs.empty()) {
+        return;
+    }
     if (self->rcs.size() == 1) {
         // there is only one rc, must be me
         autoupdate_update_rc_self (self, self->rcs[0]);
@@ -210,7 +215,9 @@ static void autoupdate_update_rc_information (fty_asset_autoupdate_t *self)
 
 static void autoupdate_request_all_rcs (fty_asset_autoupdate_t *self)
 {
-    if (!self) return;
+    if (!self) {
+        return;
+    }
 
     if (self->verbose) {
         log_debug ("%s:\tRequest RC list", self->name);
@@ -222,6 +229,7 @@ static void autoupdate_request_all_rcs (fty_asset_autoupdate_t *self)
     zmsg_addstr (msg, "rack controller");
     int rv = mlm_client_sendto (self->client, self->asset_agent_name, "ASSETS_IN_CONTAINER", NULL, 5000, &msg);
     zmsg_destroy (&msg);
+
     if (rv != 0) {
         log_error ("%s:\tRequest RC list failed", self->name);
     }
@@ -234,7 +242,9 @@ static void autoupdate_update (fty_asset_autoupdate_t *self)
 
 static void autoupdate_handle_message (fty_asset_autoupdate_t *self, zmsg_t *message)
 {
-    if (!self || !message) return;
+    if (!self || !message) {
+        return;
+    }
 
     const char *sender = mlm_client_sender (self->client);
     const char *subj = mlm_client_subject (self->client);

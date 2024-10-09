@@ -201,25 +201,24 @@
 #include "topology_processor.h"
 #include "topology_power.h"
 
-#include <ctime>
-#include <string>
-#include <iostream>
-
 #include <fty_asset_dto.h>
 #include <fty_common.h>
 #include <fty_common_db_uptime.h>
 #include <fty_common_messagebus.h>
-#include <functional>
-#include <malamute.h>
-#include <mlm_client.h>
-#include <sys/time.h>
-#include <tntdb/connect.h>
 #include <fty_proto.h>
 #include <fty_common.h>
 #include <fty_common_db.h>
 #include <fty_common_mlm.h>
-#include <uuid/uuid.h>
 
+#include <malamute.h>
+#include <mlm_client.h>
+#include <tntdb/connect.h>
+#include <functional>
+#include <sys/time.h>
+#include <uuid/uuid.h>
+#include <ctime>
+#include <string>
+#include <iostream>
 #include <cassert>
 
 bool g_testMode = false;
@@ -229,18 +228,17 @@ bool g_testMode = false;
 // bmsg request asset-agent TOPOLOGY REQUEST <uuid> POWER <assetID>
 // =============================================================================
 
-static void s_process_TopologyPower(
-    const std::string& client_name, const char* asset_name, bool testMode, zmsg_t* reply)
+static void s_process_TopologyPower(const std::string& client_name, const char* asset_name, bool testMode, zmsg_t* reply)
 {
     assert (reply);
 
     log_debug("%s:\tTOPOLOGY POWER asset_name: %s", client_name.c_str(), asset_name);
 
-    // result of power topology - list of power device names
-    std::vector<std::string> powerDevices{};
-    std::string              assetName(asset_name ? asset_name : "");
+    std::string assetName(asset_name ? asset_name : "");
 
     // select power devices
+    // result of power topology - list of power device names
+    std::vector<std::string> powerDevices{};
     int r = select_devices_total_power(assetName, powerDevices, testMode);
 
     zmsg_addstr(reply, assetName.c_str());
@@ -252,13 +250,15 @@ static void s_process_TopologyPower(
         zmsg_addstr(reply, "ERROR");
         // zmsg_addstr (reply, "INTERNAL_ERROR");
         zmsg_addstr(reply, TRANSLATE_ME("Internal error").c_str());
-    } else if (r == -2) {
+    }
+    else if (r == -2) {
         log_error("%s:\tTOPOLOGY POWER: Asset was not found (%s)", client_name.c_str(), asset_name);
 
         zmsg_addstr(reply, "ERROR");
         // zmsg_addstr (reply, "ASSET_NOT_FOUND");
         zmsg_addstr(reply, TRANSLATE_ME("Asset not found").c_str());
-    } else {
+    }
+    else {
         log_debug("%s:\tPower topology for '%s':", client_name.c_str(), asset_name);
 
         zmsg_addstr(reply, "OK");
@@ -283,7 +283,7 @@ static void s_process_TopologyPowerTo(const std::string& client_name, const char
     std::string assetName(asset_name ? asset_name : "");
     std::string result;    // JSON payload
     std::string errReason; // JSON payload (TRANSLATE_ME)
-    int         r = topology_power_to(assetName, result, errReason);
+    int r = topology_power_to(assetName, result, errReason);
 
     zmsg_addstr(reply, assetName.c_str());
 
@@ -291,14 +291,17 @@ static void s_process_TopologyPowerTo(const std::string& client_name, const char
         log_error("%s:\tTOPOLOGY POWER_TO r: %d (asset_name: %s)", client_name.c_str(), r, asset_name);
 
         if (errReason.empty()) {
-            if (!asset_name)
+            if (!asset_name) {
                 errReason = TRANSLATE_ME("Missing argument");
-            else
+            }
+            else {
                 errReason = TRANSLATE_ME("Internal error");
+            }
         }
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, errReason.c_str());
-    } else {
+    }
+    else {
         zmsg_addstr(reply, "OK");
         zmsg_addstr(reply, result.c_str()); // JSON in one frame
     }
@@ -310,35 +313,37 @@ static void s_process_TopologyPowerTo(const std::string& client_name, const char
 // <select_cmd> in {"to", "from", "filter_dc", "filter_group"}
 // =============================================================================
 
-static void s_process_TopologyPowerchains(
-    const std::string& client_name, const char* select_cmd, const char* asset_name, zmsg_t* reply)
+static void s_process_TopologyPowerchains(const std::string& client_name, const char* select_cmd, const char* asset_name, zmsg_t* reply)
 {
     assert (reply);
 
-    log_debug("%s:\tTOPOLOGY POWERCHAINS select_cmd: %s, asset_name: %s", client_name.c_str(), select_cmd,
-        asset_name);
+    log_debug("%s:\tTOPOLOGY POWERCHAINS select_cmd: %s, asset_name: %s",
+        client_name.c_str(), select_cmd, asset_name);
 
     std::string command(select_cmd ? select_cmd : "");
     std::string assetName(asset_name ? asset_name : "");
     std::string result;    // JSON payload
     std::string errReason; // JSON payload (TRANSLATE_ME)
-    int         r = topology_power_process(command, assetName, result, errReason);
+    int r = topology_power_process(command, assetName, result, errReason);
 
     zmsg_addstr(reply, assetName.c_str());
 
     if (r != 0) {
-        log_error("%s:\tTOPOLOGY POWERCHAINS r: %d (cmd: %s, asset_name: %s)", client_name.c_str(), r,
-            select_cmd, asset_name);
+        log_error("%s:\tTOPOLOGY POWERCHAINS r: %d (cmd: %s, asset_name: %s)",
+            client_name.c_str(), r, select_cmd, asset_name);
 
         if (errReason.empty()) {
-            if (!asset_name)
+            if (!asset_name) {
                 errReason = TRANSLATE_ME("Missing argument");
-            else
+            }
+            else {
                 errReason = TRANSLATE_ME("Internal error");
+            }
         }
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, errReason.c_str());
-    } else {
+    }
+    else {
         zmsg_addstr(reply, "OK");
         zmsg_addstr(reply, result.c_str()); // JSON in one frame
     }
@@ -351,8 +356,7 @@ static void s_process_TopologyPowerchains(
 // see topology_location_process() for allowed options
 // =============================================================================
 
-static void s_process_TopologyLocation(const std::string& client_name, const char* select_cmd,
-    const char* asset_name, const char* cmd_options, zmsg_t* reply)
+static void s_process_TopologyLocation(const std::string& client_name, const char* select_cmd,const char* asset_name, const char* cmd_options, zmsg_t* reply)
 {
     assert (reply);
 
@@ -364,7 +368,7 @@ static void s_process_TopologyLocation(const std::string& client_name, const cha
     std::string options(cmd_options ? cmd_options : "");
     std::string result;    // JSON payload
     std::string errReason; // JSON payload (TRANSLATE_ME)
-    int         r = topology_location_process(command, assetName, options, result, errReason);
+    int r = topology_location_process(command, assetName, options, result, errReason);
 
     zmsg_addstr(reply, assetName.c_str());
 
@@ -373,14 +377,17 @@ static void s_process_TopologyLocation(const std::string& client_name, const cha
             r, select_cmd, asset_name, cmd_options);
 
         if (errReason.empty()) {
-            if (!asset_name)
+            if (!asset_name) {
                 errReason = TRANSLATE_ME("Missing argument");
-            else
+            }
+            else {
                 errReason = TRANSLATE_ME("Internal error");
+            }
         }
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, errReason.c_str());
-    } else {
+    }
+    else {
         zmsg_addstr(reply, "OK");
         zmsg_addstr(reply, result.c_str()); // JSON in one frame
     }
@@ -402,7 +409,7 @@ static void s_process_TopologyInputPowerchain(
     std::string assetName(asset_name ? asset_name : "");
     std::string result;    // JSON payload
     std::string errReason; // JSON payload (TRANSLATE_ME)
-    int         r = topology_input_powerchain_process(assetName, result, errReason);
+    int r = topology_input_powerchain_process(assetName, result, errReason);
 
     zmsg_addstr(reply, assetName.c_str());
 
@@ -411,14 +418,17 @@ static void s_process_TopologyInputPowerchain(
             "%s:\tTOPOLOGY INPUT_POWERCHAIN r: %d (asset_name: %s)", client_name.c_str(), r, asset_name);
 
         if (errReason.empty()) {
-            if (!asset_name)
+            if (!asset_name) {
                 errReason = TRANSLATE_ME("Missing argument");
-            else
+            }
+            else {
                 errReason = TRANSLATE_ME("Internal error");
+            }
         }
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, errReason.c_str());
-    } else {
+    }
+    else {
         zmsg_addstr(reply, "OK");
         zmsg_addstr(reply, result.c_str()); // JSON in one frame
     }
@@ -445,18 +455,21 @@ static void s_handle_subject_topology(const fty::AssetServer& server, zmsg_t* ms
 
     const std::string& client_name = server.getAgentName();
 
-    log_debug(
-        "%s:\tmessage_type: %s, uuid: %s, command: %s", client_name.c_str(), message_type, uuid, command);
+    log_debug("%s:\tmessage_type: %s, uuid: %s, command: %s", client_name.c_str(), message_type, uuid, command);
 
     if (!message_type) {
         log_error("%s:\tExpected message_type for subject=TOPOLOGY", client_name.c_str());
-    } else if (!uuid) {
+    }
+    else if (!uuid) {
         log_error("%s:\tExpected uuid for subject=TOPOLOGY", client_name.c_str());
-    } else if (!command) {
+    }
+    else if (!command) {
         log_error("%s:\tExpected command for subject=TOPOLOGY", client_name.c_str());
-    } else if (!reply) {
+    }
+    else if (!reply) {
         log_error("%s:\tTOPOLOGY %s: reply allocation failed", client_name.c_str(), command);
-    } else {
+    }
+    else {
         // message model always enforce reply
         zmsg_addstr(reply, uuid);
         zmsg_addstr(reply, "REPLY");
@@ -468,21 +481,25 @@ static void s_handle_subject_topology(const fty::AssetServer& server, zmsg_t* ms
             zmsg_addstr(reply, "ERROR"); // status
             // reason, JSON payload (TRANSLATE_ME)
             zmsg_addstr(reply, TRANSLATE_ME("REQUEST_MSGTYPE_EXPECTED (msg type: %s)", message_type).c_str());
-        } else if (streq(command, "POWER")) {
+        }
+        else if (streq(command, "POWER")) {
             char* asset_name = zmsg_popstr(msg);
             s_process_TopologyPower(server.getAgentName(), asset_name, server.getTestMode(), reply);
             zstr_free(&asset_name);
-        } else if (streq(command, "POWER_TO")) {
+        }
+        else if (streq(command, "POWER_TO")) {
             char* asset_name = zmsg_popstr(msg);
             s_process_TopologyPowerTo(server.getAgentName(), asset_name, reply);
             zstr_free(&asset_name);
-        } else if (streq(command, "POWERCHAINS")) {
+        }
+        else if (streq(command, "POWERCHAINS")) {
             char* select_cmd = zmsg_popstr(msg);
             char* asset_name = zmsg_popstr(msg);
             s_process_TopologyPowerchains(server.getAgentName(), select_cmd, asset_name, reply);
             zstr_free(&asset_name);
             zstr_free(&select_cmd);
-        } else if (streq(command, "LOCATION")) {
+        }
+        else if (streq(command, "LOCATION")) {
             char* select_cmd = zmsg_popstr(msg);
             char* asset_name = zmsg_popstr(msg);
             char* options    = zmsg_popstr(msg); // can be NULL
@@ -490,11 +507,13 @@ static void s_handle_subject_topology(const fty::AssetServer& server, zmsg_t* ms
             zstr_free(&options);
             zstr_free(&asset_name);
             zstr_free(&select_cmd);
-        } else if (streq(command, "INPUT_POWERCHAIN")) {
+        }
+        else if (streq(command, "INPUT_POWERCHAIN")) {
             char* asset_name = zmsg_popstr(msg);
             s_process_TopologyInputPowerchain(server.getAgentName(), asset_name, reply);
             zstr_free(&asset_name);
-        } else {
+        }
+        else {
             log_error("%s:\tUnexpected command for subject=TOPOLOGY (%s)", client_name.c_str(), command);
             zmsg_addstr(reply, "ERROR"); // status
             // reason, JSON payload (TRANSLATE_ME)
@@ -605,7 +624,8 @@ static void s_handle_subject_ename_from_iname(const fty::AssetServer& server, zm
         if (ename.empty()) {
             zmsg_addstr(reply, "ERROR");
             zmsg_addstr(reply, "ASSET_NOT_FOUND");
-        } else {
+        }
+        else {
             zmsg_addstr(reply, "OK");
             zmsg_addstr(reply, ename.c_str());
         }
@@ -686,10 +706,12 @@ static void s_handle_subject_assets(const fty::AssetServer& server, zmsg_t* msg)
     if (r == -1) {
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, "INTERNAL_ERROR");
-    } else if (r == -2) {
+    }
+    else if (r == -2) {
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, "ASSET_NOT_FOUND");
-    } else {
+    }
+    else {
         zmsg_addstr(reply, "OK");
         for (const auto& dev : assets) {
             zmsg_addstr(reply, dev.c_str());
@@ -850,14 +872,18 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
     }
 
     std::function<void(const tntdb::Row&)> cb3 = [aux](const tntdb::Row& row) {
-        static const std::vector<std::string> parentNames({"parent_name1", "parent_name2", "parent_name3",
-                "parent_name4", "parent_name5", "parent_name6",
-                "parent_name7", "parent_name8", "parent_name9", "parent_name10"});
+        static const std::vector<std::string> parentNames({
+            "parent_name1", "parent_name2", "parent_name3",
+            "parent_name4", "parent_name5", "parent_name6",
+            "parent_name7", "parent_name8", "parent_name9",
+            "parent_name10"})
+        ;
         for (const auto& name : parentNames) {
             std::string foo;
             row[name].get(foo);
-            if (foo.empty())
+            if (foo.empty()) {
                 continue;
+            }
             std::string hash_name = name;
             // 11 == strlen ("parent_name")
             hash_name.insert(11, 1, '.'); // parent_nameX -> parent_name.X
@@ -944,17 +970,18 @@ static void s_handle_subject_asset_detail(const fty::AssetServer& server, zmsg_t
 
     char* c_command = zmsg_popstr(zmessage);
     if (!streq(c_command, "GET")) {
-        char*   uuid  = zmsg_popstr(zmessage);
+        log_error("%s:\tASSET_DETAIL: bad command '%s', expected GET", server.getAgentName().c_str(), c_command);
+
+        char* uuid  = zmsg_popstr(zmessage);
         zmsg_t* reply = zmsg_new();
-        log_error(
-            "%s:\tASSET_DETAIL: bad command '%s', expected GET", server.getAgentName().c_str(), c_command);
-        if (uuid)
-            zmsg_addstr(reply, uuid);
+        if (uuid) { zmsg_addstr(reply, uuid); }
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, "BAD_COMMAND");
+
         mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
             mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), "ASSET_DETAIL", NULL,
             5000, &reply);
+
         zstr_free(&uuid);
         zstr_free(&c_command);
         zmsg_destroy(&reply);
@@ -963,7 +990,7 @@ static void s_handle_subject_asset_detail(const fty::AssetServer& server, zmsg_t
     zstr_free(&c_command);
 
     // select an asset and publish it through mailbox
-    char* uuid       = zmsg_popstr(zmessage);
+    char* uuid = zmsg_popstr(zmessage);
     char* asset_name = zmsg_popstr(zmessage);
 
     s_sendto_create_or_update_asset(server, asset_name, FTY_PROTO_ASSET_OP_UPDATE,
@@ -987,11 +1014,14 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
 
     char* read_only_s = zmsg_popstr(zmessage);
     bool read_only{false};
+
     if (read_only_s && streq(read_only_s, "READONLY")) {
         read_only = true;
-    } else if (read_only_s && streq(read_only_s, "READWRITE")) {
+    }
+    else if (read_only_s && streq(read_only_s, "READWRITE")) {
         read_only = false;
-    } else {
+    }
+    else {
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, "BAD_COMMAND");
         mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
@@ -1042,19 +1072,23 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
             if (!asset.isActivable()) {
                 if (streq(operation, "create-force")) {
                     asset.setAssetStatus(fty::AssetStatus::Nonactive);
-                } else {
+                }
+                else {
                     throw std::runtime_error(
                         "Licensing limitation hit - maximum amount of active power devices allowed in "
                         "license reached.");
                 }
             }
+
             // store asset to db
             asset.create();
+
             // activate asset
             if (requestActivation) {
                 try {
                     asset.activate();
-                } catch (std::exception& e) {
+                }
+                catch (const std::exception& e) {
                     // if activation fails, delete asset
                     fty::AssetImpl::deleteList({asset.getInternalName()}, false);
                     throw std::runtime_error(e.what());
@@ -1066,11 +1100,12 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
 
             // full notification
             server.sendNotification(FTY_ASSET_SUBJECT_CREATED, fty::Asset::toJson(asset));
-        } else if (streq(operation, "update")) {
+        }
+        else if (streq(operation, "update")) {
             fty::AssetImpl currentAsset(asset.getInternalName());
             // on update, add link info from current asset:
             //    as fty-proto does not carry link info, they would be deleted on update
-            for(const auto& l : currentAsset.getLinkedAssets()) {
+            for (const auto& l : currentAsset.getLinkedAssets()) {
                 asset.addLink(l.sourceId(), l.srcOut(), l.destIn(), l.linkType(), l.ext());
             }
 
@@ -1089,19 +1124,23 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
                     "Licensing limitation hit - maximum amount of active power devices allowed in "
                     "license reached.");
             }
+
             // store asset to db
             asset.update();
+
             // activate asset
             if (requestActivation) {
                 try {
                     asset.activate();
-                } catch (std::exception& e) {
+                }
+                catch (const std::exception& e) {
                     // if activation fails, set status to nonactive
                     asset.setAssetStatus(fty::AssetStatus::Nonactive);
                     asset.update();
                     throw std::runtime_error(e.what());
                 }
-            } else if(requestDeactivation) {
+            }
+            else if(requestDeactivation) {
                 asset.deactivate();
             }
 
@@ -1115,14 +1154,16 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
             si.addMember("before") <<= currentAsset;
             si.addMember("after") <<= asset;
             server.sendNotification(FTY_ASSET_SUBJECT_UPDATED, JSON::writeToString(si, false));
-        } else {
+        }
+        else {
             // unknown op
             log_error("%s:\tASSET_MANIPULATION: asset operation %s is not implemented", client_name.c_str(),
                 operation);
             zmsg_addstr(reply, "ERROR");
             zmsg_addstr(reply, "OPERATION_NOT_IMPLEMENTED");
         }
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("exception reached: %s", e.what());
         fty_proto_print(proto);
         zmsg_destroy(&reply); // reinit for error
@@ -1148,8 +1189,7 @@ static void s_update_topology(const fty::AssetServer& server, fty_proto_t* msg)
     assert (msg);
 
     if (!streq(fty_proto_operation(msg), FTY_PROTO_ASSET_OP_UPDATE)) {
-        log_info("%s:\tIgnore: '%s' on '%s'", server.getAgentName().c_str(), fty_proto_operation(msg),
-            fty_proto_name(msg));
+        log_info("%s:\tIgnore: '%s' on '%s'", server.getAgentName().c_str(), fty_proto_operation(msg), fty_proto_name(msg));
         return;
     }
     // select assets, that were affected by the change
@@ -1157,8 +1197,7 @@ static void s_update_topology(const fty::AssetServer& server, fty_proto_t* msg)
     std::vector<std::string> asset_names;
     int rv = select_assets_by_container(fty_proto_name(msg), empty, asset_names, server.getTestMode());
     if (rv != 0) {
-        log_warning("%s:\tCannot select assets in container '%s'", server.getAgentName().c_str(),
-            fty_proto_name(msg));
+        log_warning("%s:\tCannot select assets in container '%s'", server.getAgentName().c_str(), fty_proto_name(msg));
         return;
     }
 
@@ -1251,15 +1290,16 @@ void fty_asset_server(zsock_t* pipe, void* args)
         else if (which == pipe) {
             //log_debug("which = PIPE"); }
             zmsg_t* msg = zmsg_recv(pipe);
-            char*   cmd = zmsg_popstr(msg);
-            bool    term{false};
+            char* cmd = zmsg_popstr(msg);
+            bool term{false};
 
             log_debug("%s:\tActor command=%s", server.getAgentName().c_str(), cmd);
 
             if (streq(cmd, "$TERM")) {
                 log_info("%s:\tGot $TERM", server.getAgentName().c_str());
                 term = true;
-            } else if (streq(cmd, "CONNECTSTREAM")) {
+            }
+            else if (streq(cmd, "CONNECTSTREAM")) {
                 char* endpoint = zmsg_popstr(msg);
                 server.setStreamEndpoint(endpoint);
 
@@ -1278,7 +1318,8 @@ void fty_asset_server(zsock_t* pipe, void* args)
                 zstr_free(&endpoint);
                 zstr_free(&stream_name);
                 zsock_signal(pipe, 0);
-            } else if (streq(cmd, "PRODUCER")) {
+            }
+            else if (streq(cmd, "PRODUCER")) {
                 char* stream = zmsg_popstr(msg);
                 server.setTestMode(streq(stream, "ASSETS-TEST"));
                 int rv = mlm_client_set_producer(const_cast<mlm_client_t*>(server.getStreamClient()), stream);
@@ -1288,7 +1329,8 @@ void fty_asset_server(zsock_t* pipe, void* args)
                 }
                 zstr_free(&stream);
                 zsock_signal(pipe, 0);
-            } else if (streq(cmd, "CONSUMER")) {
+            }
+            else if (streq(cmd, "CONSUMER")) {
                 char* stream  = zmsg_popstr(msg);
                 char* pattern = zmsg_popstr(msg);
                 int rv = mlm_client_set_consumer(
@@ -1300,7 +1342,8 @@ void fty_asset_server(zsock_t* pipe, void* args)
                 zstr_free(&pattern);
                 zstr_free(&stream);
                 zsock_signal(pipe, 0);
-            } else if (streq(cmd, "CONNECTMAILBOX")) {
+            }
+            else if (streq(cmd, "CONNECTMAILBOX")) {
                 char* endpoint = zmsg_popstr(msg);
                 server.setMailboxEndpoint(endpoint);
                 server.setSrrEndpoint(endpoint);
@@ -1320,10 +1363,12 @@ void fty_asset_server(zsock_t* pipe, void* args)
 
                 zstr_free(&endpoint);
                 zsock_signal(pipe, 0);
-            } else if (streq(cmd, "REPEAT_ALL")) {
+            }
+            else if (streq(cmd, "REPEAT_ALL")) {
                 s_repeat_all(server);
                 log_debug("%s:\tREPEAT_ALL end", server.getAgentName().c_str());
-            } else {
+            }
+            else {
                 log_info("%s:\tUnhandled command %s", server.getAgentName().c_str(), cmd);
             }
             zstr_free(&cmd);
@@ -1334,8 +1379,7 @@ void fty_asset_server(zsock_t* pipe, void* args)
         }
         // This agent is a reactive agent, it reacts only on messages
         // and doesn't do anything if there are no messages
-        else if (which == mlm_client_msgpipe(const_cast<mlm_client_t*>(server.getMailboxClient())))
-        {
+        else if (which == mlm_client_msgpipe(const_cast<mlm_client_t*>(server.getMailboxClient()))) {
             zmsg_t* zmessage = mlm_client_recv(const_cast<mlm_client_t*>(server.getMailboxClient()));
             const char* sender = mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient()));
             const char* subject = mlm_client_subject(const_cast<mlm_client_t*>(server.getMailboxClient()));
@@ -1344,20 +1388,26 @@ void fty_asset_server(zsock_t* pipe, void* args)
 
             if (!zmessage) {
                 //nop
-            } else if (streq(subject,"TOPOLOGY")) {
+            }
+            else if (streq(subject,"TOPOLOGY")) {
                 s_handle_subject_topology(server, zmessage);
-            } else if (streq(subject,"ASSETS_IN_CONTAINER")) {
+            }
+            else if (streq(subject,"ASSETS_IN_CONTAINER")) {
                 s_handle_subject_assets_in_container(server, zmessage);
-            } else if (streq(subject,"ASSETS")) {
+            }
+            else if (streq(subject,"ASSETS")) {
                 s_handle_subject_assets(server, zmessage);
-            } else if (streq(subject,"ENAME_FROM_INAME")) {
+            }
+            else if (streq(subject,"ENAME_FROM_INAME")) {
                 s_handle_subject_ename_from_iname(server, zmessage);
-            } else if (streq(subject,"REPUBLISH")) {
+            }
+            else if (streq(subject,"REPUBLISH")) {
 
                 char* asset = zmsg_popstr(zmessage);
                 if (!asset || streq(asset, "$all")) {
                     s_repeat_all(server);
-                } else {
+                }
+                else {
                     std::set<std::string> assets_to_publish;
                     while (asset) {
                         assets_to_publish.insert(asset);
@@ -1369,17 +1419,19 @@ void fty_asset_server(zsock_t* pipe, void* args)
                 zstr_free(&asset);
                 // do not reply anything (requesters don't expect an answer)
 
-            } else if (streq(subject,"ASSET_MANIPULATION")) {
+            }
+            else if (streq(subject,"ASSET_MANIPULATION")) {
                 s_handle_subject_asset_manipulation(server, &zmessage);
-            } else if (streq(subject,"ASSET_DETAIL")) {
+            }
+            else if (streq(subject,"ASSET_DETAIL")) {
                 s_handle_subject_asset_detail(server, &zmessage);
-            } else {
+            }
+            else {
                 log_info("%s:\tUnexpected subject '%s'", server.getAgentName().c_str(), subject);
             }
             zmsg_destroy(&zmessage);
         }
-        else if (which == mlm_client_msgpipe(const_cast<mlm_client_t*>(server.getStreamClient())))
-        {
+        else if (which == mlm_client_msgpipe(const_cast<mlm_client_t*>(server.getStreamClient()))) {
             zmsg_t* zmessage = mlm_client_recv(const_cast<mlm_client_t*>(server.getStreamClient()));
 
             if (zmessage && fty_proto_is(zmessage)) {
@@ -1388,7 +1440,8 @@ void fty_asset_server(zsock_t* pipe, void* args)
                 if (fty_proto_id(bmsg) == FTY_PROTO_ASSET) {
                     log_debug("%s:\tSTREAM DELIVER (PROTO_ASSET)", server.getAgentName().c_str());
                     s_update_topology(server, bmsg);
-                } else if (fty_proto_id(bmsg) == FTY_PROTO_METRIC) {
+                }
+                else if (fty_proto_id(bmsg) == FTY_PROTO_METRIC) {
                     log_debug("%s:\tSTREAM DELIVER (PROTO_METRIC)", server.getAgentName().c_str());
                     handle_incoming_limitations(server, bmsg);
                 }

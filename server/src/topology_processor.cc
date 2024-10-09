@@ -369,7 +369,7 @@ static int si_member_value (const cxxtools::SerializationInfo & si, const std::s
 {
     value = "";
     const cxxtools::SerializationInfo *m = si.findMember(member);
-    if (!m || m->isNull()) return -1;
+    if (!m || m->isNull()) { return -1; }
     m->getValue(value);
     return 0; // ok
 }
