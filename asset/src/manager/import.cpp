@@ -40,8 +40,9 @@ static std::string sanitizeCol(const std::string& col)
 static std::string sanitize(const std::string& csvStr)
 {
     std::vector<std::string> out;
+
     auto rows = split(csvStr, std::regex("\r\n"), SplitOption::KeepEmpty);
-    for(const auto& row: rows) {
+    for (const auto& row: rows) {
         char inQuota = 0;
         std::string col;
         std::vector<std::string> outRow;
@@ -50,7 +51,8 @@ static std::string sanitize(const std::string& csvStr)
             if ((it == '\'' || it == '"') && ((i > 0 && row[i-1] != '\\') || i == 0)) {
                 if (!inQuota) {
                     inQuota = it;
-                } else if (inQuota == it) {
+                }
+                else if (inQuota == it) {
                     inQuota = 0;
                 }
             }
@@ -107,7 +109,7 @@ AssetExpected<AssetManager::ImportList> AssetManager::importCsv(
     if (auto ret = import.process(sendNotify)) {
         AssetManager::ImportList res;
         const auto& list = import.items();
-        for(const auto&[row, el]: list) {
+        for (const auto&[row, el]: list) {
             if (el) {
                 res.emplace(row, el->id);
             } else {
@@ -115,7 +117,8 @@ AssetExpected<AssetManager::ImportList> AssetManager::importCsv(
             }
         }
         return std::move(res);
-    } else {
+    }
+    else {
         return unexpected(ret.error());
     }
 }

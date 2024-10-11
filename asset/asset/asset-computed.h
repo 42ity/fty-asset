@@ -23,7 +23,9 @@
  * \author Tomas Halman <TomasHalman@Eaton.com>
  * \brief Helper functions for computed values for assets
  */
+
 #pragma once
+
 #include <map>
 #include <string>
 

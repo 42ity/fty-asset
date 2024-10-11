@@ -1,3 +1,19 @@
+/*  ========================================================================
+    Copyright (C) 2020 Eaton
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ========================================================================
+*/
+
 #include "asset/asset-db.h"
 #include "asset/asset-dto.h"
 #include "asset/error.h"
@@ -45,40 +61,18 @@ static std::string DtoBaseAssetSql()
 
 static uint32_t stringToStatus(const std::string& status)
 {
-    if (status == "active") {
-        return 1;
-    } else if (status == "nonactive") {
-        return 2;
-    }
-
+    if (status == "active") { return 1; }
+    if (status == "nonactive") { return 2; }
     return 0;
 }
 
 static void fetchDto(const fty::db::Row& row, Dto& asset)
 {
-    uint32_t assetId;
-
-    assetId        = row.get<uint32_t>("id");
-    asset.name     = row.get("internalName");
-    asset.type     = row.get("type");
-    asset.sub_type = row.get("subtype");
-    asset.parent   = row.get("parent");
-    asset.status   = stringToStatus(row.get("status"));
-    asset.priority = row.get<uint32_t>("priority");
+    uint32_t assetId{row.get<uint32_t>("id")};
 
     auto attributes = selectExtAttributes(assetId);
     if (!attributes) {
         throw std::runtime_error(fmt::format("Failed to get external attributes for asset {}", assetId));
-    }
-
-    for (const auto& [key, attrib] : *attributes) {
-
-        ExtEntry ext;
-        ext.value    = attrib.value;
-        ext.readOnly = attrib.readOnly;
-        ext.update   = false;
-
-        asset.ext.append(key, ext);
     }
 
     auto links = selectAssetLinks(assetId);
@@ -86,8 +80,25 @@ static void fetchDto(const fty::db::Row& row, Dto& asset)
         throw std::runtime_error(fmt::format("Failed to get links for asset {}", assetId));
     }
 
-    for (auto l : *links) {
-        asset.linked.append(l);
+    // set asset
+
+    asset.name     = row.get("internalName");
+    asset.type     = row.get("type");
+    asset.sub_type = row.get("subtype");
+    asset.parent   = row.get("parent");
+    asset.status   = stringToStatus(row.get("status"));
+    asset.priority = row.get<uint32_t>("priority");
+
+    for (const auto& [key, attrib] : *attributes) {
+        ExtEntry ext;
+        ext.value    = attrib.value;
+        ext.readOnly = attrib.readOnly;
+        ext.update   = false;
+        asset.ext.append(key, ext);
+    }
+
+    for (auto link : *links) {
+        asset.linked.append(link);
     }
 }
 
@@ -156,9 +167,11 @@ Expected<uint32_t> nameToAssetId(const std::string& assetName)
         auto res = db.selectRow(sql, "assetName"_p = assetName);
 
         return res.get<uint32_t>("id_asset_element");
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetName));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetName));
     }
 }
@@ -185,9 +198,11 @@ Expected<std::pair<std::string, std::string>> idToNameExtName(uint32_t assetId)
         auto res = db.selectRow(sql, "assetId"_p = assetId);
 
         return std::make_pair(res.get<std::string>("name"), res.get<std::string>("value"));
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetId));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetId));
     }
 }
@@ -208,9 +223,11 @@ Expected<std::string> nameToExtName(std::string assetName)
         fty::db::Connection conn;
         auto                res = conn.selectRow(sql, "asset_name"_p = assetName);
         return res.get("value");
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetName));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetName));
     }
 }
@@ -236,9 +253,11 @@ Expected<std::string> extNameToAssetName(const std::string& assetExtName)
         auto res = db.selectRow(sql, "extName"_p = assetExtName);
 
         return res.get("name");
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetExtName));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetExtName));
     }
 }
@@ -259,15 +278,18 @@ Expected<uint32_t> extNameToAssetId(const std::string& assetExtName)
         WHERE
             keytag = 'name' and value = :extName
     )";
+
     try {
         fty::db::Connection db;
 
         auto res = db.selectRow(sql, "extName"_p = assetExtName);
 
         return res.get<uint32_t>("id_asset_element");
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(assetExtName));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetExtName));
     }
 }
@@ -302,13 +324,15 @@ Expected<AssetElement> selectAssetElementByName(const std::string& elementName, 
 
         if (extNameOnly) {
             row = db.selectRow(extNameSql, "name"_p = elementName);
-        } else {
+        }
+        else {
             try {
                 if (!persist::is_ok_name(elementName.c_str())) {
                     throw std::runtime_error("name is not valid"_tr);
                 }
                 row = db.selectRow(nameSql, "name"_p = elementName);
-            } catch (const std::exception&) {
+            }
+            catch (const std::exception&) {
                 row = db.selectRow(extNameSql, "name"_p = elementName);
             }
         }
@@ -323,9 +347,11 @@ Expected<AssetElement> selectAssetElementByName(const std::string& elementName, 
         row.get("id_subtype", el.subtypeId);
 
         return std::move(el);
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(elementName));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementName));
     }
 }
@@ -338,7 +364,8 @@ Expected<WebAssetElement> selectAssetElementWebById(uint32_t elementId)
 
     if (auto ret = selectAssetElementWebById(elementId, el)) {
         return std::move(el);
-    } else {
+    }
+    else {
         return unexpected(ret.error());
     }
 }
@@ -360,9 +387,11 @@ Expected<void> selectAssetElementById(uint32_t elementId, Dto& asset)
         fetchDto(row, asset);
 
         return {};
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(elementId));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -384,9 +413,11 @@ Expected<void> selectAssetElementWebById(uint32_t elementId, WebAssetElement& as
         fetchWebAsset(row, asset);
 
         return {};
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(elementId));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -408,9 +439,11 @@ Expected<WebAssetElement> selectAssetElementWebByName(const std::string& name)
         WebAssetElement asset;
         fetchWebAsset(row, asset);
         return asset;
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(name));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), name));
     }
 }
@@ -419,8 +452,6 @@ Expected<WebAssetElement> selectAssetElementWebByName(const std::string& name)
 
 Expected<std::vector<WebAssetElement>> selectAssetElementsByType(uint16_t type_id, const std::string& status)
 {
-    std::vector<WebAssetElement> items;
-
     static const std::string sql = webAssetSql() + R"(
         WHERE
             v.id_type = :typeid AND v.status = :vstatus
@@ -431,13 +462,15 @@ Expected<std::vector<WebAssetElement>> selectAssetElementsByType(uint16_t type_i
 
         auto result = db.select(sql, "typeid"_p = type_id, "vstatus"_p = status);
 
+        std::vector<WebAssetElement> items;
         for (const auto& row : result) {
             WebAssetElement asset;
             fetchWebAsset(row, asset);
             items.push_back(asset);
         }
         return items;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), type_id));
     }
 }
@@ -470,7 +503,7 @@ Expected<Attributes> selectExtAttributes(uint32_t elementId)
 
             row.get("value", val.value);
 
-            int ro;
+            int ro{0};
             row.get("read_only", ro); // 'read_only' is tinyint
             val.readOnly = (ro != 0);
 
@@ -488,7 +521,8 @@ Expected<Attributes> selectExtAttributes(uint32_t elementId)
         }
 
         return std::move(attrs);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -525,7 +559,7 @@ Expected<Attributes> selectExtAttributes(const std::map<std::string, std::string
 
             row.get("value", val.value);
 
-            int ro;
+            int ro{0};
             row.get("read_only", ro); // 'read_only' is tinyint
             val.readOnly = (ro != 0);
 
@@ -533,7 +567,8 @@ Expected<Attributes> selectExtAttributes(const std::map<std::string, std::string
         }
 
         return std::move(attrs);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what()));
     }
 }
@@ -565,7 +600,8 @@ Expected<std::map<uint32_t, std::string>> selectAssetElementGroups(uint32_t elem
             item.emplace(row.get<uint32_t>("id_asset_group"), row.get("name"));
         }
         return std::move(item);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -606,7 +642,8 @@ Expected<uint> updateAssetElement(
         // clang-format on
 
         return st.execute();
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -630,7 +667,8 @@ Expected<uint> deleteAssetExtAttributesWithRo(fty::db::Connection& conn, uint32_
             "ro"_p      = readOnly
         );
         // clang-format on
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -675,7 +713,8 @@ Expected<uint> insertIntoAssetExtAttributes(
         }
 
         return st.execute();
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -693,7 +732,8 @@ Expected<uint> deleteAssetElementFromAssetGroups(fty::db::Connection& conn, uint
 
     try {
         return conn.execute(sql, "elementId"_p = elementId);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -739,12 +779,14 @@ Expected<uint> insertElementIntoGroups(fty::db::Connection& conn, const std::set
 
         if (affectedRows == groups.size()) {
             return affectedRows;
-        } else {
+        }
+        else {
             auto msg = "not all links were inserted"_tr;
             logError(msg.toString());
             return unexpected(msg);
         }
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -753,49 +795,50 @@ Expected<uint> insertElementIntoGroups(fty::db::Connection& conn, const std::set
 
 static std::string createAssetName(fty::db::Connection& conn, uint32_t typeId, uint32_t subtypeId)
 {
-    std::string type    = persist::typeid_to_type(static_cast<uint16_t>(typeId));
-    std::string subtype = persist::subtypeid_to_subtype(static_cast<uint16_t>(subtypeId));
-
-    std::string assetName;
-    timeval     t;
-
-    bool        valid = false;
     std::string indexStr;
+    {
+        bool        valid = false;
+        unsigned    retry = 0;
+        timeval     t;
 
-    unsigned retry = 0;
+        while (!valid && (retry++ < MAX_CREATE_RETRY)) {
+            gettimeofday(&t, nullptr);
+            srand(static_cast<unsigned int>(t.tv_sec * t.tv_usec));
+            // generate 8 digit random integer
+            unsigned long index = static_cast<unsigned long>(rand()) % static_cast<unsigned long>(100000000);
 
-    while (!valid && (retry++ < MAX_CREATE_RETRY)) {
-        gettimeofday(&t, nullptr);
-        srand(static_cast<unsigned int>(t.tv_sec * t.tv_usec));
-        // generate 8 digit random integer
-        unsigned long index = static_cast<unsigned long>(rand()) % static_cast<unsigned long>(100000000);
+            indexStr = std::to_string(index);
+            // create 8 digit index with leading zeros
+            indexStr = std::string(8 - indexStr.length(), '0') + indexStr;
 
-        indexStr = std::to_string(index);
-        // create 8 digit index with leading zeros
-        indexStr = std::string(8 - indexStr.length(), '0') + indexStr;
+            static const std::string sql = R"(
+                SELECT COUNT(id_asset_element) as cnt
+                FROM t_bios_asset_element
+                WHERE name like :name
+            )";
 
-        static const std::string sql = R"(
-            SELECT COUNT(id_asset_element) as cnt
-            FROM t_bios_asset_element
-            WHERE name like :name
-        )";
+            logDebug("Checking ID {} validity", indexStr);
+            try {
+                auto res = conn.selectRow(sql, "name"_p = std::string("%").append(indexStr));
+                valid    = (res.get<unsigned>("cnt") == 0);
+            }
+            catch (const std::exception& e) {
+                throw std::runtime_error(e.what());
+            }
+        }
 
-        logDebug("Checking ID {} validity", indexStr);
-        try {
-            auto res = conn.selectRow(sql, "name"_p = std::string("%").append(indexStr));
-            valid    = (res.get<unsigned>("cnt") == 0);
-        } catch (const std::exception& e) {
-            throw std::runtime_error(e.what());
+        if (!valid) {
+            throw std::runtime_error("Multiple Asset ID collisions - impossible to create asset");
         }
     }
 
-    if (!valid) {
-        throw std::runtime_error("Multiple Asset ID collisions - impossible to create asset");
-    }
-
+    std::string assetName;
     if (typeId == persist::DEVICE) {
+        std::string subtype = persist::subtypeid_to_subtype(static_cast<uint16_t>(subtypeId));
         assetName = subtype + "-" + indexStr;
-    } else {
+    }
+    else {
+        std::string type = persist::typeid_to_type(static_cast<uint16_t>(typeId));
         assetName = type + "-" + indexStr;
     }
 
@@ -849,7 +892,8 @@ Expected<uint32_t> insertIntoAssetElement(fty::db::Connection& conn, const Asset
         }
 
         return rowid;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), element.name));
     }
 }
@@ -867,7 +911,8 @@ Expected<uint> deleteAssetLinksTo(fty::db::Connection& conn, uint32_t elementId)
 
     try {
         return conn.execute(sql, "dest"_p = elementId);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(e.what());
     }
 }
@@ -884,7 +929,6 @@ Expected<uint> insertIntoAssetLinks(fty::db::Connection& conn, const std::vector
     uint affectedRows = 0;
     for (auto& link : links) {
         auto ret = insertIntoAssetLink(conn, link);
-
         if (ret) {
             affectedRows++;
         }
@@ -892,7 +936,8 @@ Expected<uint> insertIntoAssetLinks(fty::db::Connection& conn, const std::vector
 
     if (affectedRows == links.size()) {
         return affectedRows;
-    } else {
+    }
+    else {
         logError("not all links were inserted");
         return unexpected("not all links were inserted");
     }
@@ -960,7 +1005,8 @@ Expected<int64_t> insertIntoAssetLink(fty::db::Connection& conn, const AssetLink
         // clang-format on
 
         return conn.lastInsertId();
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), link.src));
     }
 }
@@ -982,7 +1028,8 @@ Expected<uint16_t> insertIntoMonitorDevice(fty::db::Connection& conn, uint16_t d
     try {
         conn.execute(sql, "name"_p = deviceName, "deviceTypeId"_p = deviceTypeId);
         return uint16_t(conn.lastInsertId());
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), deviceTypeId));
     }
 }
@@ -1018,7 +1065,8 @@ Expected<int64_t> insertIntoMonitorAssetRelation(fty::db::Connection& conn, uint
         );
         // clang-format on
         return conn.lastInsertId();
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), monitorId));
     }
 }
@@ -1039,9 +1087,11 @@ Expected<uint16_t> selectMonitorDeviceTypeId(fty::db::Connection& conn, const st
     try {
         auto res = conn.selectRow(sql, "name"_p = deviceTypeName);
         return res.get<uint16_t>("id");
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(deviceTypeName));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), deviceTypeName));
     }
 }
@@ -1112,7 +1162,8 @@ Expected<void> selectAssetElementSuperParent(uint32_t id, SelectCallback&& cb)
             cb(row);
         }
         return {};
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), id));
     }
 }
@@ -1167,7 +1218,8 @@ Expected<void> selectAssetsByContainer(
     if (!without.empty()) {
         if (without == "location") {
             select += " AND v.id_parent1 is NULL ";
-        } else if (without == "powerchain") {
+        }
+        else if (without == "powerchain") {
             select += R"(
                 AND NOT EXISTS
                 (
@@ -1182,7 +1234,8 @@ Expected<void> selectAssetsByContainer(
                         v.id_asset_element=a.id_asset_device_dest
                 )
             )";
-        } else {
+        }
+        else {
             select += R"(
                 AND NOT EXISTS
                 (
@@ -1202,7 +1255,8 @@ Expected<void> selectAssetsByContainer(
             cb(row);
         }
         return {};
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -1225,8 +1279,6 @@ Expected<void> selectAssetsAllContainer(
     const std::string&           status,
     SelectCallback&&             cb)
 {
-    LOG_START;
-
     try {
         std::string select =
             " SELECT "
@@ -1257,7 +1309,8 @@ Expected<void> selectAssetsAllContainer(
         if (without != "") {
             if (without == "location") {
                 cases.emplace_back("t.id_parent is NULL");
-            } else if (without == "powerchain") {
+            }
+            else if (without == "powerchain") {
                 endSelect +=
                     " NOT EXISTS "
                     " (SELECT id_asset_device_dest "
@@ -1266,7 +1319,8 @@ Expected<void> selectAssetsAllContainer(
                     "  WHERE "
                     "     name=\"power chain\" "
                     "     AND t.id_asset_element=a.id_asset_device_dest)";
-            } else {
+            }
+            else {
                 endSelect +=
                     " NOT EXISTS "
                     " (SELECT a.id_asset_element "
@@ -1286,7 +1340,8 @@ Expected<void> selectAssetsAllContainer(
             cb(row);
         }
         return {};
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::InternalError).format(e.what()));
     }
 }
@@ -1326,7 +1381,8 @@ Expected<void> selectAssetsWithoutContainer(const std::vector<uint16_t>& types, 
         for (const auto& row : conn.select(select)) {
             cb(row);
         }
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::InternalError).format(e.what()));
     }
 
@@ -1346,7 +1402,8 @@ static Expected<std::map<std::string, int>> getDictionary(const std::string& stS
         }
 
         return std::move(mymap);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), stStr));
     }
 }
@@ -1413,7 +1470,8 @@ Expected<std::vector<DbAssetLink>> selectAssetDeviceLinksTo(uint32_t elementId, 
             ret.push_back(link);
         }
         return std::move(ret);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -1443,7 +1501,8 @@ Expected<std::vector<std::pair<uint32_t, std::string>>> selectShortElements(
         if (!subtypeId.empty()) {
             sql += "AND v.id_subtype in (:subtypeid)";
         }
-    } else {
+    }
+    else {
         sql = fmt::format(
             R"(
             SELECT
@@ -1476,11 +1535,11 @@ Expected<std::vector<std::pair<uint32_t, std::string>>> selectShortElements(
         }
 
         return std::move(item);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), typeId));
     }
 }
-
 
 // =====================================================================================================================
 
@@ -1503,7 +1562,8 @@ Expected<int> countKeytag(const std::string& keytag, const std::string& value)
             "value"_p  = value
         ).get<int>("count");
         // clang-format on
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), keytag));
     }
 }
@@ -1530,9 +1590,11 @@ Expected<int32_t> hasAssetKeytagValue(fty::db::Connection& conn, uint32_t elemen
         );
         // clang-format on
         return row.get<int32_t>("count");
-    } catch (const fty::db::NotFound& e) {
+    }
+    catch (const fty::db::NotFound& e) {
         return 0;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), keytag));
     }
 }
@@ -1554,9 +1616,11 @@ Expected<uint16_t> convertAssetToMonitor(uint32_t assetElementId)
         fty::db::Connection conn;
         auto                res = conn.selectRow(sql, "id"_p = assetElementId);
         return res.get<uint16_t>("id_discovered_device");
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return 0;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetElementId));
     }
 }
@@ -1574,7 +1638,8 @@ Expected<uint> deleteMonitorAssetRelationByA(fty::db::Connection& conn, uint32_t
 
     try {
         return conn.execute(sql, "id"_p = id);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), id));
     }
 }
@@ -1592,7 +1657,8 @@ Expected<uint> deleteAssetElement(fty::db::Connection& conn, uint32_t elementId)
 
     try {
         return conn.execute(sql, "element"_p = elementId);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -1610,7 +1676,8 @@ Expected<uint> deleteAssetGroupLinks(fty::db::Connection& conn, uint32_t assetGr
 
     try {
         return conn.execute(sql, "grp"_p = assetGroupId);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetGroupId));
     }
 }
@@ -1634,9 +1701,11 @@ Expected<std::vector<uint32_t>> selectAssetsByParent(uint32_t parentId)
             ids.emplace_back(it.get<uint32_t>("id"));
         }
         return std::move(ids);
-    } catch (const fty::db::NotFound&) {
+    }
+    catch (const fty::db::NotFound&) {
         return unexpected(error(Errors::ElementNotFound).format(parentId));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), parentId));
     }
 }
@@ -1653,6 +1722,7 @@ Expected<std::vector<uint32_t>> selectAssetDeviceLinksSrc(uint32_t elementId)
         WHERE
             id_asset_device_src = :src
     )";
+
     try {
         fty::db::Connection   conn;
         std::vector<uint32_t> ids;
@@ -1660,7 +1730,8 @@ Expected<std::vector<uint32_t>> selectAssetDeviceLinksSrc(uint32_t elementId)
             ids.emplace_back(it.get<uint32_t>("id_asset_device_dest"));
         }
         return std::move(ids);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -1692,7 +1763,8 @@ Expected<std::vector<LinkEntry>> selectAssetLinks(uint32_t elementId)
             links.emplace_back(l);
         }
         return std::move(links);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -1713,7 +1785,8 @@ Expected<uint32_t> maxNumberOfPowerLinks()
         fty::db::Connection conn;
         auto                res = conn.selectRow(sql);
         return res.get<uint32_t>("maxCount");
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::InternalError).format(e.what()));
     }
 }
@@ -1734,7 +1807,8 @@ Expected<uint32_t> maxNumberOfAssetGroups()
         fty::db::Connection conn;
         auto                res = conn.selectRow(sql);
         return res.get<uint32_t>("maxCount");
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::InternalError).format(e.what()));
     }
 }
@@ -1760,7 +1834,8 @@ Expected<std::vector<std::string>> selectExtRwAttributesKeytags()
             ret.push_back(row.get("keytag"));
         }
         return std::move(ret);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::InternalError).format(e.what()));
     }
 }
@@ -1786,9 +1861,11 @@ Expected<std::vector<WebAssetElement>> selectAssetElementAll(const std::optional
         fty::db::Connection          db;
         std::vector<WebAssetElement> list;
         fty::db::Rows                result;
+
         if (dc) {
             result = db.select(sql, "containerid"_p = *dc);
-        } else {
+        }
+        else {
             result = db.select(sql);
         }
 
@@ -1798,7 +1875,8 @@ Expected<std::vector<WebAssetElement>> selectAssetElementAll(const std::optional
         }
 
         return std::move(list);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::InternalError).format(e.what()));
     }
 }
@@ -1824,7 +1902,8 @@ Expected<std::vector<std::string>> selectGroupNames(uint32_t id)
             result.push_back(row.get("name"));
         }
         return std::move(result);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), id));
     }
 }
@@ -1854,13 +1933,15 @@ Expected<WebAssetElement> findParentByType(uint32_t assetId, uint16_t parentType
                     return selectAssetElementWebById(idParent);
                 }
                 aid = idParent;
-            } else {
+            }
+            else {
                 break;
             }
         }
 
         return unexpected(error(Errors::ElementNotFound).format("parent with type " + persist::typeid_to_type(parentType)));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetId));
     }
 }

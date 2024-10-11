@@ -25,7 +25,7 @@ namespace fty::asset {
 // throw on error
 static std::vector<std::tuple<uint32_t, std::string, std::string, std::string>> getParents(uint32_t id)
 {
-    std::vector<std::tuple<uint32_t, std::string, std::string, std::string>> ret{};
+    std::vector<std::tuple<uint32_t, std::string, std::string, std::string>> ret;
 
     auto cb = [&ret](const fty::db::Row& row) {
         static const std::vector<std::tuple<std::string, std::string, std::string, std::string>> NAMES = {
@@ -143,7 +143,8 @@ AssetExpected<db::WebAssetElementExt> AssetManager::getItem(uint32_t id)
         if (el.typeId == persist::asset_type::DEVICE) {
             if (auto powers = db::selectAssetDeviceLinksTo(id, INPUT_POWER_CHAIN)) {
                 el.powers = *powers;
-            } else {
+            }
+            else {
                 return unexpected(powers.error());
             }
         }

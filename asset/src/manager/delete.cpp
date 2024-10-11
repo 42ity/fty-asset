@@ -260,10 +260,12 @@ std::map<std::string, AssetExpected<db::AssetElement>> AssetManager::deleteAsset
             if (!allChildren.empty() || !links.empty()) {
                 result.emplace(
                     name, unexpected("Asset can't be deleted because it is referenced by 1 or more asset(s) (being their host, their power source or their paired asset...)"_tr));
-            } else {
+            }
+            else {
                 toDel.push_back(el);
             }
-        } else {
+        }
+        else {
             result.emplace(name, unexpected(ret.error()));
         }
     }
@@ -298,7 +300,8 @@ std::map<std::string, AssetExpected<db::AssetElement>> AssetManager::deleteAsset
     for (auto& it : toDel) {
         if (auto ret = deleteAssetRec(it, sendNotify)) {
             result.emplace(it->name, *it);
-        } else {
+        }
+        else {
             result.emplace(it->name, unexpected(ret.error()));
         }
     }
@@ -326,9 +329,11 @@ AssetExpected<db::AssetElement> AssetManager::deleteDcRoomRowRack(const db::Asse
         unsigned numDatacentersAfterDelete;
         try {
             numDatacentersAfterDelete = conn.selectRow(countSql, "element"_p = element.id).get<unsigned>("count");
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e) {
             return unexpected(e.what());
         }
+
         if (numDatacentersAfterDelete == 0) {
             return unexpected("will not allow last datacenter to be deleted"_tr);
         }

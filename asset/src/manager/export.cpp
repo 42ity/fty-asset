@@ -87,13 +87,15 @@ public:
 
         if (auto ret = db::maxNumberOfPowerLinks()) {
             m_maxPowerLinks = *ret;
-        } else {
+        }
+        else {
             return unexpected(ret.error());
         }
 
         if (auto ret = db::maxNumberOfAssetGroups()) {
             m_maxGroups = *ret;
-        } else {
+        }
+        else {
             return unexpected(ret.error());
         }
 
@@ -140,10 +142,11 @@ private:
                 }
             }
             el.isExported = true;
-        } else {
+            return {};
+        }
+        else {
             return unexpected(ret.error());
         }
-        return {};
     }
 
     AssetExpected<void> exportRow(const db::WebAssetElement& el, LineCsvSerializer& lcs)
@@ -194,7 +197,8 @@ private:
 
             if (i >= powerLinks->size()) {
                 // nothing here, exists only for consistency reasons
-            } else {
+            }
+            else {
                 auto rv = db::nameToExtName(powerLinks->at(i).srcName);
                 if (!rv) {
                     return unexpected(rv.error());
@@ -240,10 +244,12 @@ private:
         for (uint32_t i = 0; i != m_maxGroups; i++) {
             if (i >= groupNames->size()) {
                 lcs.add("");
-            } else {
+            }
+            else {
                 if (auto extname = db::nameToExtName(groupNames->at(i))) {
                     lcs.add(*extname);
-                } else {
+                }
+                else {
                     return unexpected(extname.error());
                 }
             }
@@ -300,7 +306,8 @@ private:
                 }
             }
             return {};
-        } else {
+        }
+        else {
             return unexpected(ret.error());
         }
     }
@@ -327,7 +334,7 @@ private:
         if (el.element && el.element->id == id) {
             return &el;
         }
-        for(auto& ch: el.children) {
+        for (auto& ch: el.children) {
             if (auto ret = findElement(id, &ch)) {
                 return *ret;
             }
@@ -391,14 +398,18 @@ private:
 
 private:
     // preset, updated from db
-    std::vector<std::string> m_keytags = {"description", "ip.1", "company", "site_name", "region", "country", "address",
-        "contact_name", "contact_email", "contact_phone", "u_size", "manufacturer", "model", "serial_no", "runtime",
-        "installation_date", "maintenance_date", "maintenance_due", "location_u_pos", "location_w_pos",
-        "end_warranty_date", "hostname.1", "http_link.1"};
+    std::vector<std::string> m_keytags = {
+        "description", "ip.1", "company", "site_name", "region", "country", "address",
+        "contact_name", "contact_email", "contact_phone", "u_size", "manufacturer",
+        "model", "serial_no", "runtime", "installation_date", "maintenance_date",
+        "maintenance_due", "location_u_pos", "location_w_pos", "end_warranty_date",
+        "hostname.1", "http_link.1"
+    };
 
     // constant
     const std::vector<std::string> m_assetElementKeytags = {
-        "id", "name", "type", "sub_type", "location", "status", "priority", "asset_tag"};
+        "id", "name", "type", "sub_type", "location", "status", "priority", "asset_tag"
+    };
 
     std::vector<db::WebAssetElement> m_elements;
     Element                          m_root;

@@ -38,14 +38,17 @@ static std::mutex g_modification;
 AssetExpected<uint32_t> AssetManager::createAsset(const std::string& json, const std::string& user, bool sendNotify)
 {
     auto msg = "Request CREATE asset {} FAILED: {}"_tr;
+
     // Read json, transform to csv, use existing functionality
     cxxtools::SerializationInfo si;
     try {
         JSON::readFromString(json, si);
-    } catch (const std::exception& e) {
-        logError(e.what());
+    }
+    catch (const std::exception& e) {
+        logError("{}", e.what());
         return unexpected(msg.format("", e.what()));
     }
+
     auto ret = importAsset(si, user, sendNotify, msg);
     if (!ret) {
         return unexpected(ret.error());
@@ -79,10 +82,12 @@ AssetExpected<uint32_t> AssetManager::importAsset(
         cm = CsvMap_from_serialization_info(si);
         cm.setCreateUser(user);
         cm.setCreateMode(CREATE_MODE_ONE_ASSET);
-    } catch (const std::invalid_argument& e) {
+    }
+    catch (const std::invalid_argument& e) {
         logError("{}", e.what());
         return unexpected(msg.format(itemName, e.what()));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         logError("{}", e.what());
         return unexpected(msg.format(itemName, e.what()));
     }
@@ -123,14 +128,17 @@ AssetExpected<uint32_t> AssetManager::importAsset(
                 if (!*ret) {
                     return unexpected(msg.format(itemName, "Asset cannot be activated"_tr));
                 }
-            } else {
+            }
+            else {
                 logError("{}", ret.error());
                 return unexpected(msg.format(itemName, ret.error()));
             }
-        } catch (const std::invalid_argument& e) {
+        }
+        catch (const std::invalid_argument& e) {
             logError("{}", e.what());
             return unexpected(msg.format(itemName, e.what()));
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e) {
             logError("{}", e.what());
             return unexpected(msg.format(itemName, e.what()));
         }
@@ -167,6 +175,7 @@ AssetExpected<uint32_t> AssetManager::importAsset(
                     logError("{}", ret.error());
                     return unexpected(msg.format(itemName, "Database failure"_tr));
                 }
+
                 try {
                     ExtMap map;
                     getExtMapFromSi(si, map);
@@ -176,15 +185,18 @@ AssetExpected<uint32_t> AssetManager::importAsset(
                     deleteMappings(assetIname);
                     auto credentialList = getCredentialMappings(map);
                     createMappings(assetIname, credentialList);
-                } catch (const std::exception& e) {
+                }
+                catch (const std::exception& e) {
                     logError("Failed to update CAM: {}", e.what());
                 }
             }
             return imported.at(1)->id;
-        } else {
+        }
+        else {
             return unexpected(msg.format(itemName, imported.at(1).error()));
         }
-    } else {
+    }
+    else {
         return unexpected(msg.format(itemName, res.error()));
     }
 }
