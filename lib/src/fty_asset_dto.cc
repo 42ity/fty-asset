@@ -587,8 +587,7 @@ void Asset::dump(std::ostream& os)
 
 bool Asset::operator==(const Asset& asset) const
 {
-    return (
-        m_internalName == asset.m_internalName
+    return m_internalName == asset.m_internalName
         && m_assetStatus == asset.m_assetStatus
         && m_assetType == asset.m_assetType
         && m_assetSubtype == asset.m_assetSubtype
@@ -597,7 +596,7 @@ bool Asset::operator==(const Asset& asset) const
         && m_assetTag == asset.m_assetTag
         && m_ext == asset.m_ext
         && m_linkedAssets == asset.m_linkedAssets
-    );
+    ;
 }
 
 bool Asset::operator!=(const Asset& asset) const

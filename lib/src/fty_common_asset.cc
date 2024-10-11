@@ -40,25 +40,29 @@
 
 namespace fty {
     BasicAsset::BasicAsset ()
-    { }
+    {}
 
     BasicAsset::BasicAsset (const std::string & id, const std::string & status, const std::string & type, const std::string & subtype)
-        : id_(id), status_(stringToStatus (status)),
-          type_subtype_(std::make_pair (stringToType (type), stringToSubtype (subtype)))
-    { }
+        : id_(id)
+        , status_(stringToStatus (status))
+        , type_subtype_(std::make_pair (stringToType (type), stringToSubtype (subtype)))
+    {}
 
     BasicAsset::BasicAsset (fty_proto_t *msg)
     {
-        if (fty_proto_id (msg) != FTY_PROTO_ASSET)
+        if (!msg || fty_proto_id (msg) != FTY_PROTO_ASSET) {
             throw std::invalid_argument ("Wrong fty-proto type");
+        }
+
         id_ = fty_proto_name (msg);
+
         std::string status_str = fty_proto_aux_string (msg, "status", "active");
         status_ = stringToStatus (status_str);
+
         std::string type_str = fty_proto_aux_string (msg, "type", "");
         std::string subtype_str = fty_proto_aux_string (msg, "subtype", "");
         type_subtype_ = std::make_pair (stringToType (type_str), stringToSubtype (subtype_str));
     }
-
 
     BasicAsset::BasicAsset (const cxxtools::SerializationInfo & si)
     {
@@ -68,48 +72,37 @@ namespace fty {
     void BasicAsset::deserialize (const cxxtools::SerializationInfo & si)
     {
         std::string status_str;
-        if (!si.findMember ("status"))
-        {
+        if (!si.findMember ("status")) {
             throw std::runtime_error("status");
         }
         si.getMember("status") >>= status_str;
-        if (status_str.empty())
-        {
+        if (status_str.empty()) {
             throw std::runtime_error("status");
         }
-
         status_ = stringToStatus (status_str);
 
-        if (!si.findMember ("type"))
-        {
+        if (!si.findMember ("type")) {
             throw std::runtime_error("type");
         }
-        if (!si.findMember ("sub_type"))
-        {
+        if (!si.findMember ("sub_type")) {
             throw std::runtime_error("sub_type");
         }
-
         std::string type_str, subtype_str;
         si.getMember("type") >>= type_str;
-        if (type_str.empty())
-        {
+        if (type_str.empty()) {
             throw std::runtime_error("type");
         }
         si.getMember("sub_type") >>= subtype_str;
         type_subtype_ = std::make_pair (stringToType (type_str), stringToSubtype (subtype_str));
 
-        if (si.findMember ("id"))
-        {
+        if (si.findMember ("id")) {
             si.getMember("id") >>= id_;
         }
-        else // use type/subtype as preliminary ID, as is done elsewhere
-        {
-            if (type_str == "device")
-            {
+        else { // use type/subtype as preliminary ID, as is done elsewhere
+            if (type_str == "device") {
                 id_ = subtype_str;
             }
-            else
-            {
+            else {
                 id_ = type_str;
             }
         }
@@ -130,7 +123,9 @@ namespace fty {
 
     bool BasicAsset::operator == (const BasicAsset &asset) const
     {
-        return id_ == asset.id_ && status_ == asset.status_ && type_subtype_ == asset.type_subtype_;
+        return id_ == asset.id_
+            && status_ == asset.status_
+            && type_subtype_ == asset.type_subtype_;
     }
 
     bool BasicAsset::operator!= (const BasicAsset &asset) const
@@ -217,25 +212,18 @@ namespace fty {
 
     std::string BasicAsset::statusToString (BasicAsset::Status status) const
     {
-        switch (status) {
-            case Status::Active:
-                return "active";
-            case Status::Nonactive:
-                return "nonactive";
-            default:
-                throw std::invalid_argument ("status is not known value");
-        }
+        if (status == Status::Active) { return "active"; }
+        if (status == Status::Nonactive) { return "nonactive"; }
+
+        throw std::invalid_argument ("status is not known value");
     }
 
     BasicAsset::Status BasicAsset::stringToStatus (const std::string & status) const
     {
-        if (status == "active") {
-            return Status::Active;
-        } else if (status == "nonactive") {
-            return Status::Nonactive;
-        } else {
-            throw std::invalid_argument (TRANSLATE_ME ("status is not known value"));
-        }
+        if (status == "active") { return Status::Active; }
+        if (status == "nonactive") { return Status::Nonactive; }
+
+        throw std::invalid_argument (TRANSLATE_ME ("status is not known value"));
     }
 
     std::string BasicAsset::toJson() const
@@ -248,24 +236,26 @@ namespace fty {
     bool BasicAsset::isPowerAsset () const
     {
         uint16_t type = type_subtype_.first;
+        if (type != persist::asset_type::DEVICE) {
+            return false;
+        }
+
         uint16_t subtype = type_subtype_.second;
-        return (type == persist::asset_type::DEVICE
-            && (subtype == persist::asset_subtype::EPDU
-                || subtype == persist::asset_subtype::GENSET
-                || subtype == persist::asset_subtype::PDU
-                || subtype == persist::asset_subtype::STS
-                || subtype == persist::asset_subtype::UPS
-            )
-        );
+        return subtype == persist::asset_subtype::UPS
+            || subtype == persist::asset_subtype::EPDU
+            || subtype == persist::asset_subtype::STS
+            || subtype == persist::asset_subtype::GENSET
+            || subtype == persist::asset_subtype::PDU
+        ;
     }
 
     ExtendedAsset::ExtendedAsset ()
-    { }
+    {}
 
     ExtendedAsset::ExtendedAsset (const std::string & id, const std::string & status, const std::string & type, const std::string & subtype, const std::string & name,
             const std::string & parent_id, int priority)
             : BasicAsset (id, status, type, subtype), name_(name), parent_id_(parent_id), priority_(fty::convert<uint8_t>(priority))
-    { }
+    {}
 
     ExtendedAsset::ExtendedAsset (const std::string & id, const std::string & status, const std::string & type, const std::string & subtype, const std::string & name,
             const std::string & parent_id, const std::string & priority)
@@ -291,20 +281,17 @@ namespace fty {
         BasicAsset::deserialize (si);
         si.getMember("name") >>= name_;
 
-        if (!si.findMember ("priority"))
-        {
+        if (!si.findMember ("priority")) {
             throw std::runtime_error("priority");
         }
         std::string priority_str;
         si.getMember("priority") >>= priority_str;
-        if (priority_str.empty())
-        {
+        if (priority_str.empty()) {
             throw std::runtime_error("priority");
         }
         this->setPriority (priority_str);
 
-        if (!si.findMember ("location"))
-        {
+        if (!si.findMember ("location")) {
             throw std::runtime_error("location");
         }
         si.getMember("location") >>= parent_id_;
@@ -330,8 +317,10 @@ namespace fty {
 
     bool ExtendedAsset::operator == (const ExtendedAsset &asset) const
     {
-        return BasicAsset::operator == (asset) && name_ == asset.name_ && parent_id_ == asset.parent_id_ &&
-            priority_ == asset.priority_;
+        return BasicAsset::operator == (asset)
+            && name_ == asset.name_
+            && parent_id_ == asset.parent_id_
+            && priority_ == asset.priority_;
     }
 
     bool ExtendedAsset::operator!= (const ExtendedAsset &asset) const
@@ -379,23 +368,24 @@ namespace fty {
     {
         if (priority.find("P") == 0) {
             priority_ = fty::convert<uint8_t>(priority.substr(1));
-        } else {
+        }
+        else {
             priority_ = fty::convert<uint8_t>(priority);
         }
     }
 
     FullAsset::FullAsset()
-    { }
+    {}
 
     FullAsset::FullAsset (const std::string & id, const std::string & status, const std::string & type, const std::string & subtype, const std::string & name,
             const std::string & parent_id, int priority, HashMap aux, HashMap ext)
             : ExtendedAsset (id, status, type, subtype, name, parent_id, priority), aux_(aux), ext_(ext)
-    { }
+    {}
 
     FullAsset::FullAsset (const std::string & id, const std::string & status, const std::string & type, const std::string & subtype, const std::string & name,
             const std::string & parent_id, const std::string & priority, HashMap aux, HashMap ext)
             : ExtendedAsset (id, status, type, subtype, name, parent_id, priority), aux_(aux), ext_(ext)
-    { }
+    {}
 
     FullAsset::FullAsset (fty_proto_t *msg): ExtendedAsset (msg)
     {
@@ -415,11 +405,9 @@ namespace fty {
     {
         ExtendedAsset::deserialize (si);
 
-        if (si.findMember ("aux"))
-        {
+        if (si.findMember ("aux")) {
             const cxxtools::SerializationInfo auxSi = si.getMember("aux");
-            for (const auto& oneElement : auxSi)
-            {
+            for (const auto& oneElement : auxSi) {
                 auto key = oneElement.name();
                 std::string value;
                 oneElement >>= value;
@@ -427,30 +415,24 @@ namespace fty {
             }
         }
 
-        if (si.findMember ("ext"))
-        {
+        if (si.findMember ("ext")) {
             const cxxtools::SerializationInfo extSi = si.getMember("ext");
-            for (const auto& oneElement : extSi)
-            {
+            for (const auto& oneElement : extSi) {
                 auto key = oneElement.name();
                 // ext from UI behaves as an object of objects with empty 1st level keys
-                if (key.empty())
-                {
-                    for (const auto& innerElement : oneElement)
-                    {
+                if (key.empty()) {
+                    for (const auto& innerElement : oneElement) {
                         auto innerKey = innerElement.name();
                         log_debug ("inner key = %s", innerKey.c_str ());
                         // only DB is interested in read_only attribute
-                        if (innerKey != "read_only")
-                        {
+                        if (innerKey != "read_only") {
                             std::string value;
                             innerElement >>= value;
                             ext_[innerKey] = value;
                         }
                     }
                 }
-                else
-                {
+                else {
                     std::string value;
                     oneElement >>= value;
                     log_debug ("key = %s, value = %s", key.c_str (), value.c_str ());
@@ -466,8 +448,7 @@ namespace fty {
 
         cxxtools::SerializationInfo &auxSi = si.addMember("aux");
         auxSi.setCategory (cxxtools::SerializationInfo::Object);
-        for (const auto& keyValue : aux_)
-        {
+        for (const auto& keyValue : aux_) {
             auto key = keyValue.first;
             auto value = keyValue.second;
             cxxtools::SerializationInfo &keyValueObject = auxSi.addMember (key);
@@ -477,8 +458,7 @@ namespace fty {
 
         cxxtools::SerializationInfo &extSi = si.addMember("ext");
         extSi.setCategory (cxxtools::SerializationInfo::Object);
-        for (const auto& keyValue : ext_)
-        {
+        for (const auto& keyValue : ext_) {
             auto key = keyValue.first;
             auto value = keyValue.second;
             cxxtools::SerializationInfo &keyValueObject = extSi.addMember (key);
@@ -496,7 +476,9 @@ namespace fty {
 
     bool FullAsset::operator == (const FullAsset &asset) const
     {
-        return ExtendedAsset::operator == (asset) && aux_ == asset.aux_ && ext_ == asset.ext_;
+        return ExtendedAsset::operator == (asset)
+            && aux_ == asset.aux_
+            && ext_ == asset.ext_;
     }
 
     bool FullAsset::operator!= (const FullAsset &asset) const
@@ -541,7 +523,7 @@ namespace fty {
         if (it != aux_.end ()) {
             return it->second;
         }
-        return std::string ();
+        return "";
     }
 
     std::string FullAsset::getExtItem (const std::string &key) const
@@ -550,7 +532,7 @@ namespace fty {
         if (it != ext_.end ()) {
             return it->second;
         }
-        return std::string ();
+        return "";
     }
 
     std::string FullAsset::getItem (const std::string &key) const
@@ -558,30 +540,36 @@ namespace fty {
         auto it = ext_.find (key);
         if (it != ext_.end ()) {
             return it->second;
-        } else {
-            auto it2 = aux_.find (key);
-            if (it2 != aux_.end ()) {
-                return it2->second;
-            }
         }
-        return std::string ();
+
+        auto it2 = aux_.find (key);
+        if (it2 != aux_.end ()) {
+            return it2->second;
+        }
+
+        return "";
     }
 
     std::unique_ptr<BasicAsset> getBasicAssetFromFtyProto (fty_proto_t *msg)
     {
-        if (fty_proto_id (msg) != FTY_PROTO_ASSET)
+        if (!msg || fty_proto_id (msg) != FTY_PROTO_ASSET) {
             throw std::invalid_argument ("Wrong fty-proto type");
+        }
+
         return std::unique_ptr<BasicAsset>(new BasicAsset (
             fty_proto_name (msg),
             fty_proto_aux_string (msg, "status", "active"),
             fty_proto_aux_string (msg, "type", ""),
-            fty_proto_aux_string (msg, "subtype", "")));
+            fty_proto_aux_string (msg, "subtype", "")
+        ));
     }
 
     std::unique_ptr<ExtendedAsset> getExtendedAssetFromFtyProto (fty_proto_t *msg)
     {
-        if (fty_proto_id (msg) != FTY_PROTO_ASSET)
+        if (!msg || fty_proto_id (msg) != FTY_PROTO_ASSET) {
             throw std::invalid_argument ("Wrong fty-proto type");
+        }
+
         return std::unique_ptr<ExtendedAsset>(new ExtendedAsset (
             fty_proto_name (msg),
             fty_proto_aux_string (msg, "status", "active"),
@@ -589,16 +577,19 @@ namespace fty {
             fty_proto_aux_string (msg, "subtype", ""),
             fty_proto_ext_string (msg, "name", fty_proto_name (msg)),
             fty_proto_aux_string (msg, "parent_name.1", ""),
-            fty::convert<int>(fty_proto_aux_number (msg, "priority", 5))));
+            fty::convert<int>(fty_proto_aux_number (msg, "priority", 5))
+        ));
     }
 
     std::unique_ptr<FullAsset> getFullAssetFromFtyProto (fty_proto_t *msg)
     {
-        if (fty_proto_id (msg) != FTY_PROTO_ASSET)
+        if (!msg || fty_proto_id (msg) != FTY_PROTO_ASSET) {
             throw std::invalid_argument ("Wrong fty-proto type");
+        }
 
         zhash_t *aux = fty_proto_aux (msg);
         zhash_t *ext = fty_proto_ext (msg);
+
         return std::unique_ptr<FullAsset>(new FullAsset (
             fty_proto_name (msg),
             fty_proto_aux_string (msg, "status", "active"),
@@ -608,8 +599,8 @@ namespace fty {
             fty_proto_aux_string (msg, "parent_name.1", ""),
             fty::convert<uint8_t>(fty_proto_aux_number (msg, "priority", 5)),
             MlmUtils::zhash_to_map (aux),
-            MlmUtils::zhash_to_map (ext))
-            );
+            MlmUtils::zhash_to_map (ext)
+        ));
     }
 
 } // end namespace
