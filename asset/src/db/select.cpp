@@ -1,8 +1,27 @@
+/*
+ *
+ * Copyright (C) 2021 Eaton
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ */
+
 #include "asset/db/select.h"
 #include "asset/error.h"
 #include <fty_common_asset_types.h>
 #include <fty_common_db_connection.h>
-#include <fty_log.h>
 #include <iostream>
 #include <map>
 
@@ -60,7 +79,8 @@ static fty::Expected<std::string> assetExtSql(const Filter& filter, const Order&
         if (!filter.without.empty()) {
             if (filter.without == "location") {
                 wheres.emplace_back("v.id_parent is NULL");
-            } else if (filter.without == "powerchain") {
+            }
+            else if (filter.without == "powerchain") {
                 std::string pwr = R"(
                     NOT EXISTS
                     (
@@ -76,7 +96,8 @@ static fty::Expected<std::string> assetExtSql(const Filter& filter, const Order&
                     )
                 )";
                 wheres.emplace_back(pwr);
-            } else {
+            }
+            else {
                 //IPMPROG-6763 sanityze against SQL injection
                 const std::vector<std::string> unwanted{"\"", "'", ";", "--", "/*", "*/"};
                 for (const auto& s : unwanted) {
@@ -125,9 +146,11 @@ static fty::Expected<std::string> assetExtSql(const Filter& filter, const Order&
     std::string wstr;
     if (where.empty() && !filterWhere.empty()) {
         wstr = fmt::format("WHERE {}", filterWhere);
-    } else if (!where.empty() && !filterWhere.empty()) {
+    }
+    else if (!where.empty() && !filterWhere.empty()) {
         wstr = fmt::format("{} AND {}", where, filterWhere);
-    } else {
+    }
+    else {
         wstr = where;
     }
 
@@ -162,8 +185,10 @@ Filter::operator bool() const
 
 const std::set<std::string>& Order::possibleOrders() const
 {
-    static const std::set<std::string> orders = {"name",      "model",     "create_ts", "firmware",
-                                                 "max_power", "serial_no", "update_ts", "asset_order"};
+    static const std::set<std::string> orders = {
+        "name",      "model",     "create_ts", "firmware",
+        "max_power", "serial_no", "update_ts", "asset_order"
+    };
     return orders;
 }
 
@@ -186,7 +211,8 @@ Expected<AssetItem> item(const std::string& elementName, bool extNameOnly)
     try {
         Connection conn;
         return item(conn, elementName, extNameOnly);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), elementName));
     }
 }
@@ -231,19 +257,19 @@ Expected<AssetItem> item(Connection& conn, const std::string& elementName, bool 
 
     try {
         Row row;
-
         if (extNameOnly) {
             row = conn.selectRow(extNameSql, "name"_p = elementName);
-        } else {
+        }
+        else {
             try {
                 row = conn.selectRow(nameSql, "name"_p = elementName);
-            } catch (const NotFound&) {
+            }
+            catch (const NotFound&) {
                 row = conn.selectRow(extNameSql, "name"_p = elementName);
             }
         }
 
         AssetItem el;
-        // clang-format off
         row.get("name",       el.name);
         row.get("id_parent",  el.parentId);
         row.get("status",     el.status);
@@ -251,12 +277,13 @@ Expected<AssetItem> item(Connection& conn, const std::string& elementName, bool 
         row.get("id",         el.id);
         row.get("id_type",    el.typeId);
         row.get("id_subtype", el.subtypeId);
-        // clang-format on
 
         return std::move(el);
-    } catch (const NotFound&) {
+    }
+    catch (const NotFound&) {
         return unexpected(error(fty::asset::Errors::ElementNotFound).format(elementName));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), elementName));
     }
 }
@@ -270,7 +297,8 @@ Expected<void> items(Callback&& cb, const Filter& filter, const Order& order)
     try {
         Connection conn;
         return items(conn, std::move(cb), filter, order);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -287,7 +315,8 @@ Expected<void> items(Connection& conn, Callback&& cb, const Filter& filter, cons
             cb(row);
         }
         return {};
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -301,7 +330,8 @@ Expected<std::vector<AssetItemExt>> items(const Filter& filter, const Order& ord
     try {
         Connection conn;
         return items(conn, filter, order);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -321,7 +351,8 @@ Expected<std::vector<AssetItemExt>> items(Connection& conn, const Filter& filter
             res.emplace_back(std::move(el));
         }
         return res;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -336,7 +367,8 @@ Expected<AssetItemExt> itemExt(uint32_t elementId)
 
     if (auto ret = itemExt(elementId, el)) {
         return std::move(el);
-    } else {
+    }
+    else {
         return unexpected(ret.error());
     }
 }
@@ -347,7 +379,8 @@ Expected<AssetItemExt> itemExt(Connection& conn, uint32_t elementId)
 
     if (auto ret = itemExt(conn, elementId, el)) {
         return std::move(el);
-    } else {
+    }
+    else {
         return unexpected(ret.error());
     }
 }
@@ -361,7 +394,8 @@ Expected<void> itemExt(uint32_t elementId, AssetItemExt& asset)
     try {
         Connection conn;
         return itemExt(conn, elementId, asset);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -377,9 +411,11 @@ Expected<void> itemExt(Connection& conn, uint32_t elementId, AssetItemExt& asset
         auto row = conn.selectRow(*sql, "id"_p = elementId);
         fetchAssetExt(row, asset);
         return {};
-    } catch (const NotFound&) {
+    }
+    catch (const NotFound&) {
         return unexpected(error(fty::asset::Errors::ElementNotFound).format(elementId));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -393,7 +429,8 @@ Expected<AssetItemExt> itemExt(const std::string& name)
     try {
         Connection conn;
         return itemExt(conn, name);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), name));
     }
 }
@@ -410,13 +447,15 @@ Expected<AssetItemExt> itemExt(Connection& conn, const std::string& name)
     }
 
     try {
-        auto         row = conn.selectRow(*sql, "name"_p = name);
+        auto row = conn.selectRow(*sql, "name"_p = name);
         AssetItemExt asset;
         fetchAssetExt(row, asset);
         return asset;
-    } catch (const NotFound&) {
+    }
+    catch (const NotFound&) {
         return unexpected(error(fty::asset::Errors::ElementNotFound).format(name));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), name));
     }
 }
@@ -430,7 +469,8 @@ Expected<std::vector<AssetItemExt>> itemsByContainer(uint32_t containerId, const
     try {
         Connection conn;
         return itemsByContainer(conn, containerId, flt, order);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), containerId));
     }
 }
@@ -440,7 +480,8 @@ Expected<void> itemsByContainer(uint32_t containerId, Callback&& cb, const Filte
     try {
         Connection conn;
         return itemsByContainer(conn, containerId, std::move(cb), filter, order);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), containerId));
     }
 }
@@ -460,7 +501,8 @@ Expected<std::vector<AssetItemExt>> itemsByContainer(Connection& conn, uint32_t 
             return unexpected(res.error());
         }
         return result;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), containerId));
     }
 }
@@ -487,12 +529,14 @@ Expected<void> itemsByContainer(Connection& conn, uint32_t containerId, Callback
     if (!sql) {
         return unexpected(sql.error());
     }
+
     try {
         for (const auto& row : conn.select(*sql, "containerid"_p = containerId)) {
             cb(row);
         }
         return {};
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), containerId));
     }
 }
@@ -555,7 +599,8 @@ Expected<void> itemsByContainers(Connection& conn, const std::vector<uint32_t>& 
             cb(row);
         }
         return {};
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected("exception caught: " + std::string(e.what()));
     }
 }
@@ -586,7 +631,8 @@ Expected<void> itemsWithoutContainer(Connection& conn, Callback&& cb, const Filt
             cb(row);
         }
         return {};
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -600,7 +646,8 @@ Expected<std::vector<AssetItemExt>> itemsWithoutContainer(const Filter& filter, 
     try {
         Connection conn;
         return itemsWithoutContainer(conn, filter, order);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -620,7 +667,8 @@ Expected<std::vector<AssetItemExt>> itemsWithoutContainer(Connection& conn, cons
             return unexpected(res.error());
         }
         return result;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -658,7 +706,6 @@ Expected<Attributes> extAttributes(Connection& conn, uint32_t elementId)
         auto result = conn.select(sql, "elementId"_p = elementId);
 
         Attributes attrs;
-
         for (const auto& row : result) {
             ExtAttrValue val;
             row.get("value", val.value);
@@ -678,7 +725,8 @@ Expected<Attributes> extAttributes(Connection& conn, uint32_t elementId)
         }
 
         return std::move(attrs);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -692,7 +740,8 @@ Expected<std::vector<AssetLink>> deviceLinksTo(uint32_t elementId, uint8_t linkT
     try {
         fty::db::Connection conn;
         return deviceLinksTo(conn, elementId, linkTypeId);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
@@ -714,12 +763,10 @@ Expected<std::vector<AssetLink>> deviceLinksTo(Connection& conn, uint32_t elemen
 
 
     try {
-        // clang-format off
         auto rows = conn.select(sql,
             "iddevice"_p   = elementId,
             "idlinktype"_p = linkTypeId
         );
-        // clang-format on
 
         std::vector<AssetLink> ret;
 
@@ -734,8 +781,10 @@ Expected<std::vector<AssetLink>> deviceLinksTo(Connection& conn, uint32_t elemen
             ret.push_back(link);
         }
         return std::move(ret);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), elementId));
     }
 }
+
 } // namespace fty::db::asset::select
