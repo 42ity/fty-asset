@@ -520,34 +520,25 @@ namespace fty {
     std::string FullAsset::getAuxItem (const std::string &key) const
     {
         auto it = aux_.find (key);
-        if (it != aux_.end ()) {
-            return it->second;
-        }
-        return "";
+        return (it != aux_.end ()) ? it->second : "";
     }
 
     std::string FullAsset::getExtItem (const std::string &key) const
     {
         auto it = ext_.find (key);
-        if (it != ext_.end ()) {
-            return it->second;
-        }
-        return "";
+        return (it != ext_.end ()) ? it->second : "";
     }
 
     std::string FullAsset::getItem (const std::string &key) const
     {
+        // search first in ext_
         auto it = ext_.find (key);
         if (it != ext_.end ()) {
             return it->second;
         }
-
+        // then in aux_
         auto it2 = aux_.find (key);
-        if (it2 != aux_.end ()) {
-            return it2->second;
-        }
-
-        return "";
+        return (it2 != aux_.end ()) ? it2->second : "";
     }
 
     std::unique_ptr<BasicAsset> getBasicAssetFromFtyProto (fty_proto_t *msg)
