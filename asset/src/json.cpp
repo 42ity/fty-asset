@@ -47,19 +47,19 @@ static double s_rack_realpower_nominal(const std::string& name)
     return std::nan("");
 }
 
-// property json (name, value) serializer (<string>, <bool>)
+// <name, value> property json serializer (<string>, <char*>, <bool>)
 static std::string s_jsonify(const std::string& name, const std::string& value)
-{
-    return "\"" + name + "\":\"" + value + "\"";
-}
+    { return "\"" + name + "\":\"" + value + "\""; }
+static std::string s_jsonify(const std::string& name, const char* value)
+    { return s_jsonify(name, std::string{value ? value : ""}); }
 static std::string s_jsonify(const std::string& name, bool value)
-{
-    return "\"" + name + "\":" + (value ? "true" : "false");
-}
+    { return "\"" + name + "\":" + (value ? "true" : "false"); }
 
 // asset json serializer
 std::string getJsonAsset(uint32_t elemId)
 {
+    //log_debug("=== getJsonAsset elemId: %u", elemId);
+
     // Get informations from database
     auto tmp = AssetManager::getItem(elemId);
     if (!tmp) {
@@ -79,7 +79,7 @@ std::string getJsonAsset(uint32_t elemId)
     }
 
     std::string json = "{";
-    json.reserve(1024 * 6); // experimental max value (to limit memory realloc)
+    json.reserve(1024 * 6); // experimental max value to limit memory realloc.
 
     json += s_jsonify("id", tmp->name)
          + "," + s_jsonify("name", asset_ext_name)
@@ -106,13 +106,13 @@ std::string getJsonAsset(uint32_t elemId)
              + "," + s_jsonify("location", parent_ext_name)
              + "," + s_jsonify("location_type", trimmed(parentAsset->typeName));
     }
-    else {
+    else { // print as not located
         json += "," + s_jsonify("location", "")
              + "," + s_jsonify("location_type", "");
     }
 
     // every element (except groups) can be placed in some group
-    json += ", \"groups\": [";
+    json += ",\"groups\":[";
     if (!tmp->groups.empty()) {
         bool first = true;
         for (const auto& group : tmp->groups) {
@@ -129,12 +129,11 @@ std::string getJsonAsset(uint32_t elemId)
             first = false;
         }
     }
-    json += "]";
+    json += "]"; // end "groups"
 
     // Device is special element with more attributes
     if (tmp->typeId == persist::asset_type::DEVICE) {
-        json += ", \"powers\": [";
-
+        json += ",\"powers\":[";
         if (!tmp->powers.empty()) {
             bool first = true;
             for (const auto& oneLink : tmp->powers) {
@@ -157,8 +156,7 @@ std::string getJsonAsset(uint32_t elemId)
                 first = false;
             }
         }
-
-        json += "]";
+        json += "]"; // end "powers"
     }
 
     // ACE: to be consistent with RFC-11 this was put here
@@ -172,7 +170,7 @@ std::string getJsonAsset(uint32_t elemId)
     else {
         json += "," + s_jsonify("sub_type", trimmed(tmp->subtypeName));
 
-        json += ", \"parents\": [";
+        json += ",\"parents\":[";
         bool first = true;
         for (const auto& it : tmp->parents) {
             std::pair<std::string, std::string> it_names = DBAssets::id_to_name_ext_name(std::get<0>(it));
@@ -189,7 +187,7 @@ std::string getJsonAsset(uint32_t elemId)
                  + "}";
             first = false;
         }
-        json += "]";
+        json += "]"; // end "parents"
     }
 
     // Map(<key>, pair(<value>, <readOnly>))
@@ -203,7 +201,7 @@ std::string getJsonAsset(uint32_t elemId)
     std::vector<std::string> hostnames;
 
     // Print "ext" attributes
-    json += ", \"ext\": [";
+    json += ",\"ext\":[";
     {
         bool firstExtAttribute = true;
 
@@ -326,7 +324,7 @@ std::string getJsonAsset(uint32_t elemId)
             aux += std::string{first ? "" : ","} + "\"" + s + "\"";
             first = false;
         }
-        json += ", \"" + name + "\": [" + aux + "]";
+        json += ",\"" + name + "\":[" + aux + "]";
     };
 
     // Print "ips"
@@ -343,7 +341,7 @@ std::string getJsonAsset(uint32_t elemId)
         //using Outlet = std::map<std::string, std::pair<std::string, bool>>;
         //std::map<std::string, Outlet> outlets;
 
-        json += ", \"outlets\": {";
+        json += ",\"outlets\":{";
         bool firstOutlet = true;
         for (const auto& oneOutlet : outlets) {
             json += std::string{firstOutlet ? "" : ","}
@@ -367,11 +365,11 @@ std::string getJsonAsset(uint32_t elemId)
             json += "]";
             firstOutlet = false;
         }
-        json += "}";
+        json += "}"; // end "outlets"
     }
 
     // Print "computed" (object)
-    json += ", \"computed\": {";
+    json += ",\"computed\":{";
     if (persist::is_rack(tmp->typeId)) {
         int    freeusize         = free_u_size(tmp->id);
         double realpower_nominal = s_rack_realpower_nominal(tmp->name.c_str());
@@ -400,6 +398,7 @@ std::string getJsonAsset(uint32_t elemId)
     json += "}"; // end json
 
     //log_debug("=== getJsonAsset '%s': %s", tmp->name.c_str(), json.c_str());
+    json.shrink_to_fit();
     return json;
 }
 
