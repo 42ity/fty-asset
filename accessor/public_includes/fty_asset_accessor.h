@@ -23,7 +23,6 @@
 
 #include <fty_asset_dto.h>
 #include <fty/expected.h>
-#include <list>
 #include <string>
 
 namespace fty
@@ -34,7 +33,7 @@ namespace fty
         static fty::Expected<uint32_t> assetInameToID(const std::string& iname);
         static fty::Expected<fty::Asset> getAsset(const std::string& iname);
         static void notifyStatusUpdate(const std::string& iname, const std::string& oldStatus, const std::string& newStatus);
-        static void notifyAssetUpdate(const Asset& oldAsset, const Asset& newAsset);
+        static void notifyAssetUpdate(const Asset& before, const Asset& after);
     };
 
 } // namespace fty

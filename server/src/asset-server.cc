@@ -170,7 +170,6 @@ void AssetServer::connectPublisherClientNg()
 // new generation asset manipulation handler
 void AssetServer::handleAssetManipulationReq(const messagebus::Message& msg)
 {
-    // clang-format off
     static std::map<std::string, std::function<void(const messagebus::Message&)>> procMap = {
         { FTY_ASSET_SUBJECT_CREATE,       [&](const messagebus::Message& m){ createAsset(m); } },
         { FTY_ASSET_SUBJECT_UPDATE,       [&](const messagebus::Message& m){ updateAsset(m); } },
@@ -183,7 +182,6 @@ void AssetServer::handleAssetManipulationReq(const messagebus::Message& msg)
         { FTY_ASSET_SUBJECT_STATUS_UPD,   [&](const messagebus::Message& m){ notifyStatusUpdate(m); } },
         { FTY_ASSET_SUBJECT_NOTIFY,       [&](const messagebus::Message& m){ notifyAsset(m); } }
     };
-    // clang-format on
 
     const std::string& subject = value(msg.metaData(), messagebus::Message::SUBJECT);
 
@@ -341,7 +339,7 @@ dto::srr::ResetResponse AssetServer::handleReset(const dto::srr::ResetQuery& /*q
     return (createResetResponse(mapStatus)).reset();
 }
 
-// sendNotification simple interface
+// sendNotification simple (subject, data) interface
 void AssetServer::sendNotification(const std::string& subject, const std::string& data) const
 {
     sendNotification(assetutils::createMessage(
@@ -384,7 +382,7 @@ void AssetServer::sendNotification(const messagebus::Message& msg) const
         {
             // old interface
             fty::Asset asset;
-            fty::Asset::fromJson(msg.userData().back(), asset);
+            fty::Asset::fromJson(msg.userData().front(), asset);
 
             send_create_or_update_asset(*this, asset.getInternalName(), "create");
         }
@@ -461,9 +459,7 @@ void AssetServer::createAsset(const messagebus::Message& msg) const
                 requestActivation = false;
             }
             else {
-                throw std::runtime_error(
-                    "Licensing limitation hit - maximum amount of active power devices allowed in "
-                    "license reached.");
+                throw std::runtime_error("Licensing limitation hit - maximum amount of active power devices allowed in license reached.");
             }
         }
 
@@ -495,7 +491,7 @@ void AssetServer::createAsset(const messagebus::Message& msg) const
             fty::Asset::toJson(asset));
 
         // full notification
-        sendNotification(FTY_ASSET_SUBJECT_CREATED, fty::Asset::toJson(asset));
+        sendNotification(FTY_ASSET_SUBJECT_CREATED, response.userData().front() /*toJson(asset)*/);
         // light notification
         sendNotification(FTY_ASSET_SUBJECT_CREATED_L, asset.getInternalName());
     }
@@ -539,10 +535,10 @@ void AssetServer::updateAsset(const messagebus::Message& msg) const
         // get current asset data from storage
         fty::AssetImpl currentAsset(asset.getInternalName());
 
-        bool requestActivation = (currentAsset.getAssetStatus() == fty::AssetStatus::Nonactive &&
-                                  asset.getAssetStatus() == fty::AssetStatus::Active);
-        bool requestDeactivation = (currentAsset.getAssetStatus() == fty::AssetStatus::Active &&
-                                  asset.getAssetStatus() == fty::AssetStatus::Nonactive);
+        bool requestActivation = (currentAsset.getAssetStatus() == fty::AssetStatus::Nonactive
+                                  && asset.getAssetStatus() == fty::AssetStatus::Active);
+        bool requestDeactivation = (currentAsset.getAssetStatus() == fty::AssetStatus::Active
+                                  && asset.getAssetStatus() == fty::AssetStatus::Nonactive);
 
         // if status changes from nonactive to active, request activation
         if (requestActivation && !asset.isActivable()) {
@@ -644,8 +640,7 @@ void AssetServer::deleteAsset(const messagebus::Message& msg) const
         std::vector<std::string> assetInames;
         si >>= assetInames;
 
-        DeleteStatus deleted =
-            AssetImpl::deleteList(assetInames, value(msg.metaData(), "RECURSIVE") == "YES");
+        DeleteStatus deleted = AssetImpl::deleteList(assetInames, value(msg.metaData(), "RECURSIVE") == "YES");
 
         // create response (ok)
         response = assetutils::createMessage(
@@ -922,28 +917,31 @@ void AssetServer::notifyStatusUpdate(const messagebus::Message& msg) const
         AssetStatus oldSt = stringToAssetStatus(oldStatus);
         AssetStatus newSt = stringToAssetStatus(newStatus);
 
-        if (oldSt != AssetStatus::Unknown && newSt != AssetStatus::Unknown) {
-            // notify only if status changed
-            if (oldSt != newSt) {
-                AssetImpl after(iname);
-                log_debug("Sending notification for asset %s", after.getInternalName().c_str());
+        // notify only if status changed & consistent
+        if (oldSt != newSt
+            && oldSt != AssetStatus::Unknown
+            && newSt != AssetStatus::Unknown
+        ) {
+            log_debug("Notifying status update for asset %s (%s -> %s)",
+                iname.c_str(), oldStatus.c_str(), newStatus.c_str());
 
-                if (after.getAssetStatus() != newSt) {
-                    throw std::runtime_error("Current asset status does not match requested notification");
-                }
+            AssetImpl after(iname);
 
-                AssetImpl before(after);
-                before.setAssetStatus(oldSt);
-
-                notifyAssetUpdate(before, after);
+            if (after.getAssetStatus() != newSt) {
+                throw std::runtime_error("Current asset status does not match requested notification");
             }
+
+            AssetImpl before(after);
+            before.setAssetStatus(oldSt);
+
+            notifyAssetUpdate(before, after);
         }
     }
     catch (const std::exception& e) {
         log_error("Unexpected error: '%s'", e.what());
     }
 
-    // no response sent !?
+    // no response sent
 }
 
 void AssetServer::notifyAsset(const messagebus::Message& msg) const
@@ -974,7 +972,7 @@ void AssetServer::notifyAsset(const messagebus::Message& msg) const
         log_error("Unexpected error: '%s'", e.what());
     }
 
-    // no response sent !?
+    // no response sent
 }
 
 void AssetServer::notifyAssetUpdate(const Asset& before, const Asset& after) const

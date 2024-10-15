@@ -27,8 +27,6 @@
 #include <fty_log.h>
 #include <fty/convert.h>
 
-#define RECV_TIMEOUT_S 5  // messagebus request timeout (seconds)
-
 namespace fty
 {
     static constexpr const char *ASSET_AGENT = "asset-agent-ng";
@@ -36,8 +34,8 @@ namespace fty
     static constexpr const char *ACCESSOR_NAME = "fty-asset-accessor";
     static constexpr const char *ENDPOINT = MLM_DEFAULT_ENDPOINT;
 
-    /// static helper to send a MessageBus SYNChronous request (can throw)
-    static messagebus::Message sendSyncReq(const std::string& command, const messagebus::UserData& data)
+    /// send a MessageBus synchronous request (can throw)
+    static messagebus::Message sendSyncReq(const std::string& command, const messagebus::UserData& userdata)
     {
         // generate unique ID interface
         const std::string clientName{messagebus::getClientId(ACCESSOR_NAME)};
@@ -50,13 +48,14 @@ namespace fty
             {messagebus::Message::REPLY_TO, clientName},
         };
 
+        const int timeout_s{5}; // request timeout (seconds)
         std::unique_ptr<messagebus::MessageBus> interface(messagebus::MlmMessageBus(ENDPOINT, clientName));
         interface->connect();
-        return interface->request(ASSET_AGENT_QUEUE, messagebus::Message{metadata, data}, RECV_TIMEOUT_S);
+        return interface->request(ASSET_AGENT_QUEUE, messagebus::Message{metadata, userdata}, timeout_s);
     }
 
-    /// static helper to send a MessageBus ASYNChronous request (can throw)
-    static void sendAsyncReq(const std::string& command, const messagebus::UserData& data)
+    /// send a MessageBus asynchronous request (can throw)
+    static void sendAsyncReq(const std::string& command, const messagebus::UserData& userdata)
     {
         // generate unique ID interface
         const std::string clientName{messagebus::getClientId(ACCESSOR_NAME)};
@@ -71,16 +70,25 @@ namespace fty
 
         std::unique_ptr<messagebus::MessageBus> interface(messagebus::MlmMessageBus(ENDPOINT, clientName));
         interface->connect();
-        interface->sendRequest(ASSET_AGENT_QUEUE, messagebus::Message{metadata, data});
+        interface->sendRequest(ASSET_AGENT_QUEUE, messagebus::Message{metadata, userdata});
+        // no response expected
     }
 
     /// returns the asset database ID, given the internal name
     fty::Expected<uint32_t> AssetAccessor::assetInameToID(const std::string &iname)
     {
         try {
+            if (iname.empty()) {
+                throw std::runtime_error("iname is empty");
+            }
+
             messagebus::Message ret = sendSyncReq("GET_ID", {iname});
             if (ret.metaData().at(messagebus::Message::STATUS) != messagebus::STATUS_OK) {
-                return fty::unexpected("assetInameToID request failed");
+                throw std::runtime_error("response status is not OK");
+            }
+
+            if (ret.userData().empty()) {
+                throw std::runtime_error("response userData is empty");
             }
 
             cxxtools::SerializationInfo si;
@@ -102,9 +110,17 @@ namespace fty
     fty::Expected<fty::Asset> AssetAccessor::getAsset(const std::string& iname)
     {
         try {
+            if (iname.empty()) {
+                throw std::runtime_error("iname is empty");
+            }
+
             messagebus::Message ret = sendSyncReq("GET", {iname});
             if (ret.metaData().at(messagebus::Message::STATUS) != messagebus::STATUS_OK) {
-                return fty::unexpected("getAsset request failed");
+                throw std::runtime_error("response status is not OK");
+            }
+
+            if (ret.userData().empty()) {
+                throw std::runtime_error("response userData is empty");
             }
 
             Asset asset;
@@ -120,12 +136,17 @@ namespace fty
         return fty::unexpected("getAsset failed");
     }
 
-    /// triggers a status update notification. It receives the DTOs of the asset before and after the update
+    /// triggers a status update notification
+    /// given the iname and status of the asset before and after the update.
+    /// assume status in {"active", "inactive"}
     void AssetAccessor::notifyStatusUpdate(const std::string& iname, const std::string& oldStatus, const std::string& newStatus)
     {
         try {
-            if (iname.empty() || oldStatus.empty() || newStatus.empty()) {
-                throw std::runtime_error("empty data");
+            if (iname.empty()) {
+                throw std::runtime_error("iname is empty");
+            }
+            if (oldStatus.empty() || newStatus.empty()) {
+                throw std::runtime_error("oldStatus or newStatus is empty");
             }
 
             cxxtools::SerializationInfo si;
@@ -143,13 +164,14 @@ namespace fty
         }
     }
 
-    /// triggers an update notification. It receives the DTOs of the asset before and after the update
-    void AssetAccessor::notifyAssetUpdate(const Asset& oldAsset, const Asset& newAsset)
+    /// triggers an asset update notification
+    /// given the DTOs of the asset before and after the update
+    void AssetAccessor::notifyAssetUpdate(const Asset& before, const Asset& after)
     {
         try {
             cxxtools::SerializationInfo si;
-            si.addMember("before") <<= oldAsset;
-            si.addMember("after") <<= newAsset;
+            si.addMember("before") <<= before;
+            si.addMember("after") <<= after;
 
             sendAsyncReq("NOTIFY", {JSON::writeToString(si, false)});
         }
