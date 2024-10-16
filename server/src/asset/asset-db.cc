@@ -196,7 +196,7 @@ fty::Expected<uint32_t> DB::getID(const std::string& internalName)
         assetID = static_cast<uint32_t>(v.getInt32());
     }
     catch (tntdb::NotFound&) {
-        return fty::unexpected("Internal name {} not found", internalName);
+        return fty::unexpected("Internal name '{}' not found", internalName);
     }
     catch (const std::exception& e) {
         throw std::runtime_error("database error - " + std::string(e.what()));

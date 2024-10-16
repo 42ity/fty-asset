@@ -905,7 +905,7 @@ std::string AssetImpl::getInameFromUuid(const std::string& uuid)
 /// get internal database index from iname
 uint32_t AssetImpl::getIDFromIname(const std::string& iname)
 {
-    log_debug("Request ID for asset %s", iname.c_str());
+    log_debug("Request ID for asset '%s'", iname.c_str());
     auto id = getStorage().getID(iname);
     if (!id) {
         throw std::runtime_error(id.error());

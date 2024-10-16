@@ -575,16 +575,16 @@ static void s_handle_subject_assets_in_container(const fty::AssetServer& server,
         }
 
         std::vector<std::string> assets;
-        int rv = select_assets_by_container(container_name, filters, assets, server.getTestMode());
-
-        if (rv == 0) {
+        int r = select_assets_by_container(container_name, filters, assets, server.getTestMode());
+        if (r == 0) {
             zmsg_addstr(reply, "OK");
-            for (const auto& dev : assets)
-                zmsg_addstr(reply, dev.c_str());
+            for (const auto& asset : assets) {
+                zmsg_addstr(reply, asset.c_str());
+            }
         }
         else {
             zmsg_addstr(reply, "ERROR");
-            zmsg_addstr(reply, ((rv == -2) ? "ASSET_NOT_FOUND" : "INTERNAL_ERROR"));
+            zmsg_addstr(reply, ((r == -2) ? "ASSET_NOT_FOUND" : "INTERNAL_ERROR"));
         }
     }
 
@@ -800,8 +800,8 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
     };
 
     // select basic info
-    int rv = select_asset_element_basic(asset_name, cb1, test_mode);
-    if (rv != 0) {
+    int r = select_asset_element_basic(asset_name, cb1, test_mode);
+    if (r != 0) {
         log_warning("%s:\tCannot select info about '%s'", client_name.c_str(), asset_name.c_str());
         CLEANUP;
         return NULL;
@@ -816,8 +816,8 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
     };
 
     // select ext attributes
-    rv = select_ext_attributes(asset_id, cb2, test_mode);
-    if (rv != 0) {
+    r = select_ext_attributes(asset_id, cb2, test_mode);
+    if (r != 0) {
         log_warning("%s:\tCannot select ext attributes for '%s'", client_name.c_str(), asset_name.c_str());
         CLEANUP;
         return NULL;
@@ -892,8 +892,8 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
     };
 
     // select "physical topology"
-    rv = select_asset_element_super_parent(asset_id, cb3, test_mode);
-    if (rv != 0) {
+    r = select_asset_element_super_parent(asset_id, cb3, test_mode);
+    if (r != 0) {
         log_error("%s:\tselect_asset_element_super_parent ('%s') failed.",
             client_name.c_str(), asset_name.c_str());
         CLEANUP;
@@ -1010,47 +1010,49 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
     }
     zmsg_t* zmessage = *zmessage_p;
 
-    zmsg_t* reply = zmsg_new();
-
-    char* read_only_s = zmsg_popstr(zmessage);
     bool read_only{false};
+    {
+        char* read_only_s = zmsg_popstr(zmessage);
 
-    if (read_only_s && streq(read_only_s, "READONLY")) {
-        read_only = true;
-    }
-    else if (read_only_s && streq(read_only_s, "READWRITE")) {
-        read_only = false;
-    }
-    else {
-        zmsg_addstr(reply, "ERROR");
-        zmsg_addstr(reply, "BAD_COMMAND");
-        mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-            mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), "ASSET_MANIPULATION",
-            NULL, 5000, &reply);
+        if (read_only_s && streq(read_only_s, "READONLY")) {
+            read_only = true;
+        }
+        else if (read_only_s && streq(read_only_s, "READWRITE")) {
+            read_only = false;
+        }
+        else {
+            zmsg_t* reply = zmsg_new();
+            zmsg_addstr(reply, "ERROR");
+            zmsg_addstr(reply, "BAD_COMMAND");
+            mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
+                mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), "ASSET_MANIPULATION",
+                NULL, 5000, &reply);
+            zmsg_destroy(&reply);
+            zstr_free(&read_only_s);
+            return;
+        }
         zstr_free(&read_only_s);
-        zmsg_destroy(&reply);
-        return;
     }
-    zstr_free(&read_only_s);
 
     if (!fty_proto_is(zmessage)) {
         log_error("%s:\tASSET_MANIPULATION: receiver message is not fty_proto", client_name.c_str());
-        zmsg_destroy(&reply);
         return;
     }
 
     fty_proto_t* proto = fty_proto_decode(zmessage_p);
     if (!proto) {
         log_error("%s:\tASSET_MANIPULATION: failed to decode message", client_name.c_str());
-        zmsg_destroy(&reply);
         return;
     }
 
-    fty_proto_print(proto);
+    if (ftylog_getInstance()->isLogDebug()) {
+        fty_proto_print(proto);
+    }
 
-    // get operation from message
     const char* operation = fty_proto_operation(proto);
 
+    // process operation from message
+    zmsg_t* reply = zmsg_new();
     try {
         // asset manipulation is disabled
         if (server.getGlobalConfigurability() == 0) {
@@ -1180,24 +1182,30 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
             operation, mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())));
     }
 
-    fty_proto_destroy(&proto);
     zmsg_destroy(&reply);
+    fty_proto_destroy(&proto);
 }
 
-static void s_update_topology(const fty::AssetServer& server, fty_proto_t* msg)
+static void s_update_topology(const fty::AssetServer& server, fty_proto_t* asset)
 {
-    assert (msg);
-
-    if (!streq(fty_proto_operation(msg), FTY_PROTO_ASSET_OP_UPDATE)) {
-        log_info("%s:\tIgnore: '%s' on '%s'", server.getAgentName().c_str(), fty_proto_operation(msg), fty_proto_name(msg));
+    if (!asset || (fty_proto_id(asset) != FTY_PROTO_ASSET)) {
         return;
     }
+
+    const char* operation = fty_proto_operation(asset);
+    const char* name = fty_proto_name(asset); // iname
+
+    if (!streq(operation, FTY_PROTO_ASSET_OP_UPDATE)) {
+        log_debug("%s:\tIgnore: '%s' on '%s'", server.getAgentName().c_str(), operation, name);
+        return;
+    }
+
     // select assets, that were affected by the change
-    std::set<std::string>    empty;
+    std::set<std::string> empty;
     std::vector<std::string> asset_names;
-    int rv = select_assets_by_container(fty_proto_name(msg), empty, asset_names, server.getTestMode());
-    if (rv != 0) {
-        log_warning("%s:\tCannot select assets in container '%s'", server.getAgentName().c_str(), fty_proto_name(msg));
+    int r = select_assets_by_container(name, empty, asset_names, server.getTestMode());
+    if (r != 0) {
+        log_warning("%s:\tCannot select assets in container '%s'", server.getAgentName().c_str(), name);
         return;
     }
 
@@ -1221,8 +1229,8 @@ static void s_repeat_all(const fty::AssetServer& server, const std::set<std::str
     };
 
     // select all assets
-    int rv = select_assets(cb, server.getTestMode());
-    if (rv != 0) {
+    int r = select_assets(cb, server.getTestMode());
+    if (r != 0) {
         log_warning("%s:\tCannot list all assets", server.getAgentName().c_str());
         return;
     }
@@ -1304,11 +1312,11 @@ void fty_asset_server(zsock_t* pipe, void* args)
                 server.setStreamEndpoint(endpoint);
 
                 char* stream_name = zsys_sprintf("%s-stream", server.getAgentName().c_str());
-                int rv = mlm_client_connect(const_cast<mlm_client_t*>(server.getStreamClient()),
+                int r = mlm_client_connect(const_cast<mlm_client_t*>(server.getStreamClient()),
                     server.getStreamEndpoint().c_str(), 1000, stream_name);
-                if (rv != 0) {
-                    log_error("%s:\tCan't connect to malamute endpoint '%s'", stream_name,
-                        server.getStreamEndpoint().c_str());
+                if (r != 0) {
+                    log_error("%s:\tCan't connect to malamute endpoint '%s'",
+                        stream_name, server.getStreamEndpoint().c_str());
                 }
 
                 // new interface
@@ -1322,10 +1330,10 @@ void fty_asset_server(zsock_t* pipe, void* args)
             else if (streq(cmd, "PRODUCER")) {
                 char* stream = zmsg_popstr(msg);
                 server.setTestMode(streq(stream, "ASSETS-TEST"));
-                int rv = mlm_client_set_producer(const_cast<mlm_client_t*>(server.getStreamClient()), stream);
-                if (rv != 0) {
-                    log_error(
-                        "%s:\tCan't set producer on stream '%s'", server.getAgentName().c_str(), stream);
+                int r = mlm_client_set_producer(const_cast<mlm_client_t*>(server.getStreamClient()), stream);
+                if (r != 0) {
+                    log_error("%s:\tCan't set producer on stream '%s'",
+                        server.getAgentName().c_str(), stream);
                 }
                 zstr_free(&stream);
                 zsock_signal(pipe, 0);
@@ -1333,11 +1341,10 @@ void fty_asset_server(zsock_t* pipe, void* args)
             else if (streq(cmd, "CONSUMER")) {
                 char* stream  = zmsg_popstr(msg);
                 char* pattern = zmsg_popstr(msg);
-                int rv = mlm_client_set_consumer(
-                    const_cast<mlm_client_t*>(server.getStreamClient()), stream, pattern);
-                if (rv != 0) {
-                    log_error("%s:\tCan't set consumer on stream '%s', '%s'", server.getAgentName().c_str(),
-                        stream, pattern);
+                int r = mlm_client_set_consumer(const_cast<mlm_client_t*>(server.getStreamClient()), stream, pattern);
+                if (r != 0) {
+                    log_error("%s:\tCan't set consumer on stream '%s', '%s'",
+                        server.getAgentName().c_str(), stream, pattern);
                 }
                 zstr_free(&pattern);
                 zstr_free(&stream);
@@ -1348,11 +1355,11 @@ void fty_asset_server(zsock_t* pipe, void* args)
                 server.setMailboxEndpoint(endpoint);
                 server.setSrrEndpoint(endpoint);
 
-                int rv = mlm_client_connect(const_cast<mlm_client_t*>(server.getMailboxClient()),
+                int r = mlm_client_connect(const_cast<mlm_client_t*>(server.getMailboxClient()),
                     server.getMailboxEndpoint().c_str(), 1000, server.getAgentName().c_str());
-                if (rv != 0) {
-                    log_error("%s:\tCan't connect to malamute endpoint '%s'", server.getAgentName().c_str(),
-                        server.getMailboxEndpoint().c_str());
+                if (r != 0) {
+                    log_error("%s:\tCan't connect to malamute endpoint '%s'",
+                        server.getAgentName().c_str(), server.getMailboxEndpoint().c_str());
                 }
 
                 // new interface
@@ -1435,17 +1442,17 @@ void fty_asset_server(zsock_t* pipe, void* args)
             zmsg_t* zmessage = mlm_client_recv(const_cast<mlm_client_t*>(server.getStreamClient()));
 
             if (zmessage && fty_proto_is(zmessage)) {
-                fty_proto_t* bmsg = fty_proto_decode(&zmessage);
+                fty_proto_t* proto = fty_proto_decode(&zmessage);
 
-                if (fty_proto_id(bmsg) == FTY_PROTO_ASSET) {
+                if (fty_proto_id(proto) == FTY_PROTO_ASSET) {
                     log_debug("%s:\tSTREAM DELIVER (PROTO_ASSET)", server.getAgentName().c_str());
-                    s_update_topology(server, bmsg);
+                    s_update_topology(server, proto);
                 }
-                else if (fty_proto_id(bmsg) == FTY_PROTO_METRIC) {
+                else if (fty_proto_id(proto) == FTY_PROTO_METRIC) {
                     log_debug("%s:\tSTREAM DELIVER (PROTO_METRIC)", server.getAgentName().c_str());
-                    handle_incoming_limitations(server, bmsg);
+                    handle_incoming_limitations(server, proto);
                 }
-                fty_proto_destroy(&bmsg);
+                fty_proto_destroy(&proto);
             }
             zmsg_destroy(&zmessage);
         }
