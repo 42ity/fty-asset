@@ -61,6 +61,7 @@ static constexpr const char* METADATA_TRY_ACTIVATE      = "TRY_ACTIVATE";
 static constexpr const char* METADATA_NO_ERROR_IF_EXIST = "NO_ERROR_IF_EXIST";
 static constexpr const char* METADATA_ID_ONLY           = "ID_ONLY";
 static constexpr const char* METADATA_WITH_PARENTS_LIST = "WITH_PARENTS_LIST";
+static constexpr const char* METADATA_RECURSIVE         = "RECURSIVE";
 
 // SRR
 static constexpr const char* SRR_ACTIVE_VERSION  = "1.1";

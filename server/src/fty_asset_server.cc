@@ -930,8 +930,8 @@ void send_create_or_update_asset(const fty::AssetServer& server, const std::stri
 
     if (NULL == msg ||
         0 != mlm_client_send(const_cast<mlm_client_t*>(server.getStreamClient()), subject.c_str(), &msg)) {
-        log_info("%s:\tmlm_client_send not sending message for asset '%s'", server.getAgentName().c_str(),
-            asset_name.c_str());
+        log_error("%s:\tmlm_client_send '%s' failed for asset '%s'",
+            server.getAgentName().c_str(), operation, asset_name.c_str());
     }
     zmsg_destroy(&msg);
 }
@@ -945,7 +945,8 @@ static void s_sendto_create_or_update_asset(const fty::AssetServer& server, cons
         server.getAgentName(), asset_name, operation, subject, server.getTestMode());
 
     if (NULL == msg) {
-        log_error("%s:\tASSET_DETAIL: asset not found (%s)", server.getAgentName().c_str(), asset_name.c_str());
+        log_error("%s:\tASSET_DETAIL: asset not found (%s)",
+            server.getAgentName().c_str(), asset_name.c_str());
         msg = zmsg_new();
         zmsg_addstr(msg, "ERROR");
         zmsg_addstr(msg, "ASSET_NOT_FOUND");
@@ -955,7 +956,8 @@ static void s_sendto_create_or_update_asset(const fty::AssetServer& server, cons
     int r = mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
         address, subject.c_str(), NULL, 5000, &msg);
     if (r != 0) {
-        log_error("%s:\tmlm_client_send failed for asset '%s'", server.getAgentName().c_str(), asset_name.c_str());
+        log_error("%s:\tmlm_client_sendto '%s'/'%s' failed for asset '%s'",
+            server.getAgentName().c_str(), address, subject.c_str(), asset_name.c_str());
     }
     zmsg_destroy(&msg);
 }
