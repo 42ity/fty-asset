@@ -1,5 +1,5 @@
 /*  =========================================================================
-    asset_conversion_json - asset/conversion/json
+    asset_conversion_full_asset - asset/conversion/full-asset
 
     Copyright (C) 2016 - 2020 Eaton
 
@@ -21,16 +21,15 @@
 
 #pragma once
 
-#include <string>
-
 // fwd declaration
 namespace fty {
 class Asset;
+class FullAsset;
 } // namespace fty
 
 namespace fty {
 namespace conversion {
-    std::string toJson(const Asset& asset);
-    void        fromJson(const std::string& json, fty::Asset& asset);
-}
-} // namespace fty::conversion
+
+    fty::FullAsset toFullAsset(const Asset& asset);
+
+}} // namespace fty::conversion

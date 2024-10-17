@@ -89,38 +89,40 @@ int asset_location_r(asset_msg_t** asset_msg, std::string& json)
     _scoped_zframe_t *it_f = NULL;
     _scoped_zmsg_t *zmsg = NULL;
     _scoped_asset_msg_t *item = NULL;
-    while(!(frames.empty() || names.empty()))
+
+    while (!(frames.empty() || names.empty()))
     {
         it_f = frames.front();
         frames.pop_front();
         std::string name_it = names.front();
         names.pop_front();
-        if(it_f == NULL)
+        if (it_f == NULL)
             continue;
 #if CZMQ_VERSION_MAJOR == 3
         byte *buffer = zframe_data(it_f);
-        if(buffer == NULL)
+        if (buffer == NULL)
             goto err_cleanup;
         zmsg = zmsg_decode(buffer, zframe_size(it_f));
 #else
         zmsg = zmsg_decode (it_f);
 #endif
-        if(zmsg == NULL || !zmsg_is (zmsg))
+        if (zmsg == NULL || !zmsg_is (zmsg))
             goto err_cleanup;
         zframe_destroy(&it_f);
 
         _scoped_zmsg_t *pop = NULL;
         bool first = true;
         while((pop = zmsg_popmsg(zmsg)) != NULL) { // caller owns zmgs_t
-            if(!is_asset_msg (pop))
+            if (!is_asset_msg (pop))
                 goto err_cleanup;
             item = asset_msg_decode(&pop); // zmsg_t is freed
-            if(item == NULL)
+            if (item == NULL)
                 goto err_cleanup;
-            if(first == false) {
+            if (first == false) {
                 json += ", ";
-            } else {
-                if(first_contains == false) {
+            }
+            else {
+                if (first_contains == false) {
                     json += ", ";
                 } else {
                     first_contains = false;
@@ -135,17 +137,17 @@ int asset_location_r(asset_msg_t** asset_msg, std::string& json)
         }
         zmsg_destroy(&zmsg);
 
-        if(first == false)
+        if (first == false)
             json += "]";
     }
 
-    if(!first_contains) {
+    if (!first_contains) {
         json += "}"; // level-1 "contains"
     }
-    else {
-        if (type_id != persist::asset_type::DEVICE )
-            json += ", \"contains\":[]";
+    else if (type_id != persist::asset_type::DEVICE ) {
+        json += ", \"contains\":[]";
     }
+
     json += "}"; // json closing curly bracket
 
     return 0; //HTTP_OK;
@@ -154,7 +156,7 @@ err_cleanup:
     zmsg_destroy (&zmsg);
     asset_msg_destroy (&item);
     zframe_destroy(&it_f);
-    while(!(frames.empty())) {
+    while (!(frames.empty())) {
         it_f = frames.front();
         frames.pop_front();
         zframe_destroy(&it_f);

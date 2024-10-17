@@ -19,6 +19,7 @@
  */
 
 #pragma once
+
 #include <cxxtools/serializationinfo.h>
 #include <list>
 #include <map>
@@ -41,8 +42,8 @@ typedef struct CredentialMapping {
 
 typedef struct ExtMapElement {
     std::string value;
-    bool        readOnly   = false;
-    bool        wasUpdated = false;
+    bool        readOnly{false};
+    bool        wasUpdated{false};
 } ExtMapElement;
 
 using ExtMap = std::map<std::string, ExtMapElement>;

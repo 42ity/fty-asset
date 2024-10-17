@@ -34,15 +34,6 @@
 
 #include "utilspp.h"
 
-//Initilialize the logger for tntnet process
-int setFtylog()
-{
-  //ManageFtyLog::setInstanceFtylog("tntnet","/etc/fty/wwwlog.cfg");
-  return 1;
-}
-
-static int _ftylog=setFtylog();
-
 namespace utils {
 
 namespace math {
@@ -51,9 +42,8 @@ void dtos (double number, std::streamsize precision, std::string& result) {
     std::ostringstream stream;
     stream.precision (precision);
     stream << std::fixed;
-
     stream << number;
-    result.assign (stream.str ());
+    result = stream.str();
 }
 
 bool
@@ -213,4 +203,3 @@ join (const char **str_arr, const char *separator) {
 }
 
 } // namespace utils
-

@@ -43,7 +43,6 @@ Build-Depends: debhelper (>= 9),
     libfty-common-messagebus-dev,
     libfty-security-wallet-dev,
     libfty-shm-dev,
-    libfty-common-rest-dev,
     libmariadbd-dev,
     libfty-pack-dev
 
@@ -99,8 +98,8 @@ Package: fty-asset-server
 Architecture: any
 Depends:
     libfty-asset (= ${binary:Version}),
-   ${shlibs:Depends},
-   ${misc:Depends}
+    ${shlibs:Depends},
+    ${misc:Depends}
 Description: fty-asset-server
  This package contains fty asset agent
 

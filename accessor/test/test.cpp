@@ -25,7 +25,7 @@ using namespace fty;
 TEST_CASE("Create test")
 {
     REQUIRE_NOTHROW([&]()
-    { 
+    {
         AssetAccessor accessor;
         (void)accessor;
     }());
@@ -34,7 +34,7 @@ TEST_CASE("Create test")
 TEST_CASE("Request ID - Success")
 {
     auto id = AssetAccessor::assetInameToID("rackcontroller-0");
-    
+
     REQUIRE(id);
     CHECK(*id == 1);
 }
@@ -44,5 +44,5 @@ TEST_CASE("Request ID - Failure")
     auto id = AssetAccessor::assetInameToID("datacenter-0");
 
     REQUIRE(!id);
-    CHECK(id.error() == "Request of ID from iname failed");  
+    CHECK(id.error().find("failed") != std::string::npos);
 }

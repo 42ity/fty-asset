@@ -1,3 +1,23 @@
+/*
+ *
+ * Copyright (C) 2021 Eaton
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ */
+
 #include "asset/db/misc.h"
 #include "asset/error.h"
 #include <fty_common_asset_types.h>
@@ -14,7 +34,8 @@ Expected<uint32_t> nameToAssetId(const std::string& assetName)
     try {
         Connection db;
         return nameToAssetId(db, assetName);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), assetName));
     }
 }
@@ -36,9 +57,11 @@ Expected<uint32_t> nameToAssetId(Connection& conn, const std::string& assetName)
     try {
         auto res = conn.selectRow(sql, "assetName"_p = assetName);
         return res.get<uint32_t>("id_asset_element");
-    } catch (const NotFound&) {
+    }
+    catch (const NotFound&) {
         return unexpected(error(fty::asset::Errors::ElementNotFound).format(assetName));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), assetName));
     }
 }
@@ -52,7 +75,8 @@ Expected<Names> idToNameExtName(uint32_t assetId)
     try {
         Connection db;
         return idToNameExtName(db, assetId);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), assetId));
     }
 }
@@ -74,9 +98,11 @@ Expected<Names> idToNameExtName(Connection& conn, uint32_t assetId)
     try {
         auto res = conn.selectRow(sql, "assetId"_p = assetId);
         return Names{res.get<std::string>("name"), res.get<std::string>("extName")};
-    } catch (const NotFound&) {
+    }
+    catch (const NotFound&) {
         return unexpected(error(fty::asset::Errors::ElementNotFound).format(assetId));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), assetId));
     }
 }
@@ -90,7 +116,8 @@ Expected<std::string> extNameToAssetName(const std::string& assetExtName)
     try {
         Connection db;
         return extNameToAssetName(db, assetExtName);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), assetExtName));
     }
 }
@@ -111,13 +138,14 @@ Expected<std::string> extNameToAssetName(Connection& conn, const std::string& as
     try {
         auto res = conn.selectRow(sql, "extName"_p = assetExtName);
         return res.get("name");
-    } catch (const NotFound&) {
+    }
+    catch (const NotFound&) {
         return unexpected(error(fty::asset::Errors::ElementNotFound).format(assetExtName));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), assetExtName));
     }
 }
-
 
 // =========================================================================================================================================
 // Converts internal name to extended name
@@ -128,7 +156,8 @@ Expected<std::string> nameToExtName(const std::string& assetName)
     try {
         Connection conn;
         return nameToExtName(conn, assetName);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), assetName));
     }
 }
@@ -153,9 +182,11 @@ Expected<std::string> nameToExtName(Connection& conn, const std::string& assetNa
     try {
         auto res = conn.selectRow(sql, "asset_name"_p = assetName);
         return res.get("value");
-    } catch (const NotFound&) {
+    }
+    catch (const NotFound&) {
         return unexpected(error(fty::asset::Errors::ElementNotFound).format(assetName));
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), assetName));
     }
 }
@@ -169,7 +200,8 @@ Expected<uint32_t> maxNumberOfPowerLinks()
     try {
         Connection conn;
         return maxNumberOfPowerLinks(conn);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -187,7 +219,8 @@ Expected<uint32_t> maxNumberOfPowerLinks(Connection& conn)
     try {
         auto res = conn.selectRow(sql);
         return res.get<uint32_t>("maxCount");
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -201,7 +234,8 @@ Expected<uint32_t> maxNumberOfAssetGroups()
     try {
         Connection conn;
         return maxNumberOfAssetGroups(conn);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -219,7 +253,8 @@ Expected<uint32_t> maxNumberOfAssetGroups(Connection& conn)
     try {
         auto res = conn.selectRow(sql);
         return res.get<uint32_t>("maxCount");
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::InternalError).format(e.what()));
     }
 }
@@ -233,7 +268,8 @@ Expected<int32_t> countKeytag(const std::string& keytag, const std::string& valu
     try {
         Connection conn;
         return countKeytag(conn, keytag, value, elementId);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), keytag));
     }
 }
@@ -265,25 +301,26 @@ Expected<int32_t> countKeytag(Connection& conn, const std::string& keytag, const
     try {
         auto st = conn.prepare(elementId ? sqlEl : sql);
 
-        // clang-format off
         st.bind(
             "keytag"_p = keytag,
             "value"_p  = value
         );
-        // clang-format on
 
         if (elementId) {
             st.bind("element_id"_p = elementId);
         }
 
         return st.selectRow().get<int32_t>("count");
-    } catch (const NotFound&) {
+    }
+    catch (const NotFound&) {
         if (elementId) {
             return unexpected(error(fty::asset::Errors::ElementNotFound).format(elementId));
-        } else {
+        }
+        else {
             return unexpected(error(fty::asset::Errors::ElementNotFound).format(keytag));
         }
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(error(fty::asset::Errors::ExceptionForElement).format(e.what(), keytag));
     }
 }

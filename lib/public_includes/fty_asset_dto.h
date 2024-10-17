@@ -23,7 +23,6 @@
 
 #include "fty_common_asset.h"
 
-#include <cxxtools/serializationinfo.h>
 #include <fty_common_asset_types.h>
 #include <map>
 #include <optional>
@@ -32,6 +31,10 @@
 // fwd declaration
 struct fty_proto_t;
 
+namespace cxxtools {
+    class SerializationInfo;
+}
+
 namespace fty {
 // extended properties
 static constexpr const char* EXT_UUID         = "uuid";
@@ -39,7 +42,7 @@ static constexpr const char* EXT_CREATE_TS    = "create_ts";
 static constexpr const char* EXT_CREATE_USER  = "create_user";
 static constexpr const char* EXT_UPDATE_TS    = "update_ts";
 static constexpr const char* EXT_UPDATE_USER  = "update_user";
-static constexpr const char* EXT_NAME         = "name";
+static constexpr const char* EXT_NAME         = "name"; // friendly name
 static constexpr const char* EXT_MODEL        = "model";
 static constexpr const char* EXT_MANUFACTURER = "manufacturer";
 static constexpr const char* EXT_SERIAL_NO    = "serial_no";
@@ -86,8 +89,8 @@ public:
 
 private:
     std::string m_value;
-    bool        m_readOnly   = false;
-    bool        m_wasUpdated = false;
+    bool m_readOnly{false};
+    bool m_wasUpdated{false};
 };
 
 void operator<<=(cxxtools::SerializationInfo& si, const ExtMapElement& e);
@@ -129,7 +132,7 @@ private:
     std::string m_sourceId;
     std::string m_srcOut;
     std::string m_destIn;
-    int         m_linkType = 0;
+    int         m_linkType{0};
     ExtMap      m_ext;
     std::string m_secondaryID;
 };
@@ -257,7 +260,7 @@ protected:
     // direct parent iname
     std::string m_parentIname;
     // priority 1..5 (1 is most, 5 is least)
-    int m_priority = 5;
+    int m_priority{5};
     // asset tag
     std::string m_assetTag;
     // secondary ID
@@ -275,16 +278,5 @@ protected:
 
 void operator<<=(cxxtools::SerializationInfo& si, const fty::Asset& asset);
 void operator>>=(const cxxtools::SerializationInfo& si, fty::Asset& asset);
-
-
-class UIAsset : public Asset
-{
-public:
-    explicit UIAsset(const Asset& a = Asset());
-
-    // serialization / deserialization for cxxtools
-    void serializeUI(cxxtools::SerializationInfo& si) const;
-    void deserializeUI(const cxxtools::SerializationInfo& si);
-};
 
 } // namespace fty

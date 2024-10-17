@@ -24,18 +24,18 @@
 
 namespace fty
 {
-  class Lock {
+    class Lock {
     public:
-      Lock(std::mutex & m):m_mutex(m) {
-        log_trace("Try to get the mutex...");
-        m_mutex.lock();
-        log_trace("Try to get the mutex... OK.");
-      }
-      ~Lock() {
-        m_mutex.unlock();
-        log_trace("Release the mutex... OK.");
-      }
+        Lock(std::mutex& m): m_mutex(m) {
+            log_trace("Locking the mutex...");
+            m_mutex.lock();
+            log_trace("Mutex locked");
+        }
+        ~Lock() {
+            m_mutex.unlock();
+            log_trace("Mutex unlocked");
+        }
     private:
-      std::mutex & m_mutex;
-  };
+        std::mutex& m_mutex;
+    };
 }

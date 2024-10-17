@@ -1,5 +1,5 @@
 /*  =========================================================================
-    asset_asset_storage - asset/asset-storage
+    asset_conversion_json - asset/conversion/json
 
     Copyright (C) 2016 - 2020 Eaton
 
@@ -19,9 +19,19 @@
     =========================================================================
 */
 
-/*
-@header
-    asset_asset_storage - asset/asset-storage
-@discuss
-@end
-*/
+#pragma once
+
+#include <string>
+
+// fwd declaration
+namespace fty {
+class Asset;
+} // namespace fty
+
+namespace fty {
+namespace conversion {
+
+    std::string toJson(const Asset& asset);
+    void        fromJson(const std::string& json, fty::Asset& asset);
+
+}} // namespace fty::conversion

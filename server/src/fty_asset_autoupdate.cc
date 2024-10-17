@@ -49,8 +49,7 @@ struct fty_asset_autoupdate_t {
 //  --------------------------------------------------------------------------
 //  Destroy the fty_asset_autoupdate
 
-static void
-fty_asset_autoupdate_destroy (fty_asset_autoupdate_t **self_p)
+static void fty_asset_autoupdate_destroy (fty_asset_autoupdate_t **self_p)
 {
     if (self_p && *self_p) {
         fty_asset_autoupdate_t *self = *self_p;
@@ -67,8 +66,7 @@ fty_asset_autoupdate_destroy (fty_asset_autoupdate_t **self_p)
 //  --------------------------------------------------------------------------
 //  Create a new fty_asset_autoupdate
 
-static fty_asset_autoupdate_t *
-fty_asset_autoupdate_new (void)
+static fty_asset_autoupdate_t *fty_asset_autoupdate_new ()
 {
     fty_asset_autoupdate_t *self = new (fty_asset_autoupdate_t); //due to std::vector<>
     if (!self) {
@@ -87,10 +85,11 @@ fty_asset_autoupdate_new (void)
 #define is_ipv6(X) (X.find(':') != std::string::npos)
 #define icase_streq(X,Y) (strcasecmp ((X),(Y)) == 0)
 
-static void
-autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &assetName)
+static void autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &assetName)
 {
-    if (!self) return;
+    if (!self) {
+        return;
+    }
 
     zhash_t *inventory = zhash_new ();
     zhash_t *aux = zhash_new ();
@@ -100,7 +99,6 @@ autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &asse
 
     zhash_update (aux, "time", static_cast<void*>( const_cast<char*>(std::to_string (zclock_time () / 1000).c_str ())));
 
-    std::string key, topic;
     auto ifaces = local_addresses();
 
     bool haveLAN1 = (ifaces.find ("LAN1") != ifaces.cend ());
@@ -113,6 +111,7 @@ autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &asse
             const auto iface = ifaces.find( "LAN" + std::to_string (i));
             if (iface != ifaces.cend()) {
                 for (auto addr: iface->second) {
+                    std::string key;
                     if (is_ipv6 (addr)) {
                         key = "ipv6." + std::to_string (++ipv6index);
                     } else {
@@ -128,10 +127,10 @@ autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &asse
             "inventory",
             inventory);
         if (msg) {
-            topic = "inventory@" + assetName;
+            std::string topic = "inventory@" + assetName;
             log_debug ("new inventory message %s", topic.c_str());
             int r = mlm_client_send (self->client, topic.c_str (), &msg);
-            if( r != 0 ) log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r);
+            if (r != 0) { log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r); }
             zmsg_destroy (&msg);
         }
     } else {
@@ -141,6 +140,7 @@ autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &asse
         for (auto interface: ifaces) {
             if (interface.first == "lo") continue;
             for (auto addr: interface.second) {
+                std::string key;
                 if (is_ipv6 (addr)) {
                     key = "ipv6." + std::to_string (++ipv6index);
                 } else {
@@ -155,10 +155,10 @@ autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &asse
             "inventory",
             inventory);
         if (msg) {
-            topic = "inventory@" + assetName;
+            std::string topic = "inventory@" + assetName;
             log_debug ("new inventory message %s", topic.c_str());
             int r = mlm_client_send (self->client, topic.c_str (), &msg);
-            if( r != 0 ) log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r);
+            if (r != 0) { log_error("failed to send inventory %s result %" PRIi32, topic.c_str(), r); }
             zmsg_destroy (&msg);
         }
     }
@@ -166,13 +166,15 @@ autoupdate_update_rc_self (fty_asset_autoupdate_t *self, const std::string &asse
     zhash_destroy (&aux);
 }
 
-static void
-autoupdate_update_rc_information (fty_asset_autoupdate_t *self)
+static void autoupdate_update_rc_information (fty_asset_autoupdate_t *self)
 {
-    if (!self) return;
-
-    if (self->rcs.empty() )
+    if (!self) {
         return;
+    }
+
+    if (self->rcs.empty()) {
+        return;
+    }
     if (self->rcs.size() == 1) {
         // there is only one rc, must be me
         autoupdate_update_rc_self (self, self->rcs[0]);
@@ -185,7 +187,7 @@ autoupdate_update_rc_information (fty_asset_autoupdate_t *self)
     for (const auto &interface: local_addresses ()) {
         for (const auto &ip: interface.second) {
             std::string name = ip_to_name (ip.c_str());
-            if ( name.empty () ) {
+            if (name.empty()) {
                 continue;
             }
 
@@ -196,10 +198,12 @@ autoupdate_update_rc_information (fty_asset_autoupdate_t *self)
             }
             log_info ("%s:\tip='%s', dns_name='%s'", self->name, ip.c_str (), name.c_str ());
             for (const auto &rc: self->rcs) {
-                if(rc.empty() || hostname.empty())
+                if (rc.empty() || hostname.empty()) {
                     continue;
-                if ( icase_streq (rc.c_str (), hostname.c_str ()) ||
-                     icase_streq (rc.c_str (), name.c_str ())) {
+                }
+                if (icase_streq (rc.c_str (), hostname.c_str ())
+                    || icase_streq (rc.c_str (), name.c_str ())
+                ) {
                     // asset name == hostname this is me
                     autoupdate_update_rc_self (self, rc);
                     return;
@@ -209,46 +213,50 @@ autoupdate_update_rc_information (fty_asset_autoupdate_t *self)
     }
 }
 
-static void
-autoupdate_request_all_rcs (fty_asset_autoupdate_t *self)
+static void autoupdate_request_all_rcs (fty_asset_autoupdate_t *self)
 {
-    if (!self) return;
+    if (!self) {
+        return;
+    }
 
-    if ( self->verbose)
+    if (self->verbose) {
         log_debug ("%s:\tRequest RC list", self->name);
+    }
+
     zmsg_t *msg = zmsg_new ();
     zmsg_addstr (msg, "GET");
     zmsg_addstr (msg, "");
     zmsg_addstr (msg, "rack controller");
     int rv = mlm_client_sendto (self->client, self->asset_agent_name, "ASSETS_IN_CONTAINER", NULL, 5000, &msg);
+    zmsg_destroy (&msg);
+
     if (rv != 0) {
         log_error ("%s:\tRequest RC list failed", self->name);
     }
-    zmsg_destroy (&msg);
 }
 
-static void
-autoupdate_update (fty_asset_autoupdate_t *self)
+static void autoupdate_update (fty_asset_autoupdate_t *self)
 {
     autoupdate_update_rc_information (self);
 }
 
-static void
-autoupdate_handle_message (fty_asset_autoupdate_t *self, zmsg_t *message)
+static void autoupdate_handle_message (fty_asset_autoupdate_t *self, zmsg_t *message)
 {
-    if (!self || !message ) return;
+    if (!self || !message) {
+        return;
+    }
 
     const char *sender = mlm_client_sender (self->client);
     const char *subj = mlm_client_subject (self->client);
     if (streq (sender, self->asset_agent_name)) {
         if (streq (subj, "ASSETS_IN_CONTAINER")) {
-            if ( self->verbose ) {
+            if (self->verbose) {
                 log_debug ("%s:\tGot reply with RC:", self->name);
                 zmsg_print (message);
             }
             self->rcs.clear ();
             char *okfail = zmsg_popstr (message);
-            if ( okfail && streq (okfail, "OK")) {
+            if (okfail && streq (okfail, "OK")) {
                 char *rc = zmsg_popstr(message);
                 while (rc) {
                     self->rcs.push_back(rc);
@@ -263,8 +271,7 @@ autoupdate_handle_message (fty_asset_autoupdate_t *self, zmsg_t *message)
     }
 }
 
-void
-fty_asset_autoupdate_server (zsock_t *pipe, void *args)
+void fty_asset_autoupdate_server (zsock_t *pipe, void *args)
 {
     assert(args);
 
@@ -298,21 +305,17 @@ fty_asset_autoupdate_server (zsock_t *pipe, void *args)
         else if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
             char *cmd = zmsg_popstr (msg);
+            bool term{false};
+
             log_debug ("%s:\tActor command=%s", self->name, cmd);
 
             if (streq (cmd, "$TERM")) {
-                if ( !self->verbose ) // ! is here intentionally, to get rid of duplication information
-                    log_info ("%s:\tGot $TERM", self->name);
-                zstr_free (&cmd);
-                zmsg_destroy (&msg);
-                break;
+                term = true;
             }
-            else
-            if (streq (cmd, "VERBOSE")) {
+            else if (streq (cmd, "VERBOSE")) {
                 self->verbose = true;
             }
-            else
-            if (streq (cmd, "CONNECT")) {
+            else if (streq (cmd, "CONNECT")) {
                 char* endpoint = zmsg_popstr (msg);
                 int rv = mlm_client_connect (self->client, endpoint, 1000, self->name);
                 if (rv == -1) {
@@ -321,8 +324,7 @@ fty_asset_autoupdate_server (zsock_t *pipe, void *args)
                 zstr_free (&endpoint);
                 zsock_signal (pipe, 0);
             }
-            else
-            if (streq (cmd, "PRODUCER")) {
+            else if (streq (cmd, "PRODUCER")) {
                 char* stream = zmsg_popstr (msg);
                 int rv = mlm_client_set_producer (self->client, stream);
                 if (rv == -1) {
@@ -331,8 +333,7 @@ fty_asset_autoupdate_server (zsock_t *pipe, void *args)
                 zstr_free (&stream);
                 zsock_signal (pipe, 0);
             }
-            else
-            if (streq (cmd, "CONSUMER")) {
+            else if (streq (cmd, "CONSUMER")) {
                 char* stream = zmsg_popstr (msg);
                 char* pattern = zmsg_popstr (msg);
                 int rv = mlm_client_set_consumer (self->client, stream, pattern);
@@ -343,12 +344,10 @@ fty_asset_autoupdate_server (zsock_t *pipe, void *args)
                 zstr_free (&stream);
                 zsock_signal (pipe, 0);
             }
-            else
-            if (streq (cmd, "WAKEUP")) {
+            else if (streq (cmd, "WAKEUP")) {
                 autoupdate_request_all_rcs (self);
             }
-            else
-            if (streq (cmd, "ASSET_AGENT_NAME")) {
+            else if (streq (cmd, "ASSET_AGENT_NAME")) {
                 char *name = zmsg_popstr (msg);
                 zstr_free(&self->asset_agent_name);
                 self->asset_agent_name = name;
@@ -358,6 +357,9 @@ fty_asset_autoupdate_server (zsock_t *pipe, void *args)
             }
             zstr_free (&cmd);
             zmsg_destroy (&msg);
+            if (term) {
+                break;
+            }
         }
         else if (which == mlm_client_msgpipe(self->client)) {
             zmsg_t *zmessage = mlm_client_recv (self->client);

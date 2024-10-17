@@ -30,8 +30,8 @@
 #include "conversion/full-asset.h"
 #include "conversion/json.h"
 #include "conversion/proto.h"
-#include <algorithm>
 #include <fty_proto.h>
+#include <algorithm>
 #include <sstream>
 
 namespace fty {
@@ -78,26 +78,15 @@ const AssetLink::ExtMap& AssetLink::ext() const
 
 const std::string& AssetLink::extEntry(const std::string& key) const
 {
-    static const std::string extNotFound;
-
-    auto search = m_ext.find(key);
-
-    if (search != m_ext.end()) {
-        return search->second.getValue();
-    }
-
-    return extNotFound;
+    static const std::string emptyStr;
+    auto it = m_ext.find(key);
+    return (it != m_ext.end()) ? it->second.getValue() : emptyStr;
 }
 
 bool AssetLink::isReadOnly(const std::string& key) const
 {
-    auto search = m_ext.find(key);
-
-    if (search != m_ext.end()) {
-        return search->second.isReadOnly();
-    }
-
-    return false;
+    auto it = m_ext.find(key);
+    return (it != m_ext.end()) ? it->second.isReadOnly() : false;
 }
 
 const std::string& AssetLink::secondaryID() const
@@ -132,13 +121,14 @@ void AssetLink::setExt(const AssetLink::ExtMap& ext)
 
 void AssetLink::setExtEntry(const std::string& key, const std::string& value, bool readOnly, bool forceUpdatedFalse)
 {
-    if (m_ext.find(key) != m_ext.end()) {
+    auto it = m_ext.find(key);
+    if (it != m_ext.end()) {
         // key already exists, update values
-        m_ext.at(key).setValue(value);
-        m_ext.at(key).setReadOnly(readOnly);
-    } else {
-        ExtMapElement element(value, readOnly, forceUpdatedFalse);
-        m_ext[key] = element;
+        it->second.setValue(value);
+        it->second.setReadOnly(readOnly);
+    }
+    else {
+        m_ext[key] = ExtMapElement{value, readOnly, forceUpdatedFalse};
     }
 }
 
@@ -195,7 +185,7 @@ void AssetLink::deserialize(const cxxtools::SerializationInfo& si)
     if (si.findMember(SI_LINK_EXT) != NULL) {
         const cxxtools::SerializationInfo ext = si.getMember(SI_LINK_EXT);
         for (const auto& si_link_ext : ext) {
-            std::string   key = si_link_ext.name();
+            std::string key = si_link_ext.name();
             ExtMapElement element;
             si_link_ext >>= element;
             m_ext[key] = element;
@@ -210,7 +200,12 @@ void AssetLink::deserialize(const cxxtools::SerializationInfo& si)
 bool operator==(const AssetLink& l, const AssetLink& r)
 {
     // note that the external map of attributes does not determine if two links are equal
-    return ((l.sourceId() == r.sourceId()) && (l.srcOut() == r.srcOut()) && (l.destIn() == r.destIn()) && (l.linkType() == r.linkType()));
+    return (
+        l.sourceId() == r.sourceId()
+        && l.srcOut() == r.srcOut()
+        && l.destIn() == r.destIn()
+        && l.linkType() == r.linkType()
+    );
 }
 
 void operator<<=(cxxtools::SerializationInfo& si, const AssetLink& l)
@@ -223,38 +218,18 @@ void operator>>=(const cxxtools::SerializationInfo& si, AssetLink& l)
     l.deserialize(si);
 }
 
-
 const std::string assetStatusToString(AssetStatus status)
 {
-    std::string retVal;
-
-    switch (status) {
-        case AssetStatus::Active:
-            retVal = "active";
-            break;
-        case AssetStatus::Nonactive:
-            retVal = "nonactive";
-            break;
-        case AssetStatus::Unknown:
-        default:
-            retVal = "unknown";
-            break;
-    }
-
-    return retVal;
+    if (status == AssetStatus::Active) { return "active"; }
+    if (status == AssetStatus::Nonactive) { return "nonactive"; }
+    return "unknown";
 }
 
 AssetStatus stringToAssetStatus(const std::string& str)
 {
-    AssetStatus retVal = AssetStatus::Unknown;
-
-    if (str == "active") {
-        retVal = AssetStatus::Active;
-    } else if (str == "nonactive") {
-        retVal = AssetStatus::Nonactive;
-    }
-
-    return retVal;
+    if (str == "active") { return AssetStatus::Active; }
+    if (str == "nonactive") { return AssetStatus::Nonactive; }
+    return AssetStatus::Unknown;
 }
 
 // getters
@@ -306,26 +281,15 @@ const std::string& Asset::getSecondaryID() const
 
 const std::string& Asset::getExtEntry(const std::string& key) const
 {
-    static const std::string extNotFound;
-
-    auto search = m_ext.find(key);
-
-    if (search != m_ext.end()) {
-        return search->second.getValue();
-    }
-
-    return extNotFound;
+    static const std::string extNotFound; //empty
+    auto it = m_ext.find(key);
+    return (it != m_ext.end()) ? it->second.getValue() : extNotFound;
 }
 
 bool Asset::isExtEntryReadOnly(const std::string& key) const
 {
-    auto search = m_ext.find(key);
-
-    if (search != m_ext.end()) {
-        return search->second.isReadOnly();
-    }
-
-    return false;
+    auto it = m_ext.find(key);
+    return (it != m_ext.end()) ? it->second.isReadOnly() : false;
 }
 
 // ext param getters
@@ -413,32 +377,30 @@ void Asset::clearExtMap()
 
 void Asset::setExtEntry(const std::string& key, const std::string& value, bool readOnly, bool forceUpdatedFalse)
 {
-    if (m_ext.find(key) != m_ext.end()) {
+    auto it = m_ext.find(key);
+    if (it != m_ext.end()) {
         // key already exists, update values
-        m_ext.at(key).setValue(value);
-        m_ext.at(key).setReadOnly(readOnly);
-    } else {
-        ExtMapElement element(value, readOnly, forceUpdatedFalse);
-        m_ext[key] = element;
+        it->second.setValue(value);
+        it->second.setReadOnly(readOnly);
+    }
+    else {
+        m_ext[key] = ExtMapElement{value, readOnly, forceUpdatedFalse};
     }
 }
 
-void Asset::addLink(
-    const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType, const AssetLink::ExtMap& attributes)
+void Asset::addLink(const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType, const AssetLink::ExtMap& attributes)
 {
-    AssetLink l(sourceId, scrOut, destIn, linkType);
-    l.setExt(attributes);
-
-    m_linkedAssets.push_back(l);
+    AssetLink link{sourceId, scrOut, destIn, linkType};
+    link.setExt(attributes);
+    m_linkedAssets.push_back(link);
 }
 
 void Asset::removeLink(const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType)
 {
-    AssetLink l(sourceId, scrOut, destIn, linkType);
-    auto      found = std::find(m_linkedAssets.begin(), m_linkedAssets.end(), l);
-
-    if (found != m_linkedAssets.end()) {
-        m_linkedAssets.erase(found);
+    AssetLink link(sourceId, scrOut, destIn, linkType);
+    auto it = std::find(m_linkedAssets.begin(), m_linkedAssets.end(), link);
+    if (it != m_linkedAssets.end()) {
+        m_linkedAssets.erase(it);
     }
 }
 
@@ -450,22 +412,6 @@ void Asset::setLinkedAssets(const std::vector<AssetLink>& assets)
 void Asset::setSecondaryID(const std::string& secondaryID)
 {
     m_secondaryID = secondaryID;
-}
-
-// wrapper for address
-Asset::AddressMap Asset::getAddressMap() const
-{
-    Asset::AddressMap addresses;
-
-    for (uint16_t index = 0; index <= 255; index++) {
-        const std::string& address = getAddress(static_cast<uint8_t>(index));
-
-        if (!address.empty()) {
-            addresses[static_cast<uint8_t>(index)] = address;
-        }
-    }
-
-    return addresses;
 }
 
 const std::string& Asset::getAddress(uint8_t index) const
@@ -483,93 +429,30 @@ void Asset::removeAddress(uint8_t index)
     setAddress(index, "");
 }
 
+// wrapper for address
+Asset::AddressMap Asset::getAddressMap() const
+{
+    Asset::AddressMap addresses;
+    for (uint8_t index = 0; index < 16; index++) {
+        const std::string& address = getAddress(index);
+        if (!address.empty()) {
+            addresses[index] = address;
+        }
+    }
+    return addresses;
+}
+
 // Wrapper for Endpoints
 Asset::ProtocolMap Asset::getProtocolMap() const
 {
     Asset::ProtocolMap protocols;
-
-    for (uint16_t index = 0; index <= 255; index++) {
-        const std::string& protocol = getEndpointProtocol(static_cast<uint8_t>(index));
-
+    for (uint8_t index = 0; index < 16; index++) {
+        const std::string& protocol = getEndpointProtocol(index);
         if (!protocol.empty()) {
-            protocols[static_cast<uint8_t>(index)] = protocol;
+            protocols[index] = protocol;
         }
     }
-
     return protocols;
-}
-
-const std::string& Asset::getEndpointProtocol(uint8_t index) const
-{
-    return getEndpointData(index, "protocol");
-}
-const std::string& Asset::getEndpointPort(uint8_t index) const
-{
-    return getEndpointData(index, "port");
-}
-const std::string& Asset::getEndpointSubAddress(uint8_t index) const
-{
-    return getEndpointData(index, "sub_address");
-}
-const std::string& Asset::getEndpointOperatingStatus(uint8_t index) const
-{
-    return getEndpointData(index, "status.operating");
-}
-const std::string& Asset::getEndpointErrorMessage(uint8_t index) const
-{
-    return getEndpointData(index, "status.error_msg");
-}
-
-const std::string& Asset::getEndpointProtocolAttribute(uint8_t index, const std::string& attributeName) const
-{
-    static std::string noProtocol;
-
-    std::string protocol = getEndpointProtocol(index);
-    if (protocol.empty()) {
-        return noProtocol;
-    }
-
-    return getEndpointData(index, "." + protocol + "." + attributeName);
-}
-
-void Asset::setEndpointProtocol(uint8_t index, const std::string& val)
-{
-    return setEndpointData(index, "protocol", val);
-}
-void Asset::setEndpointPort(uint8_t index, const std::string& val)
-{
-    return setEndpointData(index, "port", val);
-}
-void Asset::setEndpointSubAddress(uint8_t index, const std::string& val)
-{
-    return setEndpointData(index, "sub_address", val);
-}
-void Asset::setEndpointOperatingStatus(uint8_t index, const std::string& val)
-{
-    return setEndpointData(index, "status.operating", val);
-}
-void Asset::setEndpointErrorMessage(uint8_t index, const std::string& val)
-{
-    return setEndpointData(index, "status.error_msg", val);
-}
-
-void Asset::setEndpointProtocolAttribute(uint8_t index, const std::string& attributeName, const std::string& val)
-{
-    std::string protocol = getEndpointProtocol(index);
-    if (protocol.empty()) {
-        return;
-    }
-
-    return setEndpointData(index, "." + protocol + "." + attributeName, val);
-}
-
-void Asset::removeEndpoint(uint8_t index)
-{
-    setEndpointProtocol(index, "");
-    setEndpointPort(index, "");
-    setEndpointSubAddress(index, "");
-    setEndpointOperatingStatus(index, "");
-    setEndpointErrorMessage(index, "");
 }
 
 const std::string& Asset::getEndpointData(uint8_t index, const std::string& field) const
@@ -582,15 +465,89 @@ void Asset::setEndpointData(uint8_t index, const std::string& field, const std::
     setExtEntry("endpoint." + std::to_string(index) + "." + field, val);
 }
 
+const std::string& Asset::getEndpointProtocol(uint8_t index) const
+{
+    return getEndpointData(index, "protocol");
+}
+
+const std::string& Asset::getEndpointPort(uint8_t index) const
+{
+    return getEndpointData(index, "port");
+}
+
+const std::string& Asset::getEndpointSubAddress(uint8_t index) const
+{
+    return getEndpointData(index, "sub_address");
+}
+
+const std::string& Asset::getEndpointOperatingStatus(uint8_t index) const
+{
+    return getEndpointData(index, "status.operating");
+}
+
+const std::string& Asset::getEndpointErrorMessage(uint8_t index) const
+{
+    return getEndpointData(index, "status.error_msg");
+}
+
+const std::string& Asset::getEndpointProtocolAttribute(uint8_t index, const std::string& attributeName) const
+{
+    static const std::string noProtocol;
+    std::string protocol = getEndpointProtocol(index);
+    return !protocol.empty() ? getEndpointData(index, "." + protocol + "." + attributeName) : noProtocol;
+}
+
+void Asset::setEndpointProtocol(uint8_t index, const std::string& val)
+{
+    return setEndpointData(index, "protocol", val);
+}
+
+void Asset::setEndpointPort(uint8_t index, const std::string& val)
+{
+    return setEndpointData(index, "port", val);
+}
+
+void Asset::setEndpointSubAddress(uint8_t index, const std::string& val)
+{
+    return setEndpointData(index, "sub_address", val);
+}
+
+void Asset::setEndpointOperatingStatus(uint8_t index, const std::string& val)
+{
+    return setEndpointData(index, "status.operating", val);
+}
+
+void Asset::setEndpointErrorMessage(uint8_t index, const std::string& val)
+{
+    return setEndpointData(index, "status.error_msg", val);
+}
+
+void Asset::setEndpointProtocolAttribute(uint8_t index, const std::string& attributeName, const std::string& val)
+{
+    std::string protocol = getEndpointProtocol(index);
+    if (!protocol.empty()) {
+        setEndpointData(index, "." + protocol + "." + attributeName, val);
+    }
+}
+
+void Asset::removeEndpoint(uint8_t index)
+{
+    setEndpointProtocol(index, "");
+    setEndpointPort(index, "");
+    setEndpointSubAddress(index, "");
+    setEndpointOperatingStatus(index, "");
+    setEndpointErrorMessage(index, "");
+}
+
 // friendly name
 const std::string& Asset::getFriendlyName() const
 {
-    return getExtEntry("name");
+    return getExtEntry(EXT_NAME);
 }
 
 void Asset::setFriendlyName(const std::string& friendlyName)
 {
-    setExtEntry("name", friendlyName);
+    setExtEntry(EXT_NAME, friendlyName);
 }
 
 void Asset::dump(std::ostream& os)
@@ -630,10 +587,16 @@ void Asset::dump(std::ostream& os)
 
 bool Asset::operator==(const Asset& asset) const
 {
-    return (
-        m_internalName == asset.m_internalName && m_assetStatus == asset.m_assetStatus && m_assetType == asset.m_assetType &&
-        m_assetSubtype == asset.m_assetSubtype && m_parentIname == asset.m_parentIname && m_priority == asset.m_priority &&
-        m_assetTag == asset.m_assetTag && m_ext == asset.m_ext && m_linkedAssets == asset.m_linkedAssets);
+    return m_internalName == asset.m_internalName
+        && m_assetStatus == asset.m_assetStatus
+        && m_assetType == asset.m_assetType
+        && m_assetSubtype == asset.m_assetSubtype
+        && m_parentIname == asset.m_parentIname
+        && m_priority == asset.m_priority
+        && m_assetTag == asset.m_assetTag
+        && m_ext == asset.m_ext
+        && m_linkedAssets == asset.m_linkedAssets
+    ;
 }
 
 bool Asset::operator!=(const Asset& asset) const
@@ -688,7 +651,6 @@ void Asset::serialize(cxxtools::SerializationInfo& si) const
 void Asset::deserialize(const cxxtools::SerializationInfo& si)
 {
     int tmpInt = 0;
-
     si.getMember(SI_STATUS) >>= tmpInt;
     m_assetStatus = AssetStatus(tmpInt);
 
@@ -701,23 +663,22 @@ void Asset::deserialize(const cxxtools::SerializationInfo& si)
     // linked assets
     const cxxtools::SerializationInfo linked = si.getMember(SI_LINKED);
     for (const auto& link_si : linked) {
-        AssetLink l;
-        link_si >>= l;
-
-        m_linkedAssets.push_back(l);
+        AssetLink link;
+        link_si >>= link;
+        m_linkedAssets.push_back(link);
     }
 
     // ext map
     m_ext.clear();
     const cxxtools::SerializationInfo ext = si.getMember(SI_EXT);
     for (const auto& siExt : ext) {
-        std::string   key = siExt.name();
+        std::string key = siExt.name();
         ExtMapElement element;
         siExt >>= element;
         m_ext[key] = element;
     }
 
-    if (si.findMember(SI_SECONDARY_ID) != NULL) {
+    if (si.findMember(SI_SECONDARY_ID) != nullptr) {
         si.getMember(SI_SECONDARY_ID) >>= m_secondaryID;
     }
 
@@ -753,7 +714,6 @@ fty_proto_t* Asset::toFtyProto(const Asset& a, const std::string& op, bool test)
     return conversion::toFtyProto(a, op, test);
 }
 
-
 void operator<<=(cxxtools::SerializationInfo& si, const fty::Asset& asset)
 {
     asset.serialize(si);
@@ -787,7 +747,7 @@ ExtMapElement::ExtMapElement(ExtMapElement&& element)
     m_readOnly   = element.m_readOnly;
     m_wasUpdated = element.m_wasUpdated;
 
-    element.m_value      = std::string();
+    element.m_value.clear();
     element.m_readOnly   = false;
     element.m_wasUpdated = false;
 }
@@ -837,7 +797,10 @@ void ExtMapElement::setReadOnly(bool readOnly)
 
 bool ExtMapElement::operator==(const ExtMapElement& element) const
 {
-    return (m_value == element.m_value && m_readOnly == element.m_readOnly);
+    return (
+        m_value == element.m_value
+        && m_readOnly == element.m_readOnly
+    );
 }
 
 bool ExtMapElement::operator!=(const ExtMapElement& element) const
@@ -872,57 +835,6 @@ void operator<<=(cxxtools::SerializationInfo& si, const ExtMapElement& e)
 void operator>>=(const cxxtools::SerializationInfo& si, ExtMapElement& e)
 {
     e.deserialize(si);
-}
-
-
-UIAsset::UIAsset(const Asset& a)
-    : Asset(a)
-{
-}
-
-static constexpr const char* UI_ASSET_ID            = "id";
-static constexpr const char* UI_ASSET_LOCATION      = "location_id";
-static constexpr const char* UI_ASSET_LOCATION_URI  = "location_uri";
-static constexpr const char* UI_ASSET_FRIENDLY_NAME = "name";
-static constexpr const char* UI_TYPE                = "type";
-static constexpr const char* UI_SUBTYPE             = "sub_type";
-static constexpr const char* UI_PRIORITY            = "priority";
-
-void UIAsset::serializeUI(cxxtools::SerializationInfo& si) const
-{
-    si.addMember(UI_ASSET_ID) <<= m_internalName;
-
-    if (!m_parentIname.empty()) {
-        si.addMember(UI_ASSET_LOCATION) <<= m_parentIname;
-        si.addMember(UI_ASSET_LOCATION) <<= ("/api/v1/asset/" + m_parentIname);
-    }
-
-    si.addMember(UI_ASSET_FRIENDLY_NAME) <<= getFriendlyName();
-
-    si.addMember(UI_TYPE) <<= m_assetType;
-    si.addMember(UI_SUBTYPE) <<= m_assetSubtype;
-
-    si.addMember(UI_PRIORITY) <<= "P" + std::to_string(m_priority);
-
-    /*si.addMember(SI_LINKED) <<= m_linkedAssets;
-
-    // ext
-    cxxtools::SerializationInfo ext;
-    for (const auto& e : m_ext) {
-        cxxtools::SerializationInfo& entry = ext.addMember(e.first);
-        entry.addMember("value") <<= e.second.getValue();
-        entry.addMember("readOnly") <<= e.second.isReadOnly();
-        entry.addMember("updated") <<= e.second.wasUpdated();
-    }
-    si.addMember(SI_EXT) <<= ext;
-
-    if (m_parentsList.has_value()) {
-        si.addMember(SI_PARENTS_LIST) <<= m_parentsList.value();
-    }*/
-}
-
-void UIAsset::deserializeUI(const cxxtools::SerializationInfo& /*si*/)
-{
 }
 
 } // namespace fty
