@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <cxxtools/serializationinfo.h>
 #include <list>
 #include <map>
 #include <string>

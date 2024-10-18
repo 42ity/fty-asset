@@ -15,20 +15,20 @@
 */
 
 #include <catch2/catch.hpp>
-#include "fty_asset_dto.h"
+
 #include "fty_common_asset.h"
-#include "conversion/json.h"
+#include "fty_asset_dto.h"
 
 #include <cxxtools/serializationinfo.h>
 #include <fty_common_json.h>
 #include <fty_common_asset_types.h>
 
-TEST_CASE("conversion/json test")
+TEST_CASE("fty_common_asset conversion/json test")
 {
     try {
         fty::Asset asset1, asset2;
-        std::string json = fty::conversion::toJson(asset1);
-        fty::conversion::fromJson(json, asset2);
+        std::string json = fty::Asset::toJson(asset1);
+        fty::Asset::fromJson(json, asset2);
         std::cerr << "asset1: " << fty::Asset::toJson(asset1) << std::endl;
         std::cerr << "asset2: " << fty::Asset::toJson(asset2) << std::endl;
         CHECK(asset1 == asset2);

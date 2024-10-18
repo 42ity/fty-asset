@@ -31,7 +31,7 @@
 // On success, RESULT is valid (JSON payload)
 // Returns 0 if success, else <0
 
-int topology_power_process (const std::string & command, const std::string & assetName, std::string & result, std::string & errorMsg, bool beautify = true);
+int topology_power_process (const std::string & command, const std::string & assetName, std::string & result, std::string & errorMsg, bool beautify = false);
 
 // Retrieve the closest powerchain which powers a requested target asset
 // implementation of REST /api/v1/topology/power?to (see RFC11) **filtered** on dst-id == assetName
@@ -40,7 +40,7 @@ int topology_power_process (const std::string & command, const std::string & ass
 // On success, RESULT is valid (JSON payload)
 // Returns 0 if success, else <0
 
-int topology_power_to (const std::string & assetName, std::string & result, std::string & errorMsg, bool beautify = true);
+int topology_power_to (const std::string & assetName, std::string & result, std::string & errorMsg, bool beautify = false);
 
 // Retrieve location topology for a requested target asset
 // Implementation of REST /api/v1/topology/location?[from/to] (see RFC11)
@@ -56,7 +56,7 @@ int topology_power_to (const std::string & assetName, std::string & result, std:
 // On success, RESULT is valid (JSON payload)
 // Returns 0 if success, else <0
 
-int topology_location_process (const std::string & command, const std::string & assetName, const std::string & options, std::string & result, std::string & errorMsg, bool beautify = true);
+int topology_location_process (const std::string & command, const std::string & assetName, const std::string & options, std::string & result, std::string & errorMsg, bool beautify = false);
 
 // Retrieve input power chain topology for a requested target asset
 // Implementation of REST /api/v1/topology/input_power_chain (see RFC11)
@@ -65,4 +65,4 @@ int topology_location_process (const std::string & command, const std::string & 
 // On success, RESULT is valid (JSON payload)
 // Returns 0 if success, else <0
 
-int topology_input_powerchain_process (const std::string & assetName, std::string & result, std::string & errorMsg, bool beautify = true);
+int topology_input_powerchain_process (const std::string & assetName, std::string & result, std::string & errorMsg, bool beautify = false);
