@@ -7,11 +7,11 @@ set(ACCESSOR_NAME ${PROJECT_NAME}-accessor)
 
 etn_target(shared ${ACCESSOR_NAME}
     SOURCES
-        src/fty_asset_accessor.cc
+        src/*.cc
     PUBLIC_INCLUDE_DIR
-        public_includes
+        include
     PUBLIC
-        fty_asset_accessor.h
+        *.h
     USES_PUBLIC
         fty-asset
         fty-utils
