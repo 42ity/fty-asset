@@ -1,5 +1,25 @@
+/*  ====================================================================================================================
+    Copyright (C) 2014 - 2020 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ====================================================================================================================
+*/
+
 #include "sample-db.h"
-#include "test-db/test-db.h"
+#include "test-db.h"
+
 #include <asset/asset-db.h>
 #include <fty_common_asset_types.h>
 #include <fty_common_db_connection.h>
@@ -95,7 +115,6 @@ std::ostream& operator<<(std::ostream& ss, DBData::Types /*value*/)
     return ss;
 }
 
-
 // =====================================================================================================================
 
 static void createItem(fty::db::Connection& conn, const DBData::Item& item, std::vector<uint32_t>& ids,
@@ -169,7 +188,7 @@ static void createItem(fty::db::Connection& conn, const DBData::Item& item, std:
     el.typeId    = type();
     el.subtypeId = subType();
 
-    uint32_t id;
+    uint32_t id{0};
     if (auto ret = fty::asset::db::insertIntoAssetElement(conn, el, true); !ret) {
         throw std::runtime_error(ret.error());
     } else {
@@ -199,7 +218,7 @@ static void createItem(fty::db::Connection& conn, const DBData::Item& item, std:
 
 // =====================================================================================================================
 
-uint16_t linkId(const std::string& link)
+static uint16_t linkId(const std::string& link)
 {
     static std::map<std::string, uint16_t> lnks = []() {
         fty::db::Connection             conn;
@@ -212,7 +231,7 @@ uint16_t linkId(const std::string& link)
         return ret;
     }();
 
-    if (lnks.count(link)) {
+    if (lnks.count(link) != 0) {
         return lnks[link];
     }
     return 0;
@@ -263,12 +282,10 @@ SampleDb::~SampleDb()
 
 uint32_t SampleDb::idByName(const std::string& name)
 {
-    if (m_mapping.count(name)) {
+    if (m_mapping.count(name) != 0) {
         return m_mapping[name];
     }
     throw std::runtime_error(fmt::format("{} not in sample db", name));
 }
-
-// =====================================================================================================================
 
 } // namespace fty

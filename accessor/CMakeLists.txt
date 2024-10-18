@@ -16,12 +16,12 @@ etn_target(shared ${ACCESSOR_NAME}
         fty-asset
         fty-utils
     USES_PRIVATE
+        czmq
+        mlm
         cxxtools
         fty_common
         fty_common_logging
         fty_common_messagebus
-        czmq
-        mlm
 )
 
 # these tests require asset-agent-ng and db access

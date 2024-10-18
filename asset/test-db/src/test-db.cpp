@@ -1,4 +1,24 @@
+/*  ====================================================================================================================
+    Copyright (C) 2014 - 2020 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ====================================================================================================================
+*/
+
 #include "test-db.h"
+
 #include "structure/bios_asset_device_type.h"
 #include "structure/bios_asset_element.h"
 #include "structure/bios_asset_element_type.h"
@@ -10,8 +30,10 @@
 #include "structure/bios_discovered_device.h"
 #include "structure/bios_monitor_asset_relation.h"
 #include "structure/bios_tag.h"
-#include <filesystem>
+
 #include <fty_common_db_connection.h>
+
+#include <filesystem>
 #include <mariadb/mysql.h>
 #include <thread>
 #include <iostream>

@@ -17,11 +17,26 @@
     ====================================================================================================================
 */
 
-#include <test-db/sample-db.h>
+#pragma once
 
-#include <catch2/catch.hpp>
+#include <fty/expected.h>
+#include <string>
 
-TEST_CASE("sampledb")
+namespace fty {
+
+class TestDb
 {
-    fty::SampleDb db("");
-}
+public:
+    static Expected<void> init();
+    static TestDb&        instance();
+
+    Expected<std::string> create();
+    static void           destroy();
+
+private:
+    std::string m_path;
+    bool        m_inited{false};
+};
+
+
+} // namespace fty

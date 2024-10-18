@@ -17,11 +17,25 @@
     ====================================================================================================================
 */
 
-#include <test-db/sample-db.h>
+#pragma once
 
-#include <catch2/catch.hpp>
+#include <string>
+#include <map>
+#include <vector>
 
-TEST_CASE("sampledb")
+namespace fty {
+
+struct SampleDb
 {
-    fty::SampleDb db("");
-}
+    SampleDb(const std::string& data);
+    ~SampleDb();
+
+    uint32_t idByName(const std::string& name);
+
+private:
+    std::vector<uint32_t>           m_ids;
+    std::map<std::string, uint32_t> m_mapping;
+    std::vector<int64_t>            m_links;
+};
+
+} // namespace fty
