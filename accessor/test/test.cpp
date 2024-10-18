@@ -19,10 +19,11 @@
 
 #include "fty_asset_dto.h"
 #include "fty_asset_accessor.h"
+#include <iostream>
 
 using namespace fty;
 
-TEST_CASE("Create test")
+TEST_CASE("AssetAccessor Create")
 {
     REQUIRE_NOTHROW([&]()
     {
@@ -31,18 +32,49 @@ TEST_CASE("Create test")
     }());
 }
 
-TEST_CASE("Request ID - Success")
+TEST_CASE("AssetAccessor Request assetInameToID")
 {
-    auto id = AssetAccessor::assetInameToID("rackcontroller-0");
-
-    REQUIRE(id);
-    CHECK(*id == 1);
+    SECTION("Success")
+    {
+        auto id = AssetAccessor::assetInameToID("rackcontroller-0");
+        REQUIRE(id);
+        CHECK(*id == 1);
+    }
+    SECTION("Failure")
+    {
+        auto id = AssetAccessor::assetInameToID("fake-0");
+        REQUIRE(!id);
+        std::cout << "== " << id.error() << std::endl;
+        CHECK(id.error().find("failed") != std::string::npos);
+    }
 }
 
-TEST_CASE("Request ID - Failure")
+TEST_CASE("AssetAccessor Request getAsset")
 {
-    auto id = AssetAccessor::assetInameToID("datacenter-0");
+    SECTION("Success")
+    {
+        auto asset = AssetAccessor::getAsset("rackcontroller-0");
+        REQUIRE(asset);
+        CHECK(asset->getInternalName() == "rackcontroller-0");
+    }
+    SECTION("Failure")
+    {
+        auto asset = AssetAccessor::getAsset("fake-0");
+        REQUIRE(!asset);
+        std::cout << "== " << asset.error() << std::endl;
+        CHECK(asset.error().find("failed") != std::string::npos);
+    }
+}
 
-    REQUIRE(!id);
-    CHECK(id.error().find("failed") != std::string::npos);
+TEST_CASE("AssetAccessor Request notifyStatusUpdate")
+{
+    REQUIRE_NOTHROW(AssetAccessor::notifyStatusUpdate("fake-0", "deactivate", "activate"));
+}
+
+TEST_CASE("AssetAccessor Request notifyAssetUpdate")
+{
+    Asset before, after;
+    before.setInternalName("fake-0");
+    after.setInternalName("fake-0");
+    REQUIRE_NOTHROW(AssetAccessor::notifyAssetUpdate(before, after));
 }
