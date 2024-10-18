@@ -28,7 +28,7 @@ TEST_CASE("fty::Asset Create object")
     }());
 }
 
-TEST_CASE("fty::Asset Equality check - good case")
+TEST_CASE("fty::Asset Accessors")
 {
     Asset asset;
     asset.setInternalName("dc-0");
@@ -38,15 +38,19 @@ TEST_CASE("fty::Asset Equality check - good case")
     asset.setParentIname("abc123");
     asset.setExtEntry("testKey", "testValue");
     asset.setPriority(4);
+    asset.setAssetTag("testTag");
 
-    Asset asset2;
-    asset2 = asset;
-
-    REQUIRE(asset == asset2);
-
+    CHECK(asset.getInternalName() == "dc-0");
+    CHECK(asset.getAssetStatus() == AssetStatus::Nonactive);
+    CHECK(asset.getAssetType() == TYPE_DEVICE);
+    CHECK(asset.getAssetSubtype() == SUB_UPS);
+    CHECK(asset.getParentIname() == "abc123");
+    CHECK(asset.getExtEntry("testKey") == "testValue");
+    CHECK(asset.getPriority() == 4);
+    CHECK(asset.getAssetTag() == "testTag");
 }
 
-TEST_CASE("fty::Asset Equality check - bad case")
+TEST_CASE("fty::Asset Equality check")
 {
     Asset asset;
     asset.setInternalName("dc-0");
@@ -56,14 +60,67 @@ TEST_CASE("fty::Asset Equality check - bad case")
     asset.setParentIname("abc123");
     asset.setExtEntry("testKey", "testValue");
     asset.setPriority(4);
+    asset.setAssetTag("testTag");
 
-    Asset asset2;
-    asset2 = asset;
-
-    asset2.setParentIname("wrong-name");
-
-    REQUIRE(asset != asset2);
-
+    {
+        Asset tmp;
+        tmp = asset;
+        CHECK(asset == tmp);
+    }
+    {
+        Asset tmp;
+        tmp = asset;
+        tmp.setInternalName("dc-1");
+        CHECK(asset != tmp);
+    }
+    {
+        Asset tmp;
+        tmp = asset;
+        tmp.setAssetStatus(AssetStatus::Active);
+        CHECK(asset != tmp);
+    }
+    {
+        Asset tmp;
+        tmp = asset;
+        tmp.setAssetType(TYPE_DATACENTER);
+        CHECK(asset != tmp);
+    }
+    {
+        Asset tmp;
+        tmp = asset;
+        tmp.setAssetSubtype(SUB_SENSOR);
+        CHECK(asset != tmp);
+    }
+    {
+        Asset tmp;
+        tmp = asset;
+        tmp.setParentIname("xyz789");
+        CHECK(asset != tmp);
+    }
+    {
+        Asset tmp;
+        tmp = asset;
+        tmp.setExtEntry("testKey", "testValue2");
+        CHECK(asset != tmp);
+    }
+    {
+        Asset tmp;
+        tmp = asset;
+        tmp.setExtEntry("testKey2", "testValue2");
+        CHECK(asset != tmp);
+    }
+    {
+        Asset tmp;
+        tmp = asset;
+        tmp.setPriority(5);
+        CHECK(asset != tmp);
+    }
+    {
+        Asset tmp;
+        tmp = asset;
+        tmp.setAssetTag("testTag2");
+        CHECK(asset != tmp);
+    }
 }
 
 TEST_CASE("fty::Asset Priority set")

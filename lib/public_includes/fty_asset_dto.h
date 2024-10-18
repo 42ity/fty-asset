@@ -176,7 +176,6 @@ public:
     const std::string&              getFriendlyName() const;
     std::vector<std::string>        getAddresses() const;
 
-
     // setters
     void setInternalName(const std::string& internalName);
     void setAssetStatus(AssetStatus assetStatus);
@@ -185,15 +184,15 @@ public:
     void setParentIname(const std::string& parentIname);
     void setPriority(int priority);
     void setAssetTag(const std::string& assetTag);
+
     void setExtMap(const ExtMap& map);
     void clearExtMap();
-    void setExtEntry(const std::string& key, const std::string& value, bool readOnly = false,
-        bool forceUpdatedFalse = false);
-    void addLink(const std::string& sourceId, const std::string& scrOut, const std::string& destIn,
-        int linkType, const AssetLink::ExtMap& attributes);
-    void removeLink(
-        const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType);
+    void setExtEntry(const std::string& key, const std::string& value, bool readOnly = false, bool forceUpdatedFalse = false);
+
+    void addLink(const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType, const AssetLink::ExtMap& attributes);
+    void removeLink(const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType);
     void setLinkedAssets(const std::vector<AssetLink>& assets);
+
     void setSecondaryID(const std::string& secondaryID);
     void setFriendlyName(const std::string& friendlyName);
 
@@ -229,7 +228,6 @@ public:
 
     void removeEndpoint(uint8_t index);
 
-    //
     // dump
     void dump(std::ostream& os);
 
@@ -253,9 +251,9 @@ protected:
     // internal name = <subtype>-<id>)
     std::string m_internalName;
 
-    AssetStatus m_assetStatus  = AssetStatus::Unknown;
-    std::string m_assetType    = TYPE_UNKNOWN;
-    std::string m_assetSubtype = SUB_UNKNOWN;
+    AssetStatus m_assetStatus{AssetStatus::Unknown};
+    std::string m_assetType{TYPE_UNKNOWN};
+    std::string m_assetSubtype{SUB_UNKNOWN};
 
     // direct parent iname
     std::string m_parentIname;
@@ -273,7 +271,6 @@ protected:
 
     const std::string&  getEndpointData(uint8_t index, const std::string &field) const;
     void  setEndpointData(uint8_t index, const std::string &field, const std::string & val);
-
 };
 
 void operator<<=(cxxtools::SerializationInfo& si, const fty::Asset& asset);
