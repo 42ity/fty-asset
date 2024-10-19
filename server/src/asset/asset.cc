@@ -42,6 +42,8 @@
 #define COMMAND_ACTIVATE_ASSET_INAME     "ACTIVATE_ASSET_INAME"
 #define COMMAND_DEACTIVATE_ASSET_INAME   "DEACTIVATE_ASSET_INAME"
 
+bool g_testMode{false}; // unit test
+
 namespace fty {
 
 using namespace fty::asset;

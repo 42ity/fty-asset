@@ -38,14 +38,16 @@ TEST_CASE("fty_asset_inventory test")
     static const char* endpoint = "inproc://fty_asset_inventory_test";
 
     zactor_t *server = zactor_new (mlm_server, static_cast<void*>( const_cast<char*>( "Malamute")));
-    CHECK( server != NULL );
+    REQUIRE( server != NULL );
     zstr_sendx (server, "BIND", endpoint, NULL);
 
-    mlm_client_t *ui = mlm_client_new ();
-    mlm_client_connect (ui, endpoint, 5000, "fty-asset-inventory-ui");
-    mlm_client_set_producer (ui, "ASSETS-TEST");
+    mlm_client_t *client = mlm_client_new ();
+    REQUIRE( client != NULL );
+    mlm_client_connect (client, endpoint, 5000, "fty-asset-inventory-test-client");
+    mlm_client_set_producer (client, "ASSETS-TEST");
 
     zactor_t *inventory_server = zactor_new (fty_asset_inventory_server, static_cast<void*>( const_cast<char*>("asset-inventory-test")));
+    REQUIRE( inventory_server != NULL );
     zstr_sendx (inventory_server, "CONNECT", endpoint, NULL);
     zsock_wait (inventory_server);
     zstr_sendx (inventory_server, "CONSUMER", "ASSETS-TEST", "inventory@.*", NULL);
@@ -59,14 +61,14 @@ TEST_CASE("fty_asset_inventory test")
                 "MyDC",
                 "inventory",
                 NULL);
-        int rv = mlm_client_send (ui, "inventory@dc-1", &msg);
+        int rv = mlm_client_send (client, "inventory@dc-1", &msg);
         CHECK(rv == 0);
         zclock_sleep (200);
         log_info ("fty-asset-server-test:Test #2: OK");
     }
 
     zactor_destroy (&inventory_server);
-    mlm_client_destroy (&ui);
+    mlm_client_destroy (&client);
     zactor_destroy (&server);
 
     std::cout << "fty_asset_inventory: OK" << std::endl;

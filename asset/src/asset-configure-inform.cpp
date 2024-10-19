@@ -95,6 +95,7 @@ static bool s_getDcUPSes(fty::db::Connection& conn, const std::string& assetName
     return true;
 }
 
+// CAUTION: very similar code in server/src/fty_asset_server.cc::s_publish_create_or_update_asset_msg()
 Expected<void> sendConfigure(const std::vector<std::pair<db::AssetElement, persist::asset_operation>>& rows, const std::string& agentName)
 {
     mlm_client_t* client = mlm_client_new();

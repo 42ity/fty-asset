@@ -221,7 +221,8 @@
 #include <iostream>
 #include <cassert>
 
-bool g_testMode = false;
+//mlm_client_t* (fty::AssetServer& server)
+#define mailboxClient(server) const_cast<mlm_client_t*>(server.getMailboxClient())
 
 // =============================================================================
 // TOPOLOGY/POWER command processing (completed reply)
@@ -238,7 +239,7 @@ static void s_process_TopologyPower(const std::string& client_name, const char* 
 
     // select power devices
     // result of power topology - list of power device names
-    std::vector<std::string> powerDevices{};
+    std::vector<std::string> powerDevices;
     int r = select_devices_total_power(assetName, powerDevices, testMode);
 
     zmsg_addstr(reply, assetName.c_str());
@@ -252,7 +253,7 @@ static void s_process_TopologyPower(const std::string& client_name, const char* 
         zmsg_addstr(reply, TRANSLATE_ME("Internal error").c_str());
     }
     else if (r == -2) {
-        log_error("%s:\tTOPOLOGY POWER: Asset was not found (%s)", client_name.c_str(), asset_name);
+        log_error("%s:\tTOPOLOGY POWER: Asset not found (%s)", client_name.c_str(), asset_name);
 
         zmsg_addstr(reply, "ERROR");
         // zmsg_addstr (reply, "ASSET_NOT_FOUND");
@@ -521,9 +522,8 @@ static void s_handle_subject_topology(const fty::AssetServer& server, zmsg_t* ms
         }
 
         // send reply
-        int r = mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-            mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), "TOPOLOGY", NULL, 5000,
-            &reply);
+        const char* sender = mlm_client_sender(mailboxClient(server));
+        int r = mlm_client_sendto(mailboxClient(server), sender, "TOPOLOGY", NULL, 5000, &reply);
         if (r != 0) {
             log_error("%s:\tTOPOLOGY (command: %s): mlm_client_sendto failed", client_name.c_str(), command);
         }
@@ -589,9 +589,8 @@ static void s_handle_subject_assets_in_container(const fty::AssetServer& server,
     }
 
     // send the reply
-    int r = mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-        mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), "ASSETS_IN_CONTAINER", NULL,
-        5000, &reply);
+    const char* sender = mlm_client_sender(mailboxClient(server));
+    int r = mlm_client_sendto(mailboxClient(server), sender, "ASSETS_IN_CONTAINER", NULL, 5000, &reply);
 
     if (r != 0) {
         log_error("%s:\tASSETS_IN_CONTAINER: mlm_client_sendto failed", client_name.c_str());
@@ -608,8 +607,8 @@ static void s_handle_subject_ename_from_iname(const fty::AssetServer& server, zm
 
     zmsg_t* reply = zmsg_new();
 
-    if (zmsg_size(msg) < 1) {
-        log_error("%s:\tENAME_FROM_INAME: incoming message have less than 1 frame", client_name.c_str());
+    if (zmsg_size(msg) == 0) {
+        log_error("%s:\tENAME_FROM_INAME: incoming message have no frame", client_name.c_str());
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, "MISSING_INAME");
     }
@@ -632,9 +631,8 @@ static void s_handle_subject_ename_from_iname(const fty::AssetServer& server, zm
     }
 
     // send the reply
-    int r = mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-        mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), "ENAME_FROM_INAME", NULL,
-        5000, &reply);
+    const char* sender = mlm_client_sender(mailboxClient(server));
+    int r = mlm_client_sendto(mailboxClient(server), sender, "ENAME_FROM_INAME", NULL, 5000, &reply);
 
     if (r != 0) {
         log_error("%s:\tENAME_FROM_INAME: mlm_client_sendto failed", client_name.c_str());
@@ -652,22 +650,22 @@ static void s_handle_subject_assets(const fty::AssetServer& server, zmsg_t* msg)
 
     zmsg_t* reply = zmsg_new();
 
-    if (zmsg_size(msg) < 1) {
-        log_error("%s:\tASSETS: incoming message have less than 1 frame", client_name.c_str());
+    if (zmsg_size(msg) == 0) {
+        log_error("%s:\tASSETS: incoming message have no frame", client_name.c_str());
         zmsg_addstr(reply, "0");
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, "MISSING_COMMAND");
-        mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-            mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())),
-            "ASSETS", NULL, 5000, &reply);
+        const char* sender = mlm_client_sender(mailboxClient(server));
+        mlm_client_sendto(mailboxClient(server), sender, "ASSETS", NULL, 5000, &reply);
         zmsg_destroy(&reply);
         return;
     }
 
     char* c_command = zmsg_popstr(msg);
     if (!streq(c_command, "GET")) {
-        const char *sender = mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient()));
-        const char *subject = mlm_client_subject(const_cast<mlm_client_t*>(server.getMailboxClient()));
+        const char *sender = mlm_client_sender(mailboxClient(server));
+        const char *subject = mlm_client_subject(mailboxClient(server));
+
         log_error("%s:\tASSETS command GET expected (command: %s, sender: %s, subject: %s",
             client_name.c_str(), c_command, sender, subject);
 
@@ -678,8 +676,7 @@ static void s_handle_subject_assets(const fty::AssetServer& server, zmsg_t* msg)
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, "BAD_COMMAND");
 
-        mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-            sender, "ASSETS", NULL, 5000, &reply);
+        mlm_client_sendto(mailboxClient(server), sender, "ASSETS", NULL, 5000, &reply);
 
         zstr_free(&c_command);
         zstr_free(&uuid);
@@ -713,15 +710,14 @@ static void s_handle_subject_assets(const fty::AssetServer& server, zmsg_t* msg)
     }
     else {
         zmsg_addstr(reply, "OK");
-        for (const auto& dev : assets) {
-            zmsg_addstr(reply, dev.c_str());
+        for (const auto& it : assets) {
+            zmsg_addstr(reply, it.c_str());
         }
     }
 
     // send the reply
-    r = mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-        mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), "ASSETS", NULL, 5000,
-        &reply);
+    const char* sender = mlm_client_sender(mailboxClient(server));
+    r = mlm_client_sendto(mailboxClient(server), sender, "ASSETS", NULL, 5000, &reply);
 
     if (r != 0) {
         log_error("%s:\tASSETS: mlm_client_sendto failed", client_name.c_str());
@@ -731,6 +727,8 @@ static void s_handle_subject_assets(const fty::AssetServer& server, zmsg_t* msg)
     zmsg_destroy(&reply);
 }
 
+// CAUTION: very similar code in asset/src/asset-configure-infrom.cpp::sendConfigure()
+// subject changed
 static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_name,
     const std::string& asset_name, const char* operation, std::string& subject, bool test_mode)
 {
@@ -872,22 +870,21 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
     }
 
     std::function<void(const tntdb::Row&)> cb3 = [aux](const tntdb::Row& row) {
-        static const std::vector<std::string> parentNames({
-            "parent_name1", "parent_name2", "parent_name3",
-            "parent_name4", "parent_name5", "parent_name6",
-            "parent_name7", "parent_name8", "parent_name9",
-            "parent_name10"})
-        ;
-        for (const auto& name : parentNames) {
-            std::string foo;
-            row[name].get(foo);
-            if (foo.empty()) {
+        static const std::vector<std::string> names({
+            "parent_name1", "parent_name2", "parent_name3", "parent_name4", "parent_name5",
+            "parent_name6", "parent_name7", "parent_name8", "parent_name9", "parent_name10"
+        });
+
+        for (const auto& name : names) {
+            std::string pname_value;
+            row[name].get(pname_value);
+            if (pname_value.empty()) {
                 continue;
             }
-            std::string hash_name = name;
+            std::string pname_key = name;
             // 11 == strlen ("parent_name")
-            hash_name.insert(11, 1, '.'); // parent_nameX -> parent_name.X
-            zhash_insert(aux, hash_name.c_str(), static_cast<void*>( const_cast<char*>(foo.c_str())));
+            pname_key.insert(11, 1, '.'); // parent_nameX -> parent_name.X
+            zhash_insert(aux, pname_key.c_str(), static_cast<void*>(const_cast<char*>(pname_value.c_str())));
         }
     };
 
@@ -923,13 +920,19 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
 //extern
 void send_create_or_update_asset(const fty::AssetServer& server, const std::string& asset_name, const char* operation)
 {
-    std::string subject{"unknown"};
+    std::string subject{"unknown"}; // changed
 
     zmsg_t* msg = s_publish_create_or_update_asset_msg(
         server.getAgentName(), asset_name, operation, subject, server.getTestMode());
 
-    if (NULL == msg ||
-        0 != mlm_client_send(const_cast<mlm_client_t*>(server.getStreamClient()), subject.c_str(), &msg)) {
+    if (!msg) {
+        log_error("%s:\tpublish failed (asset='%s', op='%s')",
+            server.getAgentName().c_str(), asset_name.c_str(), operation);
+        return;
+    }
+
+    int r = mlm_client_send(const_cast<mlm_client_t*>(server.getStreamClient()), subject.c_str(), &msg);
+    if (r != 0) {
         log_error("%s:\tmlm_client_send '%s' failed for asset '%s'",
             server.getAgentName().c_str(), operation, asset_name.c_str());
     }
@@ -939,12 +942,12 @@ void send_create_or_update_asset(const fty::AssetServer& server, const std::stri
 static void s_sendto_create_or_update_asset(const fty::AssetServer& server, const std::string& asset_name,
     const char* operation, const char* address, const char* uuid)
 {
-    std::string subject{"unknown"};
+    std::string subject{"unknown"}; // changed
 
     zmsg_t* msg = s_publish_create_or_update_asset_msg(
         server.getAgentName(), asset_name, operation, subject, server.getTestMode());
 
-    if (NULL == msg) {
+    if (!msg) {
         log_error("%s:\tASSET_DETAIL: asset not found (%s)",
             server.getAgentName().c_str(), asset_name.c_str());
         msg = zmsg_new();
@@ -953,8 +956,7 @@ static void s_sendto_create_or_update_asset(const fty::AssetServer& server, cons
     }
     zmsg_pushstr(msg, uuid);
 
-    int r = mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-        address, subject.c_str(), NULL, 5000, &msg);
+    int r = mlm_client_sendto(mailboxClient(server), address, subject.c_str(), NULL, 5000, &msg);
     if (r != 0) {
         log_error("%s:\tmlm_client_sendto '%s'/'%s' failed for asset '%s'",
             server.getAgentName().c_str(), address, subject.c_str(), asset_name.c_str());
@@ -980,9 +982,8 @@ static void s_handle_subject_asset_detail(const fty::AssetServer& server, zmsg_t
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, "BAD_COMMAND");
 
-        mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-            mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), "ASSET_DETAIL", NULL,
-            5000, &reply);
+        const char* sender = mlm_client_sender(mailboxClient(server));
+        mlm_client_sendto(mailboxClient(server), sender, "ASSET_DETAIL", NULL, 5000, &reply);
 
         zstr_free(&uuid);
         zstr_free(&c_command);
@@ -995,8 +996,8 @@ static void s_handle_subject_asset_detail(const fty::AssetServer& server, zmsg_t
     char* uuid = zmsg_popstr(zmessage);
     char* asset_name = zmsg_popstr(zmessage);
 
-    s_sendto_create_or_update_asset(server, asset_name, FTY_PROTO_ASSET_OP_UPDATE,
-        mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), uuid);
+    const char* sender = mlm_client_sender(mailboxClient(server));
+    s_sendto_create_or_update_asset(server, asset_name, FTY_PROTO_ASSET_OP_UPDATE, sender, uuid);
 
     zstr_free(&asset_name);
     zstr_free(&uuid);
@@ -1026,9 +1027,8 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
             zmsg_t* reply = zmsg_new();
             zmsg_addstr(reply, "ERROR");
             zmsg_addstr(reply, "BAD_COMMAND");
-            mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-                mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), "ASSET_MANIPULATION",
-                NULL, 5000, &reply);
+            const char* sender = mlm_client_sender(mailboxClient(server));
+            mlm_client_sendto(mailboxClient(server), sender, "ASSET_MANIPULATION", NULL, 5000, &reply);
             zmsg_destroy(&reply);
             zstr_free(&read_only_s);
             return;
@@ -1161,8 +1161,7 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
         }
         else {
             // unknown op
-            log_error("%s:\tASSET_MANIPULATION: asset operation %s is not implemented", client_name.c_str(),
-                operation);
+            log_error("%s:\tASSET_MANIPULATION: operation '%s' unknown", client_name.c_str(), operation);
             zmsg_addstr(reply, "ERROR");
             zmsg_addstr(reply, "OPERATION_NOT_IMPLEMENTED");
         }
@@ -1176,12 +1175,10 @@ static void s_handle_subject_asset_manipulation(const fty::AssetServer& server, 
         zmsg_addstr(reply, e.what());
     }
 
-    int r = mlm_client_sendto(const_cast<mlm_client_t*>(server.getMailboxClient()),
-        mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())), "ASSET_MANIPULATION", NULL,
-        5000, &reply);
+    const char* sender = mlm_client_sender(mailboxClient(server));
+    int r = mlm_client_sendto(mailboxClient(server), sender, "ASSET_MANIPULATION", NULL, 5000, &reply);
     if (r != 0) {
-        log_error("ASSET_MANIPULATION/%s: failed to reply to %s",
-            operation, mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient())));
+        log_error("ASSET_MANIPULATION/%s: failed to reply to %s", operation, sender);
     }
 
     zmsg_destroy(&reply);
@@ -1203,9 +1200,9 @@ static void s_update_topology(const fty::AssetServer& server, fty_proto_t* asset
     }
 
     // select assets, that were affected by the change
-    std::set<std::string> empty;
+    std::set<std::string> filters; //empty
     std::vector<std::string> asset_names;
-    int r = select_assets_by_container(name, empty, asset_names, server.getTestMode());
+    int r = select_assets_by_container(name, filters, asset_names, server.getTestMode());
     if (r != 0) {
         log_warning("%s:\tCannot select assets in container '%s'", server.getAgentName().c_str(), name);
         return;
@@ -1237,7 +1234,7 @@ static void s_repeat_all(const fty::AssetServer& server, const std::set<std::str
         return;
     }
 
-    // For every asset we need to form new message!
+    // send a new message for each asset
     for (const auto& asset_name : asset_names) {
         send_create_or_update_asset(server, asset_name, FTY_PROTO_ASSET_OP_UPDATE);
     }
@@ -1270,12 +1267,12 @@ void fty_asset_server(zsock_t* pipe, void* args)
     // new messagebus interfaces (-ng suffix)
     fty::AssetServer server;
     server.setAgentName(static_cast<char*>(args));
-    server.setAgentNameNg(server.getAgentName() + "-ng"); // new interface
+    server.setAgentNameNg(server.getAgentName() + "-ng"); // new-generation interface
     server.setSrrAgentName(server.getAgentName() + "-srr"); // SRR
 
     zpoller_t* poller = zpoller_new(
         pipe,
-        mlm_client_msgpipe(const_cast<mlm_client_t*>(server.getMailboxClient())),
+        mlm_client_msgpipe(mailboxClient(server)),
         mlm_client_msgpipe(const_cast<mlm_client_t*>(server.getStreamClient())),
         NULL);
     if (!poller) {
@@ -1357,7 +1354,7 @@ void fty_asset_server(zsock_t* pipe, void* args)
                 server.setMailboxEndpoint(endpoint);
                 server.setSrrEndpoint(endpoint);
 
-                int r = mlm_client_connect(const_cast<mlm_client_t*>(server.getMailboxClient()),
+                int r = mlm_client_connect(mailboxClient(server),
                     server.getMailboxEndpoint().c_str(), 1000, server.getAgentName().c_str());
                 if (r != 0) {
                     log_error("%s:\tCan't connect to malamute endpoint '%s'",
@@ -1386,12 +1383,11 @@ void fty_asset_server(zsock_t* pipe, void* args)
                 break;
             }
         }
-        // This agent is a reactive agent, it reacts only on messages
-        // and doesn't do anything if there are no messages
-        else if (which == mlm_client_msgpipe(const_cast<mlm_client_t*>(server.getMailboxClient()))) {
-            zmsg_t* zmessage = mlm_client_recv(const_cast<mlm_client_t*>(server.getMailboxClient()));
-            const char* sender = mlm_client_sender(const_cast<mlm_client_t*>(server.getMailboxClient()));
-            const char* subject = mlm_client_subject(const_cast<mlm_client_t*>(server.getMailboxClient()));
+        // handle MAILBOX DELIVER messages
+        else if (which == mlm_client_msgpipe(mailboxClient(server))) {
+            zmsg_t* zmessage = mlm_client_recv(mailboxClient(server));
+            const char* sender = mlm_client_sender(mailboxClient(server));
+            const char* subject = mlm_client_subject(mailboxClient(server));
 
             log_info("%s:\tMAILBOX DELIVER (sender: %s, subject: %s)", server.getAgentName().c_str(), sender, subject);
 
@@ -1440,6 +1436,7 @@ void fty_asset_server(zsock_t* pipe, void* args)
             }
             zmsg_destroy(&zmessage);
         }
+        // handle STREAM_DELIVER messages
         else if (which == mlm_client_msgpipe(const_cast<mlm_client_t*>(server.getStreamClient()))) {
             zmsg_t* zmessage = mlm_client_recv(const_cast<mlm_client_t*>(server.getStreamClient()));
 
