@@ -7,7 +7,7 @@ etn_target(shared ${PROJECT_NAME}-test-db
     PUBLIC_INCLUDE_DIR
         include/
     PUBLIC
-        *.h
+        test-db/*.h
     SOURCES
         src/structure/*.h
         src/*.cpp

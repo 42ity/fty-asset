@@ -17,8 +17,8 @@
     ====================================================================================================================
 */
 
-#include "sample-db.h"
-#include "test-db.h"
+#include "test-db/sample-db.h"
+#include "test-db/test-db.h"
 
 #include <asset/asset-db.h>
 #include <fty_common_asset_types.h>
