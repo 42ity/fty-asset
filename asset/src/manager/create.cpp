@@ -159,10 +159,8 @@ AssetExpected<uint32_t> AssetManager::importAsset(
 
         if (imported.at(1)) {
             if (sendNotify) {
-                // this code can be executed in multiple threads -> agent's name should
-                // be unique at the every moment
-                std::string agent_name = generateMlmClientId("web.asset_post");
-                if (auto sent = sendConfigure(*(imported.at(1)), import.operation(), agent_name); !sent) {
+                const std::string agentName{generateMlmClientId("asset.create")};
+                if (auto sent = sendConfigure(*(imported.at(1)), import.operation(), agentName); !sent) {
                     logError("{}", sent.error());
                     return unexpected(
                         "Error during configuration sending of asset change notification. Consult system log."_tr);

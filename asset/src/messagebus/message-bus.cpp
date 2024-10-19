@@ -43,6 +43,7 @@ Expected<void> MessageBus::init(const std::string& actorName)
 
 MessageBus::~MessageBus()
 {
+    m_bus.reset();
 }
 
 Expected<Message> MessageBus::send(const std::string& queue, const Message& msg)
