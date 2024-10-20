@@ -1,25 +1,3 @@
-/*
- *
- * Copyright (C) 2014 - 2018 Eaton
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- */
-
-#include "asset/asset-configure-inform.h"
-#include <fty_common_db.h>
 /*  ========================================================================
     Copyright (C) 2020 Eaton
     This program is free software; you can redistribute it and/or modify
@@ -36,6 +14,8 @@
     ========================================================================
 */
 
+#include "asset/asset-configure-inform.h"
+#include <fty_common_db.h>
 #include <fty_common_db_connection.h>
 #include <fty_common.h>
 #include <fty_common_mlm_utils.h>
@@ -173,6 +153,7 @@ Expected<void> sendConfigure(const std::vector<std::pair<db::AssetElement, persi
         r = mlm_client_send(client, subject.c_str(), &msg);
         zmsg_destroy(&msg);
         if (r != 0) {
+            log_error("send failed: subject='%s', operation='%s'", subject.c_str(), operation.c_str());
             mlm_client_destroy(&client);
             return unexpected("mlm_client_send () failed.");
         }
@@ -193,26 +174,30 @@ Expected<void> sendConfigure(const std::vector<std::pair<db::AssetElement, persi
 
         // data for uptime
         if (oneRow.first.subtypeId == persist::asset_subtype::UPS) {
+            log_debug("uptime inventory dc='%s'", dc_name.c_str());
+
             aux = zhash_new();
             zhash_autofree(aux);
             if (!s_getDcUPSes(conn, dc_name, aux)) {
                 log_error("Cannot read upses for dc='%s'", dc_name.c_str());
             }
 
-            zhash_update(aux, "type", reinterpret_cast<void*>(const_cast<char*>("datacenter")));
+            const std::string type{"datacenter"};
+            zhash_update(aux, "type", voidify(type));
 
             msg = fty_proto_encode_asset(aux, dc_name.c_str(), FTY_PROTO_ASSET_OP_INVENTORY, nullptr);
             zhash_destroy(&aux);
-            r = mlm_client_send(client, std::string{"datacenter.unknown@" + dc_name}.c_str(), &msg);
+            r = mlm_client_send(client, std::string{type + ".unknown@" + dc_name}.c_str(), &msg);
             zmsg_destroy(&msg);
             if (r != 0) {
+                log_error("send failed: uptime inventory dc='%s'", dc_name.c_str());
                 mlm_client_destroy(&client);
                 return unexpected("mlm_client_send () failed.");
             }
         }
     }
 
-    zclock_sleep(500); // ensure all was senr before client destroy
+    zclock_sleep(500); // ensure all was sent before client destroy
     mlm_client_destroy(&client);
 
     return {};
