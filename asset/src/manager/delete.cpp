@@ -1,3 +1,19 @@
+/*  ========================================================================
+    Copyright (C) 2020 Eaton
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ========================================================================
+*/
+
 #include "asset/asset-cam.h"
 #include "asset/asset-db.h"
 #include "asset/asset-manager.h"
@@ -44,7 +60,6 @@ static void collectChildren(
         }
     }
 }
-
 
 // Collect links, filter by ids which should be deleted. If some ids will be in links, then we cannot delete asset
 static void collectLinks(uint32_t elementId, std::vector<uint32_t>& links, const std::map<uint32_t, std::string>& ids)
@@ -161,9 +176,8 @@ AssetExpected<db::AssetElement> AssetManager::deleteAsset(const db::AssetElement
 
     // make the device inactive first
     if (asset.status == "active" && sendNotify) {
-        std::string asset_json = getJsonAsset(asset.id);
-        if (auto ret = activation::deactivate(asset_json); !ret) {
-            logError("Error during asset deactivation - {}", ret.error());
+        if (auto ret = activation::deactivate(asset.name); !ret) {
+            logError("Error during asset deactivation for '{}' - {}", asset.name, ret.error());
             return unexpected(ret.error());
         }
     }
@@ -182,7 +196,7 @@ AssetExpected<db::AssetElement> AssetManager::deleteAsset(const db::AssetElement
             default:;
         }
 
-		// fallback to deleteDevice()
+        // fallback to deleteDevice()
         logWarn("Fallback deletion for asset '{}' (type: {})", asset.name, asset.typeId);
         return deleteDevice(asset);
 
@@ -192,10 +206,8 @@ AssetExpected<db::AssetElement> AssetManager::deleteAsset(const db::AssetElement
 
     // in case of error we need to try to activate the asset again.
     if (!ret && asset.status == "active" && sendNotify) {
-        std::string asset_json = getJsonAsset(asset.id);
-
-        if (auto res = activation::activate(asset_json); !res) {
-            logError("Error during asset activation - {}", res.error());
+        if (auto res = activation::activate(asset.name); !res) {
+            logError("Error during asset activation for '{}' - {}", asset.name, res.error());
         }
     }
 
@@ -248,10 +260,12 @@ std::map<std::string, AssetExpected<db::AssetElement>> AssetManager::deleteAsset
             if (!allChildren.empty() || !links.empty()) {
                 result.emplace(
                     name, unexpected("Asset can't be deleted because it is referenced by 1 or more asset(s) (being their host, their power source or their paired asset...)"_tr));
-            } else {
+            }
+            else {
                 toDel.push_back(el);
             }
-        } else {
+        }
+        else {
             result.emplace(name, unexpected(ret.error()));
         }
     }
@@ -286,14 +300,14 @@ std::map<std::string, AssetExpected<db::AssetElement>> AssetManager::deleteAsset
     for (auto& it : toDel) {
         if (auto ret = deleteAssetRec(it, sendNotify)) {
             result.emplace(it->name, *it);
-        } else {
+        }
+        else {
             result.emplace(it->name, unexpected(ret.error()));
         }
     }
 
     return result;
 }
-
 
 AssetExpected<db::AssetElement> AssetManager::deleteDcRoomRowRack(const db::AssetElement& element)
 {
@@ -315,9 +329,11 @@ AssetExpected<db::AssetElement> AssetManager::deleteDcRoomRowRack(const db::Asse
         unsigned numDatacentersAfterDelete;
         try {
             numDatacentersAfterDelete = conn.selectRow(countSql, "element"_p = element.id).get<unsigned>("count");
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e) {
             return unexpected(e.what());
         }
+
         if (numDatacentersAfterDelete == 0) {
             return unexpected("will not allow last datacenter to be deleted"_tr);
         }

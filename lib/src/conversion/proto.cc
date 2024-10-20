@@ -28,7 +28,8 @@
 #include <fty_proto.h>
 #include <string>
 
-namespace fty { namespace conversion {
+namespace fty {
+namespace conversion {
 
     // fty-proto/Asset conversion
     // return a valid fty_proto_t* object, else throw exception
@@ -77,7 +78,7 @@ namespace fty { namespace conversion {
 
     void fromFtyProto(fty_proto_t* proto, fty::Asset& asset, bool extAttributeReadOnly, bool test)
     {
-        if (fty_proto_id(proto) != FTY_PROTO_ASSET) {
+        if (!proto || fty_proto_id(proto) != FTY_PROTO_ASSET) {
             log_error("proto is not a FTY_PROTO_ASSET");
             throw std::invalid_argument("Wrong message type");
         }
@@ -90,13 +91,13 @@ namespace fty { namespace conversion {
         asset.setAssetSubtype(fty_proto_aux_string(proto, "subtype", ""));
         asset.setPriority(static_cast<int>(fty_proto_aux_number(proto, "priority", 5)));
 
-        //parent
+        // parent
         if (test) {
             asset.setParentIname("test-parent");
         }
         else {
             std::string parentId(fty_proto_aux_string(proto, "parent", ""));
-            if(parentId != "0") {
+            if (parentId != "0") {
                 try {
                     auto parentIname = DBAssets::id_to_name_ext_name(fty::convert<uint32_t>(parentId)).first;
                     if (parentIname.empty()) {
@@ -112,10 +113,12 @@ namespace fty { namespace conversion {
             }
         }
 
-        zhash_t* hash = fty_proto_ext(proto);
-
-        for (auto* item = zhash_first(hash); item; item = zhash_next(hash)) {
-            asset.setExtEntry(zhash_cursor(hash), static_cast<const char*>(item), extAttributeReadOnly);
+        // extended attributes
+        {
+            zhash_t* ext = fty_proto_ext(proto);
+            for (auto* item = zhash_first(ext); item; item = zhash_next(ext)) {
+                asset.setExtEntry(zhash_cursor(ext), static_cast<const char*>(item), extAttributeReadOnly);
+            }
         }
 
         // force RW for specific attributes (if default is read only)
@@ -123,14 +126,16 @@ namespace fty { namespace conversion {
             // PQSWPRG-7607 HOTFIX: force RW for friendly name ('name' ext. attribute) and also for ip.1
             asset.setExtEntry("name", asset.getExtEntry("name"), false);
             asset.setExtEntry("ip.1", asset.getExtEntry("ip.1"), false);
+
             // all endpoint attribs are RW
-            for(const auto& att : asset.getExt()) {
-                //An endpoint is always "endpoint.<params>"
-                if(att.first.find("endpoint.") == 0) {
+            for (const auto& att : asset.getExt()) {
+                // An endpoint is always "endpoint.<params>"
+                if (att.first.find("endpoint.") == 0) {
                     asset.setExtEntry(att.first, att.second.getValue(), false);
                 }
             }
-        }//
+        }
     }
 
-}} // namespace fty::conversion
+}
+} // namespace fty::conversion

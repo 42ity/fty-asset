@@ -1,20 +1,27 @@
-/*  =========================================================================
-    Copyright (C) 2021 Eaton.
-
-    This software is confidential and licensed under Eaton Proprietary License
-    (EPL or EULA).
-    This software is not authorized to be used, duplicated or disclosed to
-    anyone without the prior written permission of Eaton.
-    Limitations, restrictions and exclusions of the Eaton applicable standard
-    terms and conditions, such as its EPL and EULA, apply.
-    =========================================================================
-*/
+/*
+ *
+ * Copyright (C) 2021 Eaton
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ */
 
 #include "message-bus.h"
 #include <fty_common_messagebus_exception.h>
 #include <fty_common_messagebus_interface.h>
 #include <fty_common_messagebus_message.h>
-#include <fty_log.h>
 
 namespace fty::asset {
 
@@ -28,43 +35,51 @@ Expected<void> MessageBus::init(const std::string& actorName)
         m_bus->connect();
         m_actorName = actorName;
         return {};
-    } catch (std::exception& ex) {
-        return fty::unexpected(ex.what());
+    }
+    catch (const std::exception& e) {
+        return fty::unexpected(e.what());
     }
 }
 
 MessageBus::~MessageBus()
 {
+    m_bus.reset();
 }
 
 Expected<Message> MessageBus::send(const std::string& queue, const Message& msg)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
+
     if (msg.meta.correlationId.empty()) {
         msg.meta.correlationId = messagebus::generateUuid();
     }
     msg.meta.from = m_actorName;
+
     try {
-        Message m(m_bus->request(queue, msg.toMessageBus(), 10000));
+        Message m(m_bus->request(queue, msg.toMessageBus(), 5000));
         if (m.meta.status == Message::Status::Error) {
             return unexpected(m.userData[0]);
         }
         return Expected<Message>(m);
-    } catch (messagebus::MessageBusException& ex) {
-        return unexpected(ex.what());
+    }
+    catch (messagebus::MessageBusException& e) {
+        return unexpected(e.what());
     }
 }
 
 Expected<void> MessageBus::publish(const std::string& queue, const Message& msg)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
+
     msg.meta.from = m_actorName;
+
     try {
         m_bus->publish(queue, msg.toMessageBus());
-    } catch (messagebus::MessageBusException& ex) {
-        return unexpected(ex.what());
+        return {};
     }
-    return {};
+    catch (messagebus::MessageBusException& e) {
+        return unexpected(e.what());
+    }
 }
 
 Expected<void> MessageBus::reply(const std::string& queue, const Message& req, const Message& answ)
@@ -78,33 +93,38 @@ Expected<void> MessageBus::reply(const std::string& queue, const Message& req, c
     try {
         m_bus->sendReply(queue, answ.toMessageBus());
         return {};
-    } catch (messagebus::MessageBusException& ex) {
-        return unexpected(ex.what());
+    }
+    catch (messagebus::MessageBusException& e) {
+        return unexpected(e.what());
     }
 }
 
 Expected<Message> MessageBus::receive(const std::string& queue)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    Message                     ret;
+
     try {
+        Message ret;
         m_bus->receive(queue, [&ret](const messagebus::Message& msg) {
             ret = Message(msg);
         });
         return Expected<Message>(ret);
-    } catch (messagebus::MessageBusException& ex) {
-        return unexpected(ex.what());
+    }
+    catch (messagebus::MessageBusException& e) {
+        return unexpected(e.what());
     }
 }
 
 Expected<void> MessageBus::subscribe(const std::string& queue, std::function<void(const messagebus::Message&)>&& func)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
+
     try {
         m_bus->subscribe(queue, func);
         return {};
-    } catch (messagebus::MessageBusException& ex) {
-        return unexpected(ex.what());
+    }
+    catch (messagebus::MessageBusException& e) {
+        return unexpected(e.what());
     }
 }
 

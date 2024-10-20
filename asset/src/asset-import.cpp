@@ -1,3 +1,19 @@
+/*  ========================================================================
+    Copyright (C) 2020 Eaton
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ========================================================================
+*/
+
 #include "asset/asset-import.h"
 #include "asset/asset-helpers.h"
 #include "asset/asset-licensing.h"
@@ -5,11 +21,10 @@
 #include "asset/json.h"
 #include <fty/string-utils.h>
 #include <fty_common_db_connection.h>
+#include <fty_common_db_asset.h>
 #include <fty_common_db_dbpath.h>
 #include <fty_log.h>
 #include <regex>
-
-#define AGENT_ASSET_ACTIVATOR "etn-licensing-credits"
 
 namespace fty::asset {
 
@@ -226,7 +241,6 @@ AssetExpected<db::AssetElement> Import::processRow(
     }
 
     int rc0 = -1;
-
     {
         std::string iname = unusedColumns.count("id") ? m_cm.get(1, "id") : "noid";
         if ("rackcontroller-0" == iname) {
@@ -245,7 +259,7 @@ AssetExpected<db::AssetElement> Import::processRow(
 
     // because id is definitely not an external attribute
     auto idStr = unusedColumns.count("id") ? m_cm.get(row, "id") : "";
-    logDebug("id_str = {}, rc_0 = {}", idStr, rc0);
+    logDebug("idStr = {}, rc0 = {}", idStr, rc0);
 
     if (rc0 != int(row) && "rackcontroller-0" == idStr && rc0 != -1) {
         // we got RC-0 but it don't match "myself", change it to something else ("")
@@ -718,8 +732,9 @@ AssetExpected<db::AssetElement> Import::processRow(
 
                 if (type == "device" && status == "active" && subtypeId != rackControllerId && checkLic) {
                     // check if we may activate the device
-                    std::string assetJson = getJsonAsset(el.id);
-                    if (auto res = activation::activate(assetJson); !res) {
+                    std::pair<std::string, std::string> names = DBAssets::id_to_name_ext_name(el.id);
+                    const std::string iname{names.first};
+                    if (auto res = activation::activate(iname); !res) {
                         logError("Error during asset activation - {}", res.error());
                         return unexpected(res.error());
                     }
@@ -778,8 +793,9 @@ AssetExpected<db::AssetElement> Import::processRow(
 
                 if (type == "device" && status == "active" && subtypeId != rackControllerId && checkLic) {
                     // check if we may activate the device
-                    std::string assetJson = getJsonAsset(el.id);
-                    if (auto res = activation::activate(assetJson); !res) {
+                    std::pair<std::string, std::string> names = DBAssets::id_to_name_ext_name(el.id);
+                    const std::string iname{names.first};
+                    if (auto res = activation::activate(iname); !res) {
                         logError("Error during asset activation - {}", res.error());
                         return unexpected(res.error());
                     }

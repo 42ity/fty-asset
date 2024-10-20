@@ -23,7 +23,6 @@
 
 #include "fty_common_asset.h"
 
-#include <cxxtools/serializationinfo.h>
 #include <fty_common_asset_types.h>
 #include <map>
 #include <optional>
@@ -32,6 +31,10 @@
 // fwd declaration
 struct fty_proto_t;
 
+namespace cxxtools {
+    class SerializationInfo;
+}
+
 namespace fty {
 // extended properties
 static constexpr const char* EXT_UUID         = "uuid";
@@ -39,7 +42,7 @@ static constexpr const char* EXT_CREATE_TS    = "create_ts";
 static constexpr const char* EXT_CREATE_USER  = "create_user";
 static constexpr const char* EXT_UPDATE_TS    = "update_ts";
 static constexpr const char* EXT_UPDATE_USER  = "update_user";
-static constexpr const char* EXT_NAME         = "name";
+static constexpr const char* EXT_NAME         = "name"; // friendly name
 static constexpr const char* EXT_MODEL        = "model";
 static constexpr const char* EXT_MANUFACTURER = "manufacturer";
 static constexpr const char* EXT_SERIAL_NO    = "serial_no";
@@ -86,8 +89,8 @@ public:
 
 private:
     std::string m_value;
-    bool        m_readOnly   = false;
-    bool        m_wasUpdated = false;
+    bool m_readOnly{false};
+    bool m_wasUpdated{false};
 };
 
 void operator<<=(cxxtools::SerializationInfo& si, const ExtMapElement& e);
@@ -129,7 +132,7 @@ private:
     std::string m_sourceId;
     std::string m_srcOut;
     std::string m_destIn;
-    int         m_linkType = 0;
+    int         m_linkType{0};
     ExtMap      m_ext;
     std::string m_secondaryID;
 };
@@ -173,7 +176,6 @@ public:
     const std::string&              getFriendlyName() const;
     std::vector<std::string>        getAddresses() const;
 
-
     // setters
     void setInternalName(const std::string& internalName);
     void setAssetStatus(AssetStatus assetStatus);
@@ -182,15 +184,15 @@ public:
     void setParentIname(const std::string& parentIname);
     void setPriority(int priority);
     void setAssetTag(const std::string& assetTag);
+
     void setExtMap(const ExtMap& map);
     void clearExtMap();
-    void setExtEntry(const std::string& key, const std::string& value, bool readOnly = false,
-        bool forceUpdatedFalse = false);
-    void addLink(const std::string& sourceId, const std::string& scrOut, const std::string& destIn,
-        int linkType, const AssetLink::ExtMap& attributes);
-    void removeLink(
-        const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType);
+    void setExtEntry(const std::string& key, const std::string& value, bool readOnly = false, bool forceUpdatedFalse = false);
+
+    void addLink(const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType, const AssetLink::ExtMap& attributes);
+    void removeLink(const std::string& sourceId, const std::string& scrOut, const std::string& destIn, int linkType);
     void setLinkedAssets(const std::vector<AssetLink>& assets);
+
     void setSecondaryID(const std::string& secondaryID);
     void setFriendlyName(const std::string& friendlyName);
 
@@ -226,7 +228,6 @@ public:
 
     void removeEndpoint(uint8_t index);
 
-    //
     // dump
     void dump(std::ostream& os);
 
@@ -250,14 +251,14 @@ protected:
     // internal name = <subtype>-<id>)
     std::string m_internalName;
 
-    AssetStatus m_assetStatus  = AssetStatus::Unknown;
-    std::string m_assetType    = TYPE_UNKNOWN;
-    std::string m_assetSubtype = SUB_UNKNOWN;
+    AssetStatus m_assetStatus{AssetStatus::Unknown};
+    std::string m_assetType{TYPE_UNKNOWN};
+    std::string m_assetSubtype{SUB_UNKNOWN};
 
     // direct parent iname
     std::string m_parentIname;
     // priority 1..5 (1 is most, 5 is least)
-    int m_priority = 5;
+    int m_priority{5};
     // asset tag
     std::string m_assetTag;
     // secondary ID
@@ -270,21 +271,9 @@ protected:
 
     const std::string&  getEndpointData(uint8_t index, const std::string &field) const;
     void  setEndpointData(uint8_t index, const std::string &field, const std::string & val);
-
 };
 
 void operator<<=(cxxtools::SerializationInfo& si, const fty::Asset& asset);
 void operator>>=(const cxxtools::SerializationInfo& si, fty::Asset& asset);
-
-
-class UIAsset : public Asset
-{
-public:
-    explicit UIAsset(const Asset& a = Asset());
-
-    // serialization / deserialization for cxxtools
-    void serializeUI(cxxtools::SerializationInfo& si) const;
-    void deserializeUI(const cxxtools::SerializationInfo& si);
-};
 
 } // namespace fty

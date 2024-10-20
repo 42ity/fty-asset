@@ -35,7 +35,7 @@ namespace conversion {
         return JSON::writeToString(si, false);
     }
 
-    void fromJson(const std::string& json, fty::Asset& asset)
+    void fromJson(const std::string& json, Asset& asset)
     {
         cxxtools::SerializationInfo si;
         JSON::readFromString(json, si);

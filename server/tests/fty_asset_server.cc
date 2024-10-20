@@ -143,19 +143,19 @@ TEST_CASE("fty_asset_server test")
 
     std::cout << "create server..." << std::endl;
     zactor_t* server = zactor_new(mlm_server, static_cast<void*>( const_cast<char*>("Malamute")));
-    CHECK(server != NULL);
+    REQUIRE(server != NULL);
     zstr_sendx(server, "BIND", endpoint.c_str(), NULL);
 
-    std::cout << "create ui..." << std::endl;
-    mlm_client_t* ui = mlm_client_new();
-    CHECK(ui != NULL);
-    mlm_client_connect(ui, endpoint.c_str(), 5000, client_name.c_str());
-    mlm_client_set_producer(ui, "ASSETS-TEST");
-    mlm_client_set_consumer(ui, "ASSETS-TEST", ".*");
+    std::cout << "create mlm client..." << std::endl;
+    mlm_client_t* client = mlm_client_new();
+    REQUIRE(client != NULL);
+    mlm_client_connect(client, endpoint.c_str(), 5000, client_name.c_str());
+    mlm_client_set_producer(client, "ASSETS-TEST");
+    mlm_client_set_consumer(client, "ASSETS-TEST", ".*");
 
     std::cout << "create asset_server..." << std::endl;
     zactor_t* asset_server = zactor_new(fty_asset_server, static_cast<void*>( const_cast<char*>(asset_server_test_name.c_str())));
-    CHECK(asset_server != NULL);
+    REQUIRE(asset_server != NULL);
     zstr_sendx(asset_server, "CONNECTSTREAM", endpoint.c_str(), NULL);
     zsock_wait(asset_server);
     zstr_sendx(asset_server, "PRODUCER", "ASSETS-TEST", NULL);
@@ -178,12 +178,12 @@ TEST_CASE("fty_asset_server test")
         zhash_insert(aux, "subtype", static_cast<void*>( const_cast<char*>("N_A")));
         zmsg_t* msg = fty_proto_encode_asset(aux, asset_name, FTY_PROTO_ASSET_OP_CREATE, NULL);
         zmsg_pushstrf(msg, "%s", "READWRITE");
-        int rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        int rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         zhash_destroy(&aux);
         CHECK(rv == 0);
-        zmsg_t* reply = mlm_client_recv(ui);
+        zmsg_t* reply = mlm_client_recv(client);
         if (!fty_proto_is(reply)) {
-            CHECK(streq(mlm_client_subject(ui), subject));
+            CHECK(streq(mlm_client_subject(client), subject));
             CHECK(zmsg_size(reply) == 2);
             char* str = zmsg_popstr(reply);
             CHECK(streq(str, "OK"));
@@ -197,15 +197,15 @@ TEST_CASE("fty_asset_server test")
             fty_proto_t* fmsg             = fty_proto_decode(&reply);
             std::string  expected_subject = "unknown.unknown@";
             expected_subject.append(asset_name);
-            // CHECK(streq(mlm_client_subject(ui), expected_subject.c_str()));
+            // CHECK(streq(mlm_client_subject(client), expected_subject.c_str()));
             CHECK(streq(fty_proto_operation(fmsg), FTY_PROTO_ASSET_OP_CREATE));
             fty_proto_destroy(&fmsg);
             zmsg_destroy(&reply);
         }
 
-        reply = mlm_client_recv(ui);
+        reply = mlm_client_recv(client);
         if (!fty_proto_is(reply)) {
-            CHECK(streq(mlm_client_subject(ui), subject));
+            CHECK(streq(mlm_client_subject(client), subject));
             CHECK(zmsg_size(reply) == 2);
             char* str = zmsg_popstr(reply);
             CHECK(streq(str, "OK"));
@@ -219,7 +219,7 @@ TEST_CASE("fty_asset_server test")
             fty_proto_t* fmsg             = fty_proto_decode(&reply);
             std::string  expected_subject = "unknown.unknown@";
             expected_subject.append(asset_name);
-            // CHECK(streq(mlm_client_subject(ui), expected_subject.c_str()));
+            // CHECK(streq(mlm_client_subject(client), expected_subject.c_str()));
             CHECK(streq(fty_proto_operation(fmsg), FTY_PROTO_ASSET_OP_CREATE));
             fty_proto_destroy(&fmsg);
             zmsg_destroy(&reply);
@@ -231,7 +231,7 @@ TEST_CASE("fty_asset_server test")
     {
         log_debug("fty-asset-server-test:Test #3");
         zmsg_t* msg = fty_proto_encode_asset(NULL, asset_name, FTY_PROTO_ASSET_OP_UPDATE, NULL);
-        int rv  = mlm_client_send(ui, "update-test", &msg);
+        int rv  = mlm_client_send(client, "update-test", &msg);
         CHECK(rv == 0);
         zclock_sleep(200);
         log_info("fty-asset-server-test:Test #3: OK");
@@ -248,10 +248,10 @@ TEST_CASE("fty_asset_server test")
         zmsg_addstr(msg, uuid);
         zmsg_addstr(msg, command);
         zmsg_addstr(msg, asset_name);
-        int rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        int rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         CHECK(rv == 0);
-        zmsg_t* reply = mlm_client_recv(ui);
-        CHECK(streq(mlm_client_subject(ui), subject));
+        zmsg_t* reply = mlm_client_recv(client);
+        CHECK(streq(mlm_client_subject(client), subject));
         CHECK(zmsg_size(reply) == 5);
         char* str = zmsg_popstr(reply);
         CHECK(streq(str, uuid));
@@ -279,10 +279,10 @@ TEST_CASE("fty_asset_server test")
         zmsg_t*     msg     = zmsg_new();
         zmsg_addstr(msg, command);
         zmsg_addstr(msg, asset_name);
-        int rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        int rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         CHECK(rv == 0);
-        zmsg_t* reply = mlm_client_recv(ui);
-        CHECK(streq(mlm_client_subject(ui), subject));
+        zmsg_t* reply = mlm_client_recv(client);
+        CHECK(streq(mlm_client_subject(client), subject));
         CHECK(zmsg_size(reply) == 1);
         char* str = zmsg_popstr(reply);
         CHECK(streq(str, "OK"));
@@ -299,10 +299,10 @@ TEST_CASE("fty_asset_server test")
         zmsg_addstr(msg, command);
         zmsg_addstr(msg, "UUID");
         zmsg_addstr(msg, asset_name);
-        int rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        int rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         CHECK(rv == 0);
-        zmsg_t* reply = mlm_client_recv(ui);
-        CHECK(streq(mlm_client_subject(ui), subject));
+        zmsg_t* reply = mlm_client_recv(client);
+        CHECK(streq(mlm_client_subject(client), subject));
         CHECK(zmsg_size(reply) == 2);
         char* uuid = zmsg_popstr(reply);
         CHECK(streq(uuid, "UUID"));
@@ -328,7 +328,7 @@ TEST_CASE("fty_asset_server test")
         const char* subject = "REPUBLISH";
         zmsg_t*     msg     = zmsg_new();
         zmsg_addstr(msg, "$all");
-        int rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        int rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         CHECK(rv == 0);
         zclock_sleep(200);
         log_info("fty-asset-server-test:Test #8: OK");
@@ -343,9 +343,9 @@ TEST_CASE("fty_asset_server test")
         zmsg_addstr(msg, command);
         zmsg_addstr(msg, uuid);
         zmsg_addstr(msg, asset_name);
-        int rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        int rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         CHECK(rv == 0);
-        zmsg_t* reply    = mlm_client_recv(ui);
+        zmsg_t* reply    = mlm_client_recv(client);
         char*   rcv_uuid = zmsg_popstr(reply);
         CHECK(0 == strcmp(rcv_uuid, uuid));
         CHECK(fty_proto_is(reply));
@@ -365,9 +365,9 @@ TEST_CASE("fty_asset_server test")
         const char* subject     = "ENAME_FROM_INAME";
         zmsg_t*     msg         = zmsg_new();
         zmsg_addstr(msg, asset_name);
-        int rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        int rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         CHECK(rv == 0);
-        zmsg_t* reply = mlm_client_recv(ui);
+        zmsg_t* reply = mlm_client_recv(client);
         CHECK(zmsg_size(reply) == 2);
         char* str = zmsg_popstr(reply);
         CHECK(streq(str, "OK"));
@@ -406,14 +406,14 @@ TEST_CASE("fty_asset_server test")
         zhash_insert(aux, "subtype", static_cast<void*>( const_cast<char*>("N_A")));
         zmsg_t* msg = fty_proto_encode_asset(aux, asset_name, FTY_PROTO_ASSET_OP_CREATE, NULL);
         zmsg_pushstrf(msg, "%s", "READWRITE");
-        int rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        int rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         zclock_sleep(200);
         zhash_destroy(&aux);
         CHECK(rv == 0);
         char*   str   = NULL;
-        zmsg_t* reply = mlm_client_recv(ui);
+        zmsg_t* reply = mlm_client_recv(client);
         if (!fty_proto_is(reply)) {
-            CHECK(streq(mlm_client_subject(ui), subject));
+            CHECK(streq(mlm_client_subject(client), subject));
             CHECK(zmsg_size(reply) == 2);
             str = zmsg_popstr(reply);
             CHECK(streq(str, "OK"));
@@ -421,9 +421,9 @@ TEST_CASE("fty_asset_server test")
         }
         zmsg_destroy(&reply); // throw away stream message
 
-        reply = mlm_client_recv(ui);
+        reply = mlm_client_recv(client);
         if (!fty_proto_is(reply)) {
-            CHECK(streq(mlm_client_subject(ui), subject));
+            CHECK(streq(mlm_client_subject(client), subject));
             CHECK(zmsg_size(reply) == 2);
             str = zmsg_popstr(reply);
             CHECK(streq(str, "OK"));
@@ -432,10 +432,10 @@ TEST_CASE("fty_asset_server test")
         zmsg_destroy(&reply); // throw away stream message
 
         // disable configurability
-        mlm_client_set_producer(ui, "LICENSING-ANNOUNCEMENTS-TEST");
+        mlm_client_set_producer(client, "LICENSING-ANNOUNCEMENTS-TEST");
         zmsg_t* smsg = fty_proto_encode_metric(
             NULL, static_cast<uint64_t>(time(NULL)), 24 * 60 * 60, "configurability.global", "rackcontroller-0", "0", "");
-        mlm_client_send(ui, "configurability.global@rackcontroller-0", &smsg);
+        mlm_client_send(client, "configurability.global@rackcontroller-0", &smsg);
         zclock_sleep(200);
         // try to create asset when configurability is disabled
         aux = zhash_new();
@@ -443,12 +443,12 @@ TEST_CASE("fty_asset_server test")
         zhash_insert(aux, "subtype", static_cast<void*>( const_cast<char*>("N_A")));
         msg = fty_proto_encode_asset(aux, asset_name, FTY_PROTO_ASSET_OP_CREATE, NULL);
         zmsg_pushstrf(msg, "%s", "READWRITE");
-        rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         zclock_sleep(200);
         zhash_destroy(&aux);
         CHECK(rv == 0);
-        reply = mlm_client_recv(ui);
-        CHECK(streq(mlm_client_subject(ui), subject));
+        reply = mlm_client_recv(client);
+        CHECK(streq(mlm_client_subject(client), subject));
         CHECK(zmsg_size(reply) == 2);
         str = zmsg_popstr(reply);
         CHECK(streq(str, "ERROR"));
@@ -460,10 +460,10 @@ TEST_CASE("fty_asset_server test")
         // enable configurability again, but set limit to power devices
         smsg = fty_proto_encode_metric(
             NULL, static_cast<uint64_t>(time(NULL)), 24 * 60 * 60, "configurability.global", "rackcontroller-0", "1", "");
-        mlm_client_send(ui, "configurability.global@rackcontroller-0", &smsg);
+        mlm_client_send(client, "configurability.global@rackcontroller-0", &smsg);
         smsg = fty_proto_encode_metric(
             NULL, static_cast<uint64_t>(time(NULL)), 24 * 60 * 60, "power_nodes.max_active", "rackcontroller-0", "3", "");
-        mlm_client_send(ui, "power_nodes.max_active@rackcontroller-0", &smsg);
+        mlm_client_send(client, "power_nodes.max_active@rackcontroller-0", &smsg);
         zclock_sleep(300);
         // send power devices
         aux = zhash_new();
@@ -472,14 +472,14 @@ TEST_CASE("fty_asset_server test")
         zhash_insert(aux, "status", static_cast<void*>( const_cast<char*>("active")));
         msg = fty_proto_encode_asset(aux, "test1", FTY_PROTO_ASSET_OP_UPDATE, NULL);
         zmsg_pushstrf(msg, "%s", "READWRITE");
-        rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         if (aux)
             zhash_destroy(&aux);
         zclock_sleep(200);
         CHECK(rv == 0);
-        reply = mlm_client_recv(ui);
+        reply = mlm_client_recv(client);
         if (!fty_proto_is(reply)) {
-            CHECK(streq(mlm_client_subject(ui), subject));
+            CHECK(streq(mlm_client_subject(client), subject));
             CHECK(zmsg_size(reply) == 2);
             str = zmsg_popstr(reply);
             CHECK(streq(str, "OK"));
@@ -487,9 +487,9 @@ TEST_CASE("fty_asset_server test")
         }
         zmsg_destroy(&reply); // throw away stream message
 
-        reply = mlm_client_recv(ui);
+        reply = mlm_client_recv(client);
         if (!fty_proto_is(reply)) {
-            CHECK(streq(mlm_client_subject(ui), subject));
+            CHECK(streq(mlm_client_subject(client), subject));
             CHECK(zmsg_size(reply) == 2);
             str = zmsg_popstr(reply);
             CHECK(streq(str, "OK"));
@@ -504,14 +504,14 @@ TEST_CASE("fty_asset_server test")
         zhash_insert(aux, "status", static_cast<void*>( const_cast<char*>("active")));
         msg = fty_proto_encode_asset(aux, "test2", FTY_PROTO_ASSET_OP_UPDATE, NULL);
         zmsg_pushstrf(msg, "%s", "READWRITE");
-        rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         if (aux)
             zhash_destroy(&aux);
         zclock_sleep(1000);
         CHECK(rv == 0);
-        reply = mlm_client_recv(ui);
+        reply = mlm_client_recv(client);
         if (!fty_proto_is(reply)) {
-            CHECK(streq(mlm_client_subject(ui), subject));
+            CHECK(streq(mlm_client_subject(client), subject));
             CHECK(zmsg_size(reply) == 2);
             str = zmsg_popstr(reply);
             CHECK(streq(str, "OK"));
@@ -519,9 +519,9 @@ TEST_CASE("fty_asset_server test")
         }
         zmsg_destroy(&reply); // throw away stream message
 
-        reply = mlm_client_recv(ui);
+        reply = mlm_client_recv(client);
         if (!fty_proto_is(reply)) {
-            CHECK(streq(mlm_client_subject(ui), subject));
+            CHECK(streq(mlm_client_subject(client), subject));
             CHECK(zmsg_size(reply) == 2);
             str = zmsg_popstr(reply);
             CHECK(streq(str, "OK"));
@@ -536,15 +536,15 @@ TEST_CASE("fty_asset_server test")
         zhash_insert(aux, "status", static_cast<void*>( const_cast<char*>("active")));
         msg = fty_proto_encode_asset(aux, "test3", FTY_PROTO_ASSET_OP_UPDATE, NULL);
         zmsg_pushstrf(msg, "%s", "READWRITE");
-        rv = mlm_client_sendto(ui, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
+        rv = mlm_client_sendto(client, asset_server_test_name.c_str(), subject, NULL, 5000, &msg);
         if (aux)
             zhash_destroy(&aux);
         zclock_sleep(200);
         CHECK(rv == 0);
 
-        reply = mlm_client_recv(ui);
+        reply = mlm_client_recv(client);
         if (!fty_proto_is(reply)) {
-            CHECK(streq(mlm_client_subject(ui), subject));
+            CHECK(streq(mlm_client_subject(client), subject));
             CHECK(zmsg_size(reply) == 2);
             str = zmsg_popstr(reply);
             CHECK(streq(str, "OK"));
@@ -552,9 +552,9 @@ TEST_CASE("fty_asset_server test")
         }
         zmsg_destroy(&reply); // throw away stream message
 
-        reply = mlm_client_recv(ui);
+        reply = mlm_client_recv(client);
         if (!fty_proto_is(reply)) {
-            CHECK(streq(mlm_client_subject(ui), subject));
+            CHECK(streq(mlm_client_subject(client), subject));
             CHECK(zmsg_size(reply) == 2);
             str = zmsg_popstr(reply);
             CHECK(streq(str, "OK"));
@@ -707,7 +707,7 @@ TEST_CASE("fty_asset_server test")
 
     zactor_destroy(&autoupdate_server);
     zactor_destroy(&asset_server);
-    mlm_client_destroy(&ui);
+    mlm_client_destroy(&client);
     zactor_destroy(&server);
 
     //  @end

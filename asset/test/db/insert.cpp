@@ -1,8 +1,28 @@
+/*  ====================================================================================================================
+    Copyright (C) 2014 - 2020 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ====================================================================================================================
+*/
+
 #include "asset/asset-db.h"
 #include <fty_common_db_connection.h>
-#include <catch2/catch.hpp>
 #include <fty_common_asset_types.h>
 #include <test-db/sample-db.h>
+
+#include <catch2/catch.hpp>
 
 TEST_CASE("Asset/insert")
 {
@@ -247,7 +267,7 @@ TEST_CASE("Asset/UTF-8")
     fty::db::Connection conn;
 
     fty::asset::db::AssetElement el;
-    el.name      = "á";
+    el.name      = "á你好";
     el.status    = "active";
     el.priority  = 1;
     el.typeId    = persist::type_to_typeid("device");
@@ -258,7 +278,7 @@ TEST_CASE("Asset/UTF-8")
 
     auto check = fty::asset::db::selectAssetElementWebById(*ret);
     REQUIRE(check);
-    CHECK(check->name == "á");
+    CHECK(check->name == "á你好");
 
     auto ret2 = fty::asset::db::deleteAssetElement(conn, check->id);
     if (!ret2) {
