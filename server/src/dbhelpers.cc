@@ -76,7 +76,7 @@ int select_asset_element_basic(
     }
 
     tntdb::Connection conn = tntdb::connectCached(DBConn::url);
-    int               rv   = DBAssets::select_asset_element_basic_cb(conn, asset_name, cb);
+    int rv = DBAssets::select_asset_element_basic_cb(conn, asset_name, cb);
     return rv;
 }
 
@@ -165,7 +165,7 @@ int select_assets(std::function<void(const tntdb::Row&)>& cb, bool test)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-static const std::string SQL_EXT_ATT_INVENTORY{                                                                              \
+static const std::string SQL_EXT_ATT_INVENTORY{
     " INSERT INTO"
     "   t_bios_asset_ext_attributes"
     "   (keytag, value, id_asset_element, read_only)"
@@ -183,7 +183,7 @@ static const std::string SQL_EXT_ATT_INVENTORY{                                 
  *
  *  \param[in] device_name - iname of assets
  *  \param[in] ext_attributes - recent ext attributes for this asset
- *  \param[in] read_only - whether to insert ext attributes as readonly
+ *  \param[in] readonly - whether to insert ext attributes as readonly
  *  \param[in] test - unit tests indicator
  *
  *  \return  0 - in case of success
@@ -211,13 +211,15 @@ int process_insert_inventory(
     }
 
     tntdb::Transaction trans(conn);
-    tntdb::Statement   st = conn.prepareCached(SQL_EXT_ATT_INVENTORY);
+    tntdb::Statement st = conn.prepareCached(SQL_EXT_ATT_INVENTORY);
 
     for (void* it = zhash_first(ext_attributes); it; it = zhash_next(ext_attributes)) {
 
         const char* value  = static_cast<const char*>(it);
         const char* keytag = zhash_cursor(ext_attributes);
 
+        // readonly exception
+        // NOTICE differencies w/ the similar "with map-cache" function
         bool readonlyV = readonly;
         if (readonlyV) {
             if (streq(keytag, "name")
@@ -241,9 +243,9 @@ int process_insert_inventory(
                 .execute();
         }
         catch (const std::exception& e) {
-            log_warning("%s:\texception on updating %s {%s, %s}\n\t%s", "",
-                device_name.c_str(), keytag,
-                value, e.what());
+            log_warning("exception on updating %s {%s, %s}: %s",
+                device_name.c_str(), keytag, value, e.what());
+            // NOTICE not processed as an error
         }
     }
 
@@ -258,9 +260,9 @@ int process_insert_inventory(
  *
  *  \param[in] device_name - iname of assets
  *  \param[in] ext_attributes - recent ext attributes for this asset
- *  \param[in] read_only - whether to insert ext attributes as readonly
- *  \param[in] test - unit tests indicator
+ *  \param[in] readonly - whether to insert ext attributes as readonly
  *  \param[in] map_cache -  cache map
+ *  \param[in] test - unit tests indicator
  *
  *  \return  0 - in case of success
  *          -1 - in case of some unexpected error
@@ -287,12 +289,14 @@ int process_insert_inventory(const std::string& device_name, zhash_t* ext_attrib
     }
 
     tntdb::Transaction trans(conn);
-    tntdb::Statement   st = conn.prepareCached(SQL_EXT_ATT_INVENTORY);
+    tntdb::Statement st = conn.prepareCached(SQL_EXT_ATT_INVENTORY);
 
     for (void* it = zhash_first(ext_attributes); it; it = zhash_next(ext_attributes)) {
         const char* value  = static_cast<const char*>(it);
         const char* keytag = zhash_cursor(ext_attributes);
 
+        // readonly exception
+        // NOTICE differencies w/ the similar "without map-cache" function
         bool readonlyV = readonly;
         if (readonlyV) {
             if (streq(keytag, "name")
@@ -319,9 +323,9 @@ int process_insert_inventory(const std::string& device_name, zhash_t* ext_attrib
             map_cache[cache_key] = value;
         }
         catch (const std::exception& e) {
-            log_warning("%s:\texception on updating %s {%s, %s}\n\t%s", "",
-                device_name.c_str(), keytag,
-                value, e.what());
+            log_warning("exception on updating %s {%s, %s}: %s",
+                device_name.c_str(), keytag, value, e.what());
+            // NOTICE not processed as an error
         }
     }
 
@@ -350,24 +354,26 @@ int select_ename_from_iname(const std::string& iname, std::string& ename, bool t
         return -1;
     }
 
+    static const std::string SQL_SELECT_ENAME_FROM_INAME{
+        " SELECT e.value FROM t_bios_asset_ext_attributes AS e"
+        " INNER JOIN t_bios_asset_element AS a"
+        " ON a.id_asset_element = e.id_asset_element"
+        " WHERE keytag = 'name' and a.name = :iname"
+    };
+
     try {
         tntdb::Connection conn = tntdb::connectCached(DBConn::url);
-        tntdb::Statement  st   = conn.prepareCached(
-            "SELECT e.value FROM  t_bios_asset_ext_attributes AS e "
-            "INNER JOIN t_bios_asset_element AS a "
-            "ON a.id_asset_element = e.id_asset_element "
-            "WHERE keytag = 'name' and a.name = :iname; "
-
-        );
+        tntdb::Statement st = conn.prepareCached(SQL_SELECT_ENAME_FROM_INAME);
 
         tntdb::Row row = st.set("iname", iname).selectRow();
-        log_debug("[s_handle_subject_ename_from_iname]: were selected %" PRIu32 " rows", 1);
+        log_debug("[select_ename_from_iname]: were selected %" PRIu32 " rows", 1);
 
         row[0].get(ename);
         return 0;
     }
     catch (const std::exception& e) {
-        log_error("exception caught %s for element '%s'", e.what(), ename.c_str());
+        log_error("exception on selecting ename from %s: %s",
+            iname.c_str(), e.what());
     }
     return -1;
 }
