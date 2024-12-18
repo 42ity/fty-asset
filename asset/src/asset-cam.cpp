@@ -21,7 +21,6 @@
 #include "asset/asset-cam.h"
 #include <fty_log.h>
 #include <algorithm>
-// #include <fty/split.h>
 #include <fty_security_wallet.h>
 
 static constexpr const char* SECW_CRED_ID_KEY = "secw_credential_id";

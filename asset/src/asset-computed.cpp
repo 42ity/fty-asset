@@ -24,9 +24,9 @@
 #include <fty_common.h>
 #include <fty_common_db_asset.h>
 #include <fty_common_db_dbpath.h>
-#include <functional>
 #include <tntdb/connection.h>
 #include <tntdb/row.h>
+#include <functional>
 
 static int s_get_devices_usize(tntdb::Connection& conn, std::set<uint32_t>& elements)
 {

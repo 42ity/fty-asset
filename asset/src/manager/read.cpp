@@ -1,3 +1,19 @@
+/*  ========================================================================
+    Copyright (C) 2020 Eaton
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ========================================================================
+*/
+
 #include "asset/asset-db.h"
 #include "asset/asset-manager.h"
 #include <fty_common_asset_types.h>
@@ -6,16 +22,13 @@
 
 namespace fty::asset {
 
+// throw on error
 static std::vector<std::tuple<uint32_t, std::string, std::string, std::string>> getParents(uint32_t id)
 {
+    // <id, iname, type, subtype>
+    std::vector<std::tuple<uint32_t, std::string, std::string, std::string>> parents;
 
-    std::vector<std::tuple<uint32_t, std::string, std::string, std::string>> ret{};
-
-    auto cb = [&ret](const fty::db::Row& row) {
-        // Dim: I keep this comment from original code for history :)
-
-        // C++ is c r a z y!! Having static initializer in lambda function made
-        // my life easier here, but I did not expected this will work!!
+    auto cb = [&parents](const fty::db::Row& row) {
         static const std::vector<std::tuple<std::string, std::string, std::string, std::string>> NAMES = {
             std::make_tuple("id_parent1", "parent_name1", "id_type_parent1", "id_subtype_parent1"),
             std::make_tuple("id_parent2", "parent_name2", "id_type_parent2", "id_subtype_parent2"),
@@ -30,24 +43,24 @@ static std::vector<std::tuple<uint32_t, std::string, std::string, std::string>> 
         };
 
         for (const auto& it : NAMES) {
-            uint32_t    pid        = row.get<uint32_t>(std::get<0>(it));
-            std::string name       = row.get(std::get<1>(it));
-            uint16_t    id_type    = row.get<uint16_t>(std::get<2>(it));
-            uint16_t    id_subtype = row.get<uint16_t>(std::get<3>(it));
+            std::string name = row.get(std::get<1>(it));
+            if (name.empty()) { continue; }
 
-            if (!name.empty()) {
-                ret.push_back(std::make_tuple(pid, name, persist::typeid_to_type(id_type), persist::subtypeid_to_subtype(id_subtype)));
-            }
+            uint32_t pid        = row.get<uint32_t>(std::get<0>(it));
+            uint16_t id_type    = row.get<uint16_t>(std::get<2>(it));
+            uint16_t id_subtype = row.get<uint16_t>(std::get<3>(it));
+
+            parents.push_back(std::make_tuple(pid, name, persist::typeid_to_type(id_type), persist::subtypeid_to_subtype(id_subtype)));
         }
     };
 
-    int r = db::selectAssetElementSuperParent(id, cb);
-    if (r == -1) {
-        logError("select_asset_element_super_parent failed");
-        throw std::runtime_error("DBAssets::select_asset_element_super_parent () failed.");
+    auto res = db::selectAssetElementSuperParent(id, cb);
+    if (!res) {
+        logError("selectAssetElementSuperParent failed: {}", res.error());
+        throw std::runtime_error("selectAssetElementSuperParent () failed");
     }
 
-    return ret;
+    return parents;
 }
 
 AssetExpected<AssetManager::AssetList> AssetManager::getItems(
@@ -59,85 +72,89 @@ AssetExpected<AssetManager::AssetList> AssetManager::getItems(
 AssetExpected<AssetManager::AssetList> AssetManager::getItems(
     const std::string& typeName, const std::vector<std::string>& subtypeName, const std::string& order, OrderDir orderDir)
 {
-    uint16_t typeId = persist::type_to_typeid(typeName);
-    if (typeId == persist::asset_type::TUNKNOWN) {
-        return unexpected("Expected datacenters,rooms,ros,racks,devices"_tr);
-    }
-
-    std::vector<uint16_t> subtypeIds;
-    if (typeName == "device") {
-        for (const auto& name : subtypeName) {
-            auto id = persist::subtype_to_subtypeid(name);
-            if (id == persist::asset_subtype::SUNKNOWN) {
-                return unexpected("Expected ups, epdu, pdu, genset, sts, server, feed"_tr);
-            }
-            subtypeIds.emplace_back(id);
-        }
-    }
-
     try {
+        uint16_t typeId = persist::type_to_typeid(typeName);
+        if (typeId == persist::asset_type::TUNKNOWN) {
+            return unexpected("Expected valid type"_tr);
+        }
+
+        std::vector<uint16_t> subtypeIds;
+        if (typeId == persist::asset_type::DEVICE) {
+            for (const auto& name : subtypeName) {
+                auto id = persist::subtype_to_subtypeid(name);
+                if (id == persist::asset_subtype::SUNKNOWN) {
+                    return unexpected("Expected device subtypes"_tr);
+                }
+                subtypeIds.emplace_back(id);
+            }
+        }
+
         auto els = db::selectShortElements(typeId, subtypeIds, order, orderDir == OrderDir::Asc ? "ASC" : "DEST");
         if (!els) {
             return unexpected(els.error());
         }
         return *els;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(e.what());
     }
 }
 
 AssetExpected<Dto> AssetManager::getDto(const std::string& iname)
 {
-    Dto asset;
-
-    auto id = db::nameToAssetId(iname);
-    if(!id) {
-        return fty::unexpected(id.error());
-    }
-
     try {
+        auto id = db::nameToAssetId(iname);
+        if (!id) {
+            return fty::unexpected(id.error());
+        }
+
+        Dto asset;
         if (auto ret = db::selectAssetElementById(*id, asset); !ret) {
             return fty::unexpected(ret.error());
         }
         return std::move(asset);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(e.what());
     }
 }
 
-
 AssetExpected<db::WebAssetElementExt> AssetManager::getItem(uint32_t id)
 {
-    db::WebAssetElementExt el;
     try {
+        db::WebAssetElementExt el;
         if (auto ret = db::selectAssetElementWebById(id, el); !ret) {
             return unexpected(ret.error());
         }
 
-        if (auto ret = db::selectExtAttributes(id)) {
-            el.extAttributes = *ret;
-        } else {
+        if (auto ret = db::selectExtAttributes(id); !ret) {
             return unexpected(ret.error());
         }
+        else {
+            el.extAttributes = *ret;
+        }
 
-        if (auto ret = db::selectAssetElementGroups(id)) {
-            el.groups = *ret;
-        } else {
+        if (auto ret = db::selectAssetElementGroups(id); !ret) {
             return unexpected(ret.error());
+        }
+        else {
+            el.groups = *ret;
         }
 
         if (el.typeId == persist::asset_type::DEVICE) {
-            if (auto powers = db::selectAssetDeviceLinksTo(id, INPUT_POWER_CHAIN)) {
-                el.powers = *powers;
-            } else {
-                return unexpected(powers.error());
+            if (auto ret = db::selectAssetDeviceLinksTo(id, INPUT_POWER_CHAIN); !ret) {
+                return unexpected(ret.error());
+            }
+            else {
+                el.powers = *ret;
             }
         }
 
         el.parents = getParents(id);
 
         return std::move(el);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(e.what());
     }
 }

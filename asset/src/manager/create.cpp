@@ -1,3 +1,19 @@
+/*  ========================================================================
+    Copyright (C) 2020 Eaton
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ========================================================================
+*/
+
 #include "asset/asset-cam.h"
 #include "asset/asset-configure-inform.h"
 #include "asset/asset-helpers.h"
@@ -16,20 +32,23 @@ namespace fty::asset {
 #define CREATE_MODE_ONE_ASSET 1
 #define CREATE_MODE_CSV       2
 
-// ensure only 1 request is process at the time
+// ensure only 1 request is processed at the time
 static std::mutex g_modification;
 
 AssetExpected<uint32_t> AssetManager::createAsset(const std::string& json, const std::string& user, bool sendNotify)
 {
     auto msg = "Request CREATE asset {} FAILED: {}"_tr;
+
     // Read json, transform to csv, use existing functionality
     cxxtools::SerializationInfo si;
     try {
         JSON::readFromString(json, si);
-    } catch (const std::exception& e) {
-        logError(e.what());
+    }
+    catch (const std::exception& e) {
+        logError("{}", e.what());
         return unexpected(msg.format("", e.what()));
     }
+
     auto ret = importAsset(si, user, sendNotify, msg);
     if (!ret) {
         return unexpected(ret.error());
@@ -63,11 +82,13 @@ AssetExpected<uint32_t> AssetManager::importAsset(
         cm = CsvMap_from_serialization_info(si);
         cm.setCreateUser(user);
         cm.setCreateMode(CREATE_MODE_ONE_ASSET);
-    } catch (const std::invalid_argument& e) {
-        logError(e.what());
+    }
+    catch (const std::invalid_argument& e) {
+        logError("{}", e.what());
         return unexpected(msg.format(itemName, e.what()));
-    } catch (const std::exception& e) {
-        logError(e.what());
+    }
+    catch (const std::exception& e) {
+        logError("{}", e.what());
         return unexpected(msg.format(itemName, e.what()));
     }
 
@@ -87,36 +108,38 @@ AssetExpected<uint32_t> AssetManager::importAsset(
     }
     // If descriminant are available, check to not duplicate asset.
     if (cm.hasTitle("manufacturer") && cm.hasTitle("model") && cm.hasTitle("serial_no")) {
-      logDebug("All discriminant data are available, checking to not duplicate asset");
+        logDebug("All discriminant data are available, checking to not duplicate asset");
 
-      std::string ipAddr = cm.hasTitle("ip.1") ? cm.get(1, "ip.1") : "";
-      AssetFilter assetFilter{cm.get(1, "manufacturer"), cm.get(1, "model"), cm.get(1, "serial_no"), ipAddr};
+        std::string ipAddr = cm.hasTitle("ip.1") ? cm.get(1, "ip.1") : "";
+        AssetFilter assetFilter{cm.get(1, "manufacturer"), cm.get(1, "model"), cm.get(1, "serial_no"), ipAddr};
 
-      auto ret = checkDuplicatedAsset(assetFilter);
-      if (!ret) {
-        return unexpected(msg.format(itemName, ret.error()));
-      }
+        auto ret = checkDuplicatedAsset(assetFilter);
+        if (!ret) {
+            return unexpected(msg.format(itemName, ret.error()));
+        }
     }
     else {
-      logError("Discriminant data are not availables, can not check duplicated asset");
+        logError("Discriminant data are not availables, can not check duplicated asset");
     }
 
     if (sendNotify) {
         try {
-            FullAsset asset(si);
-            if (auto ret = activation::isActivable(asset)) {
+            if (auto ret = activation::isActivable(itemName)) {
                 if (!*ret) {
                     return unexpected(msg.format(itemName, "Asset cannot be activated"_tr));
                 }
-            } else {
-                logError(ret.error());
+            }
+            else {
+                logError("{}", ret.error());
                 return unexpected(msg.format(itemName, ret.error()));
             }
-        } catch (const std::invalid_argument& e) {
-            logError(e.what());
+        }
+        catch (const std::invalid_argument& e) {
+            logError("{}", e.what());
             return unexpected(msg.format(itemName, e.what()));
-        } catch (const std::exception& e) {
-            logError(e.what());
+        }
+        catch (const std::exception& e) {
+            logError("{}", e.what());
             return unexpected(msg.format(itemName, e.what()));
         }
     }
@@ -136,11 +159,9 @@ AssetExpected<uint32_t> AssetManager::importAsset(
 
         if (imported.at(1)) {
             if (sendNotify) {
-                // this code can be executed in multiple threads -> agent's name should
-                // be unique at the every moment
-                std::string agent_name = generateMlmClientId("web.asset_post");
-                if (auto sent = sendConfigure(*(imported.at(1)), import.operation(), agent_name); !sent) {
-                    logError(sent.error());
+                const std::string agentName{generateMlmClientId("asset.create")};
+                if (auto sent = sendConfigure(*(imported.at(1)), import.operation(), agentName); !sent) {
+                    logError("{}", sent.error());
                     return unexpected(
                         "Error during configuration sending of asset change notification. Consult system log."_tr);
                 }
@@ -149,9 +170,10 @@ AssetExpected<uint32_t> AssetManager::importAsset(
                 // process results
                 auto ret = db::idToNameExtName(imported.at(1)->id);
                 if (!ret) {
-                    logError(ret.error());
+                    logError("{}", ret.error());
                     return unexpected(msg.format(itemName, "Database failure"_tr));
                 }
+
                 try {
                     ExtMap map;
                     getExtMapFromSi(si, map);
@@ -161,15 +183,18 @@ AssetExpected<uint32_t> AssetManager::importAsset(
                     deleteMappings(assetIname);
                     auto credentialList = getCredentialMappings(map);
                     createMappings(assetIname, credentialList);
-                } catch (const std::exception& e) {
+                }
+                catch (const std::exception& e) {
                     logError("Failed to update CAM: {}", e.what());
                 }
             }
             return imported.at(1)->id;
-        } else {
+        }
+        else {
             return unexpected(msg.format(itemName, imported.at(1).error()));
         }
-    } else {
+    }
+    else {
         return unexpected(msg.format(itemName, res.error()));
     }
 }

@@ -196,7 +196,7 @@ int topology_location_process (const std::string & command, const std::string & 
 {
     result = "";
 
-    int r;
+    int r = 0;
     std::map<std::string, std::string> param;
 
     param[command] = assetName;
@@ -369,7 +369,7 @@ static int si_member_value (const cxxtools::SerializationInfo & si, const std::s
 {
     value = "";
     const cxxtools::SerializationInfo *m = si.findMember(member);
-    if (!m || m->isNull()) return -1;
+    if (!m || m->isNull()) { return -1; }
     m->getValue(value);
     return 0; // ok
 }

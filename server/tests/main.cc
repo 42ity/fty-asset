@@ -14,37 +14,25 @@
     ========================================================================
 */
 
-//#define CATCH_CONFIG_MAIN
 #define CATCH_CONFIG_RUNNER //own main()
 #include <catch2/catch.hpp>
 
 //#include <fty_log.h>
 #include "asset/asset.h"
 
-static int runCatch2Tests( int argc, char* argv[] )
+static int runCatch2Tests(int argc, char* argv[])
 {
-    Catch::Session session; // There must be exactly one instance
+    Catch::Session session;
 
-    // writing to session.configData() here sets defaults
-    // this is the preferred way to set them
+    int r = session.applyCommandLine(argc, argv);
+    if (r != 0) {
+        return r; // command line error
+    }
 
-    int returnCode = session.applyCommandLine( argc, argv );
-    if( returnCode != 0 ) // Indicates a command line error
-        return returnCode;
-
-    // writing to session.configData() or session.Config() here
-    // overrides command line args
-    // only do this if you know you need to
-
-    int numFailed = session.run();
-
-    // numFailed is clamped to 255 as some unices only use the lower 8 bits.
-    // This clamping has already been applied, so just return it here
-    // You can also do any post run clean-up here
-    return numFailed;
+    return session.run();
 }
 
-int main( int argc, char* argv[] )
+int main(int argc, char* argv[])
 {
     //bool verbose = true;
     //ManageFtyLog::setInstanceFtylog("fty-asset-test", FTY_COMMON_LOGGING_DEFAULT_CFG);

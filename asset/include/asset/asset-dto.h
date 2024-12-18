@@ -1,0 +1,70 @@
+/*  ====================================================================================================================
+    Copyright (C) 2014 - 2020 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ====================================================================================================================
+*/
+
+#pragma once
+
+#include <pack/pack.h>
+
+namespace fty::asset {
+
+struct LinkEntry : public pack::Node
+{
+    pack::String source    = FIELD("source");
+    pack::Int32  link_type = FIELD("link_type");
+    pack::String src_out   = FIELD("src_out");
+
+    using pack::Node::Node;
+    META(LinkEntry, source, link_type, src_out);
+};
+
+struct ExtEntry : public pack::Node
+{
+    pack::String value    = FIELD("value");
+    pack::Bool   readOnly = FIELD("readOnly");
+    pack::Bool   update   = FIELD("update");
+
+    using pack::Node::Node;
+    META(ExtEntry, value, readOnly, update);
+};
+
+struct Dto : public pack::Node
+{
+    // enum class Status
+    // {
+    //     Unknown,
+    //     Active,
+    //     Nonactive
+    // };
+
+    pack::UInt32 status   = FIELD("status");
+    pack::String type     = FIELD("type");
+    pack::String sub_type = FIELD("sub_type");
+    pack::String name     = FIELD("name"); // internal name
+    pack::UInt32 priority = FIELD("priority");
+    pack::String parent   = FIELD("parent");
+
+    pack::ObjectList<LinkEntry> linked = FIELD("linked");
+
+    pack::Map<ExtEntry> ext = FIELD("ext");
+
+    using pack::Node::Node;
+    META(Dto, status, type, sub_type, name, priority, parent, linked, ext);
+}; // namespace asset
+
+} // namespace fty::asset

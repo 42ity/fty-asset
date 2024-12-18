@@ -1,14 +1,36 @@
+/*  ====================================================================================================================
+    Copyright (C) 2014 - 2020 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ====================================================================================================================
+*/
+
 #include <asset/asset-db2.h>
-#include <catch2/catch.hpp>
 #include <fty_common_asset_types.h>
 #include <fty_common_db_connection.h>
 #include <iostream>
 #include <test-db/sample-db.h>
 
-#define EXP_CHECK(expected)                                                                                                                \
-    if (!expected) {                                                                                                                       \
-        FAIL(expected.error());                                                                                                            \
-    }
+#include <catch2/catch.hpp>
+
+#define EXP_CHECK(expected)         \
+    do {                            \
+        if (!expected) {            \
+            FAIL(expected.error()); \
+        }                           \
+    } while(0)
 
 namespace asset = fty::db::asset;
 
@@ -413,7 +435,7 @@ static void testItemsByContainers(fty::db::Connection& conn, uint32_t cntId)
         asset::select::Order order;
         order.field = "name";
 
-		// fails if ids is empty
+        // fails if ids is empty
         auto ret = asset::select::itemsByContainers(conn, {}, func, {}, order);
         REQUIRE(!ret);
         REQUIRE(items.size() == 0);
@@ -435,7 +457,7 @@ static void testItemsByContainers(fty::db::Connection& conn, uint32_t cntId)
         asset::select::Order order;
         order.field = "name";
 
-		// support multi def. (no doublon in items)
+        // support multi def. (no doublon in items)
         auto ret = asset::select::itemsByContainers(conn, {cntId, cntId, cntId}, func, {}, order);
         EXP_CHECK(ret);
         REQUIRE(items.size() == 1);
@@ -447,7 +469,7 @@ static void testItemsByContainers(fty::db::Connection& conn, uint32_t cntId)
         asset::select::Order order;
         order.field = "name";
 
-		// support mangled ids
+        // support mangled ids
         auto ret = asset::select::itemsByContainers(conn, {cntId, 0}, func, {}, order);
         EXP_CHECK(ret);
         REQUIRE(items.size() == 1);

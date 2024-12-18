@@ -1,8 +1,7 @@
 usr/include/fty_asset_dto.h
 usr/include/fty_common_asset.h
 usr/include/asset/*
-usr/include/test-db/sample-db.h
-usr/include/test-db/test-db.h
+usr/include/test-db/*
 usr/share/cmake/fty-asset/*
 usr/share/cmake/fty-asset-libng/*
 usr/lib/*/pkgconfig/*fty-asset.pc

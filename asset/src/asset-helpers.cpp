@@ -1,22 +1,39 @@
+/*  ========================================================================
+    Copyright (C) 2020 Eaton
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ========================================================================
+*/
+
 #include "asset/asset-helpers.h"
 #include "asset/asset-db.h"
-#include <ctime>
 #include <fty_asset_dto.h>
 #include <fty_common_agents.h>
 #include <fty_common_db_connection.h>
 #include <fty_common_mlm.h>
 #include <fty_log.h>
 #include <openssl/sha.h>
+#include <ctime>
 #include <regex>
 #include <sstream>
 #include <time.h>
 #include <utility>
 #include <uuid/uuid.h>
 
-#define AGENT_ASSET_ACTIVATOR      "etn-licensing-credits"
-#define COMMAND_IS_ASSET_ACTIVABLE "GET_IS_ASSET_ACTIVABLE"
-#define COMMAND_ACTIVATE_ASSET     "ACTIVATE_ASSET"
-#define COMMAND_DEACTIVATE_ASSET   "DEACTIVATE_ASSET"
+#define AGENT_ASSET_ACTIVATOR "etn-licensing-credits"
+
+#define COMMAND_IS_ASSET_ACTIVABLE_INAME "IS_ASSET_ACTIVABLE_INAME"
+#define COMMAND_ACTIVATE_ASSET_INAME     "ACTIVATE_ASSET_INAME"
+#define COMMAND_DEACTIVATE_ASSET_INAME   "DEACTIVATE_ASSET_INAME"
 
 namespace fty::asset {
 
@@ -214,49 +231,56 @@ AssetExpected<void> checkDuplicatedAsset(const AssetFilter& assetFilter)
     return {};
 }
 
-static AssetExpected<std::vector<std::string>> activateRequest(const std::string& command, const std::string& asset)
+static AssetExpected<std::vector<std::string>> activateRequest(const std::string& command, const std::string& data)
 {
     try {
         mlm::MlmSyncClient client(AGENT_FTY_ASSET, AGENT_ASSET_ACTIVATOR);
 
-        logDebug("Sending {} request to {}", command, AGENT_ASSET_ACTIVATOR);
+        logDebug("Request {}, command({}), data({})", AGENT_ASSET_ACTIVATOR, command, data);
 
-        std::vector<std::string> payload = {command, asset};
+        std::vector<std::string> payload = {command, data};
 
         std::vector<std::string> receivedFrames = client.syncRequestWithReply(payload);
 
         // check if the first frame we get is an error
-        if (receivedFrames[0] == "ERROR") {
+        if (receivedFrames.empty() || receivedFrames[0] == "ERROR") {
             if (receivedFrames.size() == 2) {
                 return unexpected(receivedFrames.at(1));
-            } else {
+            }
+            else {
                 return unexpected("Missing data for error");
             }
         }
         return receivedFrames;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         return unexpected(e.what());
     }
 }
 
-AssetExpected<bool> activation::isActivable(const std::string& asset)
+AssetExpected<bool> activation::isActivable(const std::string& assetIName)
 {
-    if (auto ret = activateRequest(COMMAND_IS_ASSET_ACTIVABLE, asset)) {
-        logDebug("asset is activable = {}", ret->at(0));
+    const std::string jsonIName{"\"" + assetIName + "\""}; // json compliant (single string)
+    if (auto ret = activateRequest(COMMAND_IS_ASSET_ACTIVABLE_INAME, jsonIName)) {
+        logDebug("asset is activable? {}/{}", assetIName, ret->at(0));
         return fty::convert<bool>(ret->at(0));
-    } else {
+    }
+    else {
+        logError("asset activable: {}/'{}'", assetIName, ret.error());
         return unexpected(ret.error());
     }
 }
 
 AssetExpected<bool> activation::isActivable(const FullAsset& asset)
 {
-    return isActivable(asset.toJson());
+    return isActivable(asset.getId());
 }
 
-AssetExpected<void> activation::activate(const std::string& asset)
+AssetExpected<void> activation::activate(const std::string& assetIName)
 {
-    if (auto ret = activateRequest(COMMAND_ACTIVATE_ASSET, asset); !ret) {
+    const std::string jsonListIName{"[\"" + assetIName + "\"]"}; // json compliant (string list)
+    if (auto ret = activateRequest(COMMAND_ACTIVATE_ASSET_INAME, jsonListIName); !ret) {
+        logError("asset {}: {}", assetIName, ret.error());
         return unexpected(ret.error());
     }
     return {};
@@ -264,12 +288,14 @@ AssetExpected<void> activation::activate(const std::string& asset)
 
 AssetExpected<void> activation::activate(const FullAsset& asset)
 {
-    return activate(asset.toJson());
+    return activate(asset.getId());
 }
 
-AssetExpected<void> activation::deactivate(const std::string& asset)
+AssetExpected<void> activation::deactivate(const std::string& assetIName)
 {
-    if (auto ret = activateRequest(COMMAND_DEACTIVATE_ASSET, asset); !ret) {
+    const std::string jsonListIName{"[\"" + assetIName + "\"]"}; // json compliant (string list)
+    if (auto ret = activateRequest(COMMAND_DEACTIVATE_ASSET_INAME, jsonListIName); !ret) {
+        logError("asset {}: {}", assetIName, ret.error());
         return unexpected(ret.error());
     }
     return {};
@@ -277,7 +303,7 @@ AssetExpected<void> activation::deactivate(const std::string& asset)
 
 AssetExpected<void> activation::deactivate(const FullAsset& asset)
 {
-    return deactivate(asset.toJson());
+    return deactivate(asset.getId());
 }
 
 AssetExpected<std::string> normName(const std::string& origName, uint32_t maxLen, uint32_t assetId)

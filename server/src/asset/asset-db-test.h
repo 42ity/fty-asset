@@ -20,6 +20,7 @@
 */
 
 #pragma once
+
 #include "asset-storage.h"
 #include <memory>
 #include <string>
@@ -45,7 +46,7 @@ public:
     fty::Expected<uint32_t> getID(const std::string& internalName) override;
     uint32_t getTypeID(const std::string& type);
     uint32_t getSubtypeID(const std::string& subtype);
-    bool verifyID(std::string& id);
+    bool verifyID(const std::string& id);
 
     bool hasLinkedAssets(const Asset& asset) override;
     void unlinkAll(Asset& dest) override;
@@ -68,7 +69,7 @@ public:
     std::string inameById(uint32_t id) override;
     std::string inameByUuid(const std::string& uuid) override;
 
-    std::vector<std::string> listAssets(std::map<std::string, std::vector<std::string>> filters) override;
+    std::vector<std::string> listAssets(const std::map<std::string, std::vector<std::string>>& filters) override;
     std::vector<std::string> listAllAssets() override;
 
 private:

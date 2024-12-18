@@ -1,3 +1,19 @@
+/*  ========================================================================
+    Copyright (C) 2020 Eaton
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    ========================================================================
+*/
+
 #include "asset/asset-import.h"
 #include "asset/asset-manager.h"
 #include "asset/csv.h"
@@ -24,8 +40,9 @@ static std::string sanitizeCol(const std::string& col)
 static std::string sanitize(const std::string& csvStr)
 {
     std::vector<std::string> out;
+
     auto rows = split(csvStr, std::regex("\r\n"), SplitOption::KeepEmpty);
-    for(const auto& row: rows) {
+    for (const auto& row: rows) {
         char inQuota = 0;
         std::string col;
         std::vector<std::string> outRow;
@@ -34,7 +51,8 @@ static std::string sanitize(const std::string& csvStr)
             if ((it == '\'' || it == '"') && ((i > 0 && row[i-1] != '\\') || i == 0)) {
                 if (!inQuota) {
                     inQuota = it;
-                } else if (inQuota == it) {
+                }
+                else if (inQuota == it) {
                     inQuota = 0;
                 }
             }
@@ -91,7 +109,7 @@ AssetExpected<AssetManager::ImportList> AssetManager::importCsv(
     if (auto ret = import.process(sendNotify)) {
         AssetManager::ImportList res;
         const auto& list = import.items();
-        for(const auto&[row, el]: list) {
+        for (const auto&[row, el]: list) {
             if (el) {
                 res.emplace(row, el->id);
             } else {
@@ -99,7 +117,8 @@ AssetExpected<AssetManager::ImportList> AssetManager::importCsv(
             }
         }
         return std::move(res);
-    } else {
+    }
+    else {
         return unexpected(ret.error());
     }
 }
