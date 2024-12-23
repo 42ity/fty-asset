@@ -39,6 +39,8 @@ etn_target(shared ${PROJECT_NAME}-libng
         fty-utils
 )
 
+set_target_properties(${PROJECT_NAME}-libng PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
+
 ########################################################################################################################
 
 # libfty-asset-test-db.so (tntdb/mysql wrapper for unit test)

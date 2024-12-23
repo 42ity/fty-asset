@@ -1,2 +1,2 @@
-usr/lib/*/libfty-asset.so
-usr/lib/*/libfty-asset-libng.so
+usr/lib/*/libfty-asset.so*
+usr/lib/*/libfty-asset-libng.so*

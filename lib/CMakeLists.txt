@@ -23,6 +23,8 @@ etn_target(shared ${PROJECT_NAME}
         fty-utils
 )
 
+set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
+
 #locate private headers
 target_include_directories(${PROJECT_NAME} AFTER PRIVATE src/)
 
