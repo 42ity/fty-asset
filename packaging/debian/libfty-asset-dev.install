@@ -5,5 +5,5 @@ usr/include/test-db/*
 usr/share/cmake/fty-asset/*
 usr/share/cmake/fty-asset-libng/*
 usr/lib/*/pkgconfig/*fty-asset.pc
-usr/lib/*/libfty-asset-test-db.so
+usr/lib/*/libfty-asset-test-db.so*
 

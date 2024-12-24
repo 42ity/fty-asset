@@ -23,3 +23,5 @@ etn_target(shared ${PROJECT_NAME}-test-db
         fty_common
         fty-pack
 )
+
+set_target_properties(${PROJECT_NAME}-test-db PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})

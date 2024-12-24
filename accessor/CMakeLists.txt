@@ -24,6 +24,8 @@ etn_target(shared ${ACCESSOR_NAME}
         fty_common_messagebus
 )
 
+set_target_properties(${PROJECT_NAME}-accessor PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
+
 # these tests require asset-agent-ng and db access
 set(ACCESSOR_TEST_ENABLED "Off")
 ##set(ACCESSOR_TEST_ENABLED "On")
