@@ -428,7 +428,7 @@ void AssetServer::createAsset(const messagebus::Message& msg) const
         fty::Asset::fromJson(msg.userData().front(), asset);
 
         auto ipAddr = asset.getExtEntry("ip.1");
-        asset::AssetFilter filter(asset.getManufacturer(), asset.getModel(), asset.getSerialNo(), ipAddr);
+        asset::AssetFilter filter(asset.getManufacturer(), asset.getSerialNo(), ipAddr);
         auto ret = asset::checkDuplicatedAsset(filter);
         if (!ret) {
             throw std::runtime_error("Asset already exists");

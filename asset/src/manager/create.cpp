@@ -111,7 +111,7 @@ AssetExpected<uint32_t> AssetManager::importAsset(
         logDebug("All discriminant data are available, checking to not duplicate asset");
 
         std::string ipAddr = cm.hasTitle("ip.1") ? cm.get(1, "ip.1") : "";
-        AssetFilter assetFilter{cm.get(1, "manufacturer"), cm.get(1, "model"), cm.get(1, "serial_no"), ipAddr};
+        AssetFilter assetFilter{cm.get(1, "manufacturer"), cm.get(1, "serial_no"), ipAddr};
 
         auto ret = checkDuplicatedAsset(assetFilter);
         if (!ret) {
