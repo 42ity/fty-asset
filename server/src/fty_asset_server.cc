@@ -849,7 +849,10 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
             const char* mfr = static_cast<const char*>(zhash_lookup(ext, "manufacturer"));
             const char* serial = static_cast<const char*>(zhash_lookup(ext, "serial_no"));
 
-            fty::asset::AssetFilter assetFilter{mfr, serial};
+            std::string mfr_str = mfr ? mfr : "";
+            std::string serial_str = serial ? serial : "";
+
+            fty::asset::AssetFilter assetFilter{mfr_str, serial_str};
             auto uuidAsset = fty::asset::generateUUID(assetFilter);
             zhash_insert(inventory, "uuid", static_cast<void*>(const_cast<char*>(uuidAsset.uuid.c_str())));
         }
