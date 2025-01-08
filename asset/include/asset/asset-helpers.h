@@ -36,16 +36,14 @@ static constexpr auto UUID_TYPE_VERSION_5   = UUID_TYPE_DCE_SHA1;
 
 struct AssetFilter
 {
-    AssetFilter(const std::string& _manufacturer, const std::string& _model, const std::string& _serial, const std::string& _ipAddr = {})
+    AssetFilter(const std::string& _manufacturer, const std::string& _serial, const std::string& _ipAddr = {})
         : manufacturer(_manufacturer)
-        , model(_model)
         , serial(_serial)
         , ipAddr(_ipAddr)
     {
     }
 
     std::string manufacturer;
-    std::string model;
     std::string serial;
     std::string ipAddr;
 };

@@ -40,12 +40,18 @@ namespace fty::asset {
 Uuid generateUUID(const AssetFilter& assetFilter)
 {
     static std::string ns = "\x93\x3d\x6c\x80\xde\xa9\x8c\x6b\xd1\x11\x8b\x3b\x46\xa1\x81\xf1";
-    Uuid               result;
+    Uuid result;
 
-    if (!assetFilter.manufacturer.empty() && !assetFilter.model.empty() && !assetFilter.serial.empty()) {
+    if (!assetFilter.manufacturer.empty() && !assetFilter.serial.empty()) {
+
         log_debug("generate full UUID");
 
-        std::string src = ns + assetFilter.manufacturer + assetFilter.model + assetFilter.serial;
+        // set upper case for manufacturer and serial
+        std::string src = assetFilter.manufacturer + assetFilter.serial;
+        std::transform(src.begin(), src.end(), src.begin(), ::toupper);
+
+        src = ns + src;
+
         // hash must be zeroed first
         std::array<unsigned char, SHA_DIGEST_LENGTH> hash;
         hash.fill(0);

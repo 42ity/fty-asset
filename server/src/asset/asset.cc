@@ -370,7 +370,7 @@ void AssetImpl::create()
         setExtEntry(fty::EXT_CREATE_TS, generateCurrentTimestamp(), true);
         // generate uuid if not already present in the payload
         if(getExtEntry("uuid").empty()) {
-            AssetFilter assetFilter{getManufacturer(), getModel(), getSerialNo()};
+            AssetFilter assetFilter{getManufacturer(), getSerialNo()};
             setExtEntry(fty::EXT_UUID, generateUUID(assetFilter).uuid, true);
         }
 
