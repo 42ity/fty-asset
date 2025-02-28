@@ -50,18 +50,18 @@ struct AssetFilter
 
 struct Uuid
 {
-    Uuid(const std::string& _uuid = "", const int _type = UUID_TYPE_VERSION_NIL)
+    Uuid(const std::string& _uuid = "", int _type = UUID_TYPE_VERSION_NIL)
         : uuid(_uuid)
         , type(_type)
     {
     }
 
     std::string uuid;
-    int         type{UUID_TYPE_VERSION_NIL};
+    int type{UUID_TYPE_VERSION_NIL};
 };
 
 AssetExpected<uint32_t>    checkElementIdentifier(const std::string& paramName, const std::string& paramValue);
-AssetExpected<std::string> sanitizeDate(const std::string& inp);
+AssetExpected<std::string> sanitizeDate(const std::string& dateIn);
 AssetExpected<double>      sanitizeValueDouble(const std::string& key, const std::string& value);
 AssetExpected<void>        tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t size, uint32_t loc);
 AssetExpected<void>        checkDuplicatedAsset(const AssetFilter& assetFilter);

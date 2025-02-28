@@ -39,96 +39,100 @@ namespace fty::asset {
 
 Uuid generateUUID(const AssetFilter& assetFilter)
 {
-
-    Uuid result;
-
     if (!assetFilter.manufacturer.empty() && !assetFilter.serial.empty()) {
-
-        static std::string ns = "\x93\x3d\x6c\x80\xde\xa9\x8c\x6b\xd1\x11\x8b\x3b\x46\xa1\x81\xf1";
-
         log_debug("generate full UUID");
 
         // set upper case for manufacturer and serial
         std::string src = assetFilter.manufacturer + assetFilter.serial;
         std::transform(src.begin(), src.end(), src.begin(), ::toupper);
 
+        static const std::string ns = "\x93\x3d\x6c\x80\xde\xa9\x8c\x6b\xd1\x11\x8b\x3b\x46\xa1\x81\xf1";
         src = ns + src;
 
         // hash must be zeroed first
-        std::array<unsigned char, SHA_DIGEST_LENGTH> hash;
-        hash.fill(0);
+        unsigned char hash[SHA_DIGEST_LENGTH];
+        memset(hash, 0, sizeof(hash));
 
-        SHA1(reinterpret_cast<const unsigned char*>(src.c_str()), src.length(), hash.data());
+        SHA1(reinterpret_cast<const unsigned char*>(src.c_str()), src.length(), hash);
 
         hash[6] &= 0x0F;
         hash[6] |= 0x50;
         hash[8] &= 0x3F;
         hash[8] |= 0x80;
 
-        char uuid_char[37];
+        char uuid_char[UUID_STR_LEN];
         memset(uuid_char, 0, sizeof(uuid_char));
-        uuid_unparse_lower(hash.data(), uuid_char);
+        uuid_unparse_lower(hash, uuid_char);
 
-        result.uuid = uuid_char;
-        result.type = UUID_TYPE_VERSION_5;
-    } else {
+        log_debug("UUID='%s'", uuid_char);
+
+        return Uuid{uuid_char, UUID_TYPE_VERSION_5}; // sha1
+    }
+    else {
         log_debug("generate random UUID");
+
         uuid_t u;
         uuid_generate_random(u);
 
-        char uuid_char[37];
+        char uuid_char[UUID_STR_LEN];
         memset(uuid_char, 0, sizeof(uuid_char));
         uuid_unparse_lower(u, uuid_char);
 
-        result.uuid = uuid_char;
-        result.type = UUID_TYPE_VERSION_4;
-    }
+        log_debug("UUID='%s'", uuid_char);
 
-    return result;
+        return Uuid{uuid_char, UUID_TYPE_VERSION_4}; // random
+    }
 }
 
 AssetExpected<uint32_t> checkElementIdentifier(const std::string& paramName, const std::string& paramValue)
 {
-    assert(!paramName.empty());
     if (paramValue.empty()) {
         return unexpected(error(Errors::ParamRequired).format(paramName));
     }
 
-    static std::string prohibited = "_@%;\"";
-
-    for (auto a : prohibited) {
-        if (paramValue.find(a) != std::string::npos) {
-            std::string err      = "value '{}' contains prohibited characters ({})"_tr.format(paramValue, prohibited);
+    const std::string prohibitedChars = "_@%;\"";
+    for (const auto& c : prohibitedChars) {
+        if (paramValue.find(c) != std::string::npos) {
+            std::string err = "value '{}' contains prohibited characters ({})"_tr.format(paramValue, prohibitedChars);
             std::string expected = "valid identifier"_tr;
             return unexpected(error(Errors::BadParams).format(paramName, err, expected));
         }
     }
 
-    if (auto eid = db::nameToAssetId(paramValue)) {
-        return *eid;
-    } else {
-        std::string err      = "value '{}' is not valid identifier. Error: {}"_tr.format(paramValue, eid.error());
+    auto eid = db::nameToAssetId(paramValue);
+    if (!eid) {
+        std::string err = "value '{}' is not valid identifier. Error: {}"_tr.format(paramValue, eid.error());
         std::string expected = "existing identifier"_tr;
         return unexpected(error(Errors::BadParams).format(paramName, err, expected));
     }
+
+    return eid.value(); // ok
 }
 
-AssetExpected<std::string> sanitizeDate(const std::string& inp)
+AssetExpected<std::string> sanitizeDate(const std::string& dateIn)
 {
-    static std::vector<std::string> formats = {"%d-%m-%Y", "%Y-%m-%d", "%d-%b-%y", "%d.%m.%Y", "%d %m %Y", "%m/%d/%Y"};
+    static std::vector<std::string> formats = {
+        "%d-%m-%Y",
+        "%Y-%m-%d",
+        "%d-%b-%y",
+        "%d.%m.%Y",
+        "%d %m %Y",
+        "%m/%d/%Y"
+    };
 
     struct tm timeinfo;
     for (const auto& fmt : formats) {
-        if (!strptime(inp.c_str(), fmt.c_str(), &timeinfo)) {
-            continue;
+        if (!strptime(dateIn.c_str(), fmt.c_str(), &timeinfo)) {
+            continue; // fmt don't match dateIn
         }
-        std::array<char, 11> buff;
 
+        char buf[64];
+        memset(buf, 0, sizeof(buf));
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
-        std::strftime(buff.data(), buff.size(), fmt.c_str(), &timeinfo);
+        std::strftime(buf, sizeof(buf), fmt.c_str(), &timeinfo);
 #pragma GCC diagnostic pop
-        return std::string(buff.begin(), buff.end());
+        return std::string{buf};
     }
 
     return unexpected("Not is ISO date"_tr);
@@ -137,13 +141,14 @@ AssetExpected<std::string> sanitizeDate(const std::string& inp)
 AssetExpected<double> sanitizeValueDouble(const std::string& key, const std::string& value)
 {
     try {
-        std::size_t pos     = 0;
-        double      d_value = std::stod(value, &pos);
+        std::size_t pos = 0;
+        double d_value = std::stod(value, &pos);
         if (pos != value.length()) {
             return unexpected(error(Errors::BadParams).format(key, value, "value should be a number"_tr));
         }
         return d_value;
-    } catch (const std::exception&) {
+    }
+    catch (const std::exception&) {
         return unexpected(error(Errors::BadParams).format(key, value, "value should be a number"_tr));
     }
 }
@@ -152,18 +157,16 @@ AssetExpected<void> tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t siz
 {
     auto attr = db::selectExtAttributes(parentId);
     if (!attr) {
-        return {};
+        return {}; // ok ?!
     }
 
-    if (!loc) {
-        return unexpected("Position is wrong, should be greater than 0"_tr);
-    }
-
-    if (!size) {
+    if (size == 0) {
         return unexpected("Size is wrong, should be greater than 0"_tr);
     }
-
-    if (!attr->count("u_size")) {
+    if (loc == 0) {
+        return unexpected("Position is wrong, should be greater than 0"_tr);
+    }
+    if (attr->count("u_size") == 0) {
         return unexpected("Size is not set"_tr);
     }
 
@@ -184,7 +187,7 @@ AssetExpected<void> tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t siz
         if (!chAttr) {
             continue;
         }
-        if (!chAttr->count("u_size") || !chAttr->count("location_u_pos")) {
+        if ((chAttr->count("u_size") == 0) || (chAttr->count("location_u_pos") == 0)) {
             continue; // the child does not have u_size/location_u_pos, ignore it
         }
 
@@ -193,7 +196,8 @@ AssetExpected<void> tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t siz
         try {
             isize = convert<size_t>(chAttr->at("u_size").value);
             iloc  = convert<size_t>(chAttr->at("location_u_pos").value) - 1;
-        } catch (...) {
+        }
+        catch (...) {
             return unexpected("Asset child u_size/location_u_pos is not a number"_tr);
         }
 
@@ -213,30 +217,40 @@ AssetExpected<void> tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t siz
         }
     }
 
-    return {};
+    return {}; // ok, loc/size is a free place
 }
 
 AssetExpected<void> checkDuplicatedAsset(const AssetFilter& assetFilter)
 {
-    std::map<std::string, std::string> mapFilter;
+    Uuid uuid = generateUUID(assetFilter);
 
-    auto uuidAsset = generateUUID(assetFilter);
-    if (uuidAsset.type == UUID_TYPE_VERSION_5) {
-        mapFilter = {{"keytag", "uuid"}, {"value", uuidAsset.uuid}};
-    } else {
-        mapFilter = {{"keytag", "ip.1"}, {"value", assetFilter.ipAddr}};
+    // choose unique extended asset keytag/value to search in db
+    std::string keytag, value;
+    switch (uuid.type) {
+        case UUID_TYPE_VERSION_4:
+            keytag = "ip.1";
+            value = assetFilter.ipAddr;
+            break;
+        case UUID_TYPE_VERSION_5:
+            keytag = "uuid";
+            value = uuid.uuid;
+            break;
+        default:
+            logError("Unexpected uuid type ({})", uuid.type);
+            return unexpected("Unexpected uuid type ({})"_tr.format(uuid.type));
     }
 
-    auto res = fty::asset::db::selectExtAttributes(mapFilter);
+    auto res = fty::asset::db::selectExtAttributes({{"keytag", keytag}, {"value", value}});
     if (!res) {
         return unexpected("Select data base failed"_tr);
     }
-    if (res->size() == 1) {
-        std::string err = "Asset '{}' already exist, duplicate it is forbidden"_tr.format(uuidAsset.uuid);
-        logError(err);
+    if (res->size() != 0) {
+        std::string err = "Asset with {}='{}' already exist, duplicate it is forbidden"_tr.format(keytag, value);
+        logError("{}", err);
         return unexpected(error(Errors::ElementAlreadyExist).format(err));
     }
-    return {};
+
+    return {}; // ok, no duplicate in db
 }
 
 static AssetExpected<std::vector<std::string>> activateRequest(const std::string& command, const std::string& data)
@@ -331,7 +345,7 @@ AssetExpected<std::string> normName(const std::string& origName, uint32_t maxLen
                 value LIKE :mask1 OR
                 value LIKE :mask2
             )
-            AND id_asset_element != : assetId
+            AND id_asset_element != :assetId
     )";
 
     std::string name = origName.substr(0, maxLen);
@@ -348,7 +362,7 @@ AssetExpected<std::string> normName(const std::string& origName, uint32_t maxLen
         );
         // clang-format on
 
-        int         num = -1;
+        int num = -1;
         std::smatch match;
         for (const auto& row : rows) {
             std::string val = row.get("value");
@@ -357,7 +371,8 @@ AssetExpected<std::string> normName(const std::string& origName, uint32_t maxLen
                 if (tnum > num) {
                     num = tnum;
                 }
-            } else if (num == -1) {
+            }
+            else if (num == -1) {
                 num = 0;
             }
         }
@@ -368,9 +383,10 @@ AssetExpected<std::string> normName(const std::string& origName, uint32_t maxLen
             name = origName.substr(0, maxLen - 1 - suffix.length());
             name = fmt::format("{}~{}", name, suffix);
         }
-    } catch (const std::exception& ex) {
-        logError(ex.what());
-        return fty::unexpected("Exception: {}", ex.what());
+    }
+    catch (const std::exception& e) {
+        logError("{}", e.what());
+        return fty::unexpected("Exception: {}", e.what());
     }
     return name;
 }
