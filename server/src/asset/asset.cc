@@ -370,8 +370,15 @@ void AssetImpl::create()
         setExtEntry(fty::EXT_CREATE_TS, generateCurrentTimestamp(), true);
         // generate uuid if not already present in the payload
         if (getExtEntry("uuid").empty()) {
-            AssetFilter assetFilter{getManufacturer(), getSerialNo()};
-            setExtEntry(fty::EXT_UUID, generateUUID(assetFilter).uuid, true);
+            auto manufacturer{getManufacturer()};
+            auto serial{getSerialNo()};
+            auto macAddress{getExtEntry("mac_address")};
+            auto ipAddress{getExtEntry("ip.1")};
+
+            AssetFilter assetFilter{manufacturer, serial, macAddress, ipAddress};
+            Uuid uuid = generateUUID(assetFilter);
+
+            setExtEntry(fty::EXT_UUID, uuid.uuid, true);
         }
 
         m_storage.insert(*this);

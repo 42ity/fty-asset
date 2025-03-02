@@ -42,31 +42,40 @@ Uuid generateUUID(const AssetFilter& assetFilter)
     if (!assetFilter.manufacturer.empty() && !assetFilter.serial.empty()) {
         log_debug("generate full UUID");
 
-        // set upper case for manufacturer and serial
-        std::string src = assetFilter.manufacturer + assetFilter.serial;
+        auto sanitizedMacAddress = [&assetFilter] () {
+            std::string macAddr{assetFilter.macAddress};
+            // rm spaces & colons from macAddress
+            for (const auto& c : {' ', ':'}) {
+                std::string::iterator end_pos = std::remove(macAddr.begin(), macAddr.end(), c);
+                macAddr.erase(end_pos, macAddr.end());
+            }
+            return macAddr; // sanitized
+        };
+
+        static const std::string NAMESPACE{"\x93\x3d\x6c\x80\xde\xa9\x8c\x6b\xd1\x11\x8b\x3b\x46\xa1\x81\xf1"};
+
+        // set src = NAMESPACE + uppercase(manufacturer+serial+macAddress)
+        std::string src = assetFilter.manufacturer + assetFilter.serial + sanitizedMacAddress();
         std::transform(src.begin(), src.end(), src.begin(), ::toupper);
+        src = NAMESPACE + src;
 
-        static const std::string ns = "\x93\x3d\x6c\x80\xde\xa9\x8c\x6b\xd1\x11\x8b\x3b\x46\xa1\x81\xf1";
-        src = ns + src;
-
-        // hash must be zeroed first
+        // build sha1(src)
         unsigned char hash[SHA_DIGEST_LENGTH];
         memset(hash, 0, sizeof(hash));
-
         SHA1(reinterpret_cast<const unsigned char*>(src.c_str()), src.length(), hash);
-
         hash[6] &= 0x0F;
         hash[6] |= 0x50;
         hash[8] &= 0x3F;
         hash[8] |= 0x80;
 
-        char uuid_char[UUID_STR_LEN];
-        memset(uuid_char, 0, sizeof(uuid_char));
-        uuid_unparse_lower(hash, uuid_char);
+        // build uuid from hash
+        char uuid[UUID_STR_LEN];
+        memset(uuid, 0, sizeof(uuid));
+        uuid_unparse_lower(hash, uuid);
 
-        log_debug("UUID='%s'", uuid_char);
+        log_debug("UUID='%s'", uuid);
 
-        return Uuid{uuid_char, UUID_TYPE_VERSION_5}; // sha1
+        return Uuid{uuid, UUID_TYPE_VERSION_5}; // sha1
     }
     else {
         log_debug("generate random UUID");
@@ -74,13 +83,14 @@ Uuid generateUUID(const AssetFilter& assetFilter)
         uuid_t u;
         uuid_generate_random(u);
 
-        char uuid_char[UUID_STR_LEN];
-        memset(uuid_char, 0, sizeof(uuid_char));
-        uuid_unparse_lower(u, uuid_char);
+        // build uuid from u
+        char uuid[UUID_STR_LEN];
+        memset(uuid, 0, sizeof(uuid));
+        uuid_unparse_lower(u, uuid);
 
-        log_debug("UUID='%s'", uuid_char);
+        log_debug("UUID='%s'", uuid);
 
-        return Uuid{uuid_char, UUID_TYPE_VERSION_4}; // random
+        return Uuid{uuid, UUID_TYPE_VERSION_4}; // random
     }
 }
 
@@ -224,7 +234,7 @@ AssetExpected<void> checkDuplicatedAsset(const AssetFilter& assetFilter)
 {
     Uuid uuid = generateUUID(assetFilter);
 
-    // choose unique extended asset keytag/value to search in db
+    // choose extended asset keytag/value to search in db
     std::string keytag, value;
     switch (uuid.type) {
         case UUID_TYPE_VERSION_4:
@@ -245,9 +255,9 @@ AssetExpected<void> checkDuplicatedAsset(const AssetFilter& assetFilter)
         return unexpected("Select data base failed"_tr);
     }
     if (res->size() != 0) {
-        std::string err = "Asset with {}='{}' already exist, duplicate it is forbidden"_tr.format(keytag, value);
-        logError("{}", err);
-        return unexpected(error(Errors::ElementAlreadyExist).format(err));
+        std::string criteria = keytag + "=" + value;
+        logError("Asset with {} already exist", criteria);
+        return unexpected(error(Errors::ElementAlreadyExist).format(criteria));
     }
 
     return {}; // ok, no duplicate in db

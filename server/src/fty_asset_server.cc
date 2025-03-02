@@ -827,34 +827,47 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
         zhash_t* inventory = zhash_new();
         zhash_autofree(inventory);
 
-        // Workaroung IPMPROG-9644: update uuid ext attribute in database if it was generated with the previous
-        // calculation method (with model name) or create it if it is missing
+        // Workaroung IPMPROG-9644: update uuid ext attribute in database 
+        // if it was generated with a previous calculation method
+        // or create it if it is missing
         if (zhash_lookup(ext, "uuid")) {
             const char* uuid_old = static_cast<const char*>(zhash_lookup(ext, "uuid"));
-            // calculate the new uuid (without model name)
+
+            // calculate the new uuid if discriminant datas are available
             const char* mfr = static_cast<const char*>(zhash_lookup(ext, "manufacturer"));
             const char* serial = static_cast<const char*>(zhash_lookup(ext, "serial_no"));
             if (mfr && serial) {
                 // we have all information => calculate expected uuid
-                fty::asset::AssetFilter assetFilter{mfr, serial};
-                auto uuidAsset = fty::asset::generateUUID(assetFilter);
+                const char* macAddr = static_cast<const char*>(zhash_lookup(ext, "mac_address"));
+                const char* ipAddr = static_cast<const char*>(zhash_lookup(ext, "ip.1"));
+                if (!macAddr) { macAddr = ""; }
+                if (!ipAddr) { ipAddr = ""; }
+
+                fty::asset::AssetFilter assetFilter{mfr, serial, macAddr, ipAddr};
+                fty::asset::Uuid uuid = fty::asset::generateUUID(assetFilter);
+
                 // if current uuid value is different than expected, update it
-                if (strcmp(uuid_old, uuidAsset.uuid.c_str()) != 0) {
-                    zhash_insert(inventory, "uuid", static_cast<void*>( const_cast<char*>(uuidAsset.uuid.c_str())));
+                if (strcmp(uuid_old, uuid.uuid.c_str()) != 0) {
+                    zhash_insert(inventory, "uuid", static_cast<void*>( const_cast<char*>(uuid.uuid.c_str())));
                 }
             }
         }
         else {
-            // uuid missing, create it
+            // uuid is missing, create it
             const char* mfr = static_cast<const char*>(zhash_lookup(ext, "manufacturer"));
             const char* serial = static_cast<const char*>(zhash_lookup(ext, "serial_no"));
+            const char* macAddr = static_cast<const char*>(zhash_lookup(ext, "mac_address"));
+            const char* ipAddr = static_cast<const char*>(zhash_lookup(ext, "ip.1"));
 
-            std::string mfr_str = mfr ? mfr : "";
-            std::string serial_str = serial ? serial : "";
+            if (!mfr) { mfr = ""; }
+            if (!serial) { serial = ""; }
+            if (!macAddr) { macAddr = ""; }
+            if (!ipAddr) { ipAddr = ""; }
 
-            fty::asset::AssetFilter assetFilter{mfr_str, serial_str};
-            auto uuidAsset = fty::asset::generateUUID(assetFilter);
-            zhash_insert(inventory, "uuid", static_cast<void*>(const_cast<char*>(uuidAsset.uuid.c_str())));
+            fty::asset::AssetFilter assetFilter{mfr, serial, macAddr, ipAddr};
+            fty::asset::Uuid uuid = fty::asset::generateUUID(assetFilter);
+
+            zhash_insert(inventory, "uuid", static_cast<void*>(const_cast<char*>(uuid.uuid.c_str())));
         }
 
         // create timestamp ext attribute if missing

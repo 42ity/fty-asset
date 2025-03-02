@@ -106,12 +106,17 @@ AssetExpected<uint32_t> AssetManager::importAsset(
         logError("key 'id' is forbidden to be used");
         return unexpected(msg.format(itemName, "key 'id' is forbidden to be used"_tr));
     }
-    // If descriminant are available, check to not duplicate asset.
-    if (cm.hasTitle("manufacturer") && cm.hasTitle("model") && cm.hasTitle("serial_no")) {
-        logDebug("All discriminant data are available, checking to not duplicate asset");
 
+    // If descriminant datas are available, check to not duplicate asset.
+    if (cm.hasTitle("manufacturer") && cm.hasTitle("serial_no")) {
+        logDebug("Discriminant datas are available, checking to not duplicate asset");
+
+        std::string manufacturer = cm.get(1, "manufacturer");
+        std::string serial = cm.get(1, "serial_no");
+        std::string macAddr = cm.hasTitle("mac_address") ? cm.get(1, "mac_address") : "";
         std::string ipAddr = cm.hasTitle("ip.1") ? cm.get(1, "ip.1") : "";
-        AssetFilter assetFilter{cm.get(1, "manufacturer"), cm.get(1, "serial_no"), ipAddr};
+
+        AssetFilter assetFilter{manufacturer, serial, macAddr, ipAddr};
 
         auto ret = checkDuplicatedAsset(assetFilter);
         if (!ret) {
@@ -119,7 +124,7 @@ AssetExpected<uint32_t> AssetManager::importAsset(
         }
     }
     else {
-        logError("Discriminant data are not availables, can not check duplicated asset");
+        logError("Discriminant datas are not availables, can not check duplicated asset");
     }
 
     if (sendNotify) {
