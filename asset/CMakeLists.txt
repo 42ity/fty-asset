@@ -22,7 +22,6 @@ etn_target(shared ${PROJECT_NAME}-libng
         tntdb
         cxxtools
         uuid
-        crypto
         fty-asset
         fty_shm
         fty_proto

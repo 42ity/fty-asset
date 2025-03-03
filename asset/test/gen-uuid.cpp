@@ -31,16 +31,20 @@ TEST_CASE("generateUUID")
     CHECK(generateUUID(AssetFilter("a","","","")).uuid != generateUUID(AssetFilter("a","","","")).uuid);
     CHECK(generateUUID(AssetFilter("","b","","")).uuid != generateUUID(AssetFilter("","b","","")).uuid);
 
-    // full UUID (manufacturer and serial are non empty, madAddr handled, ipAddr ignored)
+    // sha1 UUID (manufacturer and serial are non empty, madAddr handled, ipAddr ignored)
     CHECK(generateUUID(AssetFilter("a","b","","")).uuid == generateUUID(AssetFilter("a","b","","")).uuid);
     CHECK(generateUUID(AssetFilter("a","b","x","")).uuid == generateUUID(AssetFilter("a","b","x","")).uuid);
     CHECK(generateUUID(AssetFilter("a","b","x0","")).uuid != generateUUID(AssetFilter("a","b","x1","")).uuid);
     CHECK(generateUUID(AssetFilter("a","b","x","y0")).uuid == generateUUID(AssetFilter("a","b","x","y1")).uuid);
 
-    // full UUID case insensitive
+    CHECK(generateUUID(AssetFilter("a","b","x","")).uuid != generateUUID(AssetFilter("1","b","x","")).uuid);
+    CHECK(generateUUID(AssetFilter("a","b","x","")).uuid != generateUUID(AssetFilter("a","1","x","")).uuid);
+    CHECK(generateUUID(AssetFilter("a","b","x","")).uuid != generateUUID(AssetFilter("a","b","1","")).uuid);
+
+    // sha1 UUID case insensitive
     CHECK(generateUUID(AssetFilter("a","b","x","")).uuid == generateUUID(AssetFilter("A","B","X","")).uuid);
 
-    // full UUID macAddress sanitized
+    // sha1 UUID macAddress sanitized
     CHECK(generateUUID(AssetFilter("a","b","x y z","")).uuid == generateUUID(AssetFilter("a","b","xyz","")).uuid);
     CHECK(generateUUID(AssetFilter("a","b","x:y:z","")).uuid == generateUUID(AssetFilter("a","b","xyz","")).uuid);
     CHECK(generateUUID(AssetFilter("a","b",":: x::: y  z:: ","")).uuid == generateUUID(AssetFilter("a","b","xyz","")).uuid);

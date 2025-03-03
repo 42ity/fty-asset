@@ -21,7 +21,6 @@
 #include <fty_common_db_connection.h>
 #include <fty_common_mlm.h>
 #include <fty_log.h>
-#include <openssl/sha.h>
 #include <ctime>
 #include <regex>
 #include <sstream>
@@ -40,7 +39,16 @@ namespace fty::asset {
 Uuid generateUUID(const AssetFilter& assetFilter)
 {
     if (!assetFilter.manufacturer.empty() && !assetFilter.serial.empty()) {
-        log_debug("generate full UUID");
+        auto getNamespace = [] () {
+            static uuid_t uuid = "";
+            static bool first{true};
+            if (first) {
+                const char* NS = "\x93\x3d\x6c\x80\xde\xa9\x8c\x6b\xd1\x11\x8b\x3b\x46\xa1\x81\xf1";
+                uuid_parse(const_cast<char*>(NS), uuid);
+                first = false; // once
+            }
+            return uuid;
+        };
 
         auto sanitizedMacAddress = [&assetFilter] () {
             std::string macAddr{assetFilter.macAddress};
@@ -52,43 +60,32 @@ Uuid generateUUID(const AssetFilter& assetFilter)
             return macAddr; // sanitized
         };
 
-        static const std::string NAMESPACE{"\x93\x3d\x6c\x80\xde\xa9\x8c\x6b\xd1\x11\x8b\x3b\x46\xa1\x81\xf1"};
-
-        // set src = NAMESPACE + uppercase(manufacturer+serial+macAddress)
+        // set src = uppercase(manufacturer+serial+sanitize(macAddress))
         std::string src = assetFilter.manufacturer + assetFilter.serial + sanitizedMacAddress();
         std::transform(src.begin(), src.end(), src.begin(), ::toupper);
-        src = NAMESPACE + src;
 
-        // build sha1(src)
-        unsigned char hash[SHA_DIGEST_LENGTH];
-        memset(hash, 0, sizeof(hash));
-        SHA1(reinterpret_cast<const unsigned char*>(src.c_str()), src.length(), hash);
-        hash[6] &= 0x0F;
-        hash[6] |= 0x50;
-        hash[8] &= 0x3F;
-        hash[8] |= 0x80;
+        // build sha1 uuid (namespace + src)
+        uuid_t aux;
+        uuid_generate_sha1(aux, getNamespace(), src.c_str(), src.length());
 
-        // build uuid from hash
         char uuid[UUID_STR_LEN];
         memset(uuid, 0, sizeof(uuid));
-        uuid_unparse_lower(hash, uuid);
+        uuid_unparse_lower(aux, uuid);
 
-        log_debug("UUID='%s'", uuid);
+        log_debug("SHA1 UUID: %s", uuid);
 
         return Uuid{uuid, UUID_TYPE_VERSION_5}; // sha1
     }
     else {
-        log_debug("generate random UUID");
+        // build random uuid
+        uuid_t aux;
+        uuid_generate_random(aux);
 
-        uuid_t u;
-        uuid_generate_random(u);
-
-        // build uuid from u
         char uuid[UUID_STR_LEN];
         memset(uuid, 0, sizeof(uuid));
-        uuid_unparse_lower(u, uuid);
+        uuid_unparse_lower(aux, uuid);
 
-        log_debug("UUID='%s'", uuid);
+        log_debug("RAND UUID: %s", uuid);
 
         return Uuid{uuid, UUID_TYPE_VERSION_4}; // random
     }
