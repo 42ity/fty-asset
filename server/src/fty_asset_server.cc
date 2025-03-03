@@ -827,7 +827,7 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
         zhash_t* inventory = zhash_new();
         zhash_autofree(inventory);
 
-        // Workaroung IPMPROG-9644: update uuid ext attribute in database 
+        // Workaroung IPMPROG-9644: update uuid ext attribute in database
         // if it was generated with a previous calculation method
         // or create it if it is missing
         if (zhash_lookup(ext, "uuid")) {
@@ -956,11 +956,12 @@ void send_create_or_update_asset(const fty::AssetServer& server, const std::stri
     }
 
     int r = mlm_client_send(const_cast<mlm_client_t*>(server.getStreamClient()), subject.c_str(), &msg);
+    zmsg_destroy(&msg);
+
     if (r != 0) {
         log_error("%s:\tmlm_client_send '%s' failed for asset '%s'",
             server.getAgentName().c_str(), operation, asset_name.c_str());
     }
-    zmsg_destroy(&msg);
 }
 
 static void s_sendto_create_or_update_asset(const fty::AssetServer& server, const std::string& asset_name,
@@ -981,11 +982,12 @@ static void s_sendto_create_or_update_asset(const fty::AssetServer& server, cons
     zmsg_pushstr(msg, uuid);
 
     int r = mlm_client_sendto(mailboxClient(server), address, subject.c_str(), NULL, 5000, &msg);
+    zmsg_destroy(&msg);
+
     if (r != 0) {
         log_error("%s:\tmlm_client_sendto '%s'/'%s' failed for asset '%s'",
             server.getAgentName().c_str(), address, subject.c_str(), asset_name.c_str());
     }
-    zmsg_destroy(&msg);
 }
 
 static void s_handle_subject_asset_detail(const fty::AssetServer& server, zmsg_t** zmessage_p)
@@ -1000,18 +1002,21 @@ static void s_handle_subject_asset_detail(const fty::AssetServer& server, zmsg_t
     if (!streq(c_command, "GET")) {
         log_error("%s:\tASSET_DETAIL: bad command '%s', expected GET", server.getAgentName().c_str(), c_command);
 
-        char* uuid  = zmsg_popstr(zmessage);
+        char* uuid = zmsg_popstr(zmessage);
         zmsg_t* reply = zmsg_new();
         if (uuid) { zmsg_addstr(reply, uuid); }
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, "BAD_COMMAND");
 
         const char* sender = mlm_client_sender(mailboxClient(server));
-        mlm_client_sendto(mailboxClient(server), sender, "ASSET_DETAIL", NULL, 5000, &reply);
-
+        int r = mlm_client_sendto(mailboxClient(server), sender, "ASSET_DETAIL", NULL, 5000, &reply);
         zstr_free(&uuid);
         zstr_free(&c_command);
         zmsg_destroy(&reply);
+
+        if (r != 0) {
+            log_error("mlm_client_sendto failed (to: %s)", sender);
+        }
         return;
     }
     zstr_free(&c_command);
@@ -1019,6 +1024,8 @@ static void s_handle_subject_asset_detail(const fty::AssetServer& server, zmsg_t
     // select an asset and publish it through mailbox
     char* uuid = zmsg_popstr(zmessage);
     char* asset_name = zmsg_popstr(zmessage);
+    if (!uuid) { uuid = strdup("<null>"); } // secure
+    if (!asset_name) { asset_name = strdup("<null>"); }
 
     const char* sender = mlm_client_sender(mailboxClient(server));
     s_sendto_create_or_update_asset(server, asset_name, FTY_PROTO_ASSET_OP_UPDATE, sender, uuid);
