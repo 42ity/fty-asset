@@ -24,6 +24,12 @@ TEST_CASE("generateUUID")
 {
     using namespace fty::asset;
 
+    // UUID type: random (4) if manufacturer and/or serial are empty, else sha1 (5)
+    CHECK(generateUUID(AssetFilter("","","","")).type == UUID_TYPE_VERSION_4);
+    CHECK(generateUUID(AssetFilter("a","","","")).type == UUID_TYPE_VERSION_4);
+    CHECK(generateUUID(AssetFilter("","b","","")).type == UUID_TYPE_VERSION_4);
+    CHECK(generateUUID(AssetFilter("a","b","","")).type == UUID_TYPE_VERSION_5);
+
     // random UUID (manufacturer and/or serial are empty)
     CHECK(generateUUID(AssetFilter("","","","")).uuid != generateUUID(AssetFilter("","","","")).uuid);
     CHECK(generateUUID(AssetFilter("","","x","")).uuid != generateUUID(AssetFilter("","","x","")).uuid);
