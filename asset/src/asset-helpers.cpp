@@ -185,6 +185,15 @@ AssetExpected<void> tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t siz
         return {};
     }
 
+    // get serial_no for id
+    std::string id_serial_no; //empty
+    {
+        auto aux = db::selectExtAttributes(id);
+        if (aux && (aux->count("serial_no") != 0)) {
+            id_serial_no = aux->at("serial_no").value;
+        }
+    }
+
     for (const auto& child : *children) {
         if (child == id) {
             continue;
@@ -196,6 +205,14 @@ AssetExpected<void> tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t siz
         }
         if ((chAttr->count("u_size") == 0) || (chAttr->count("location_u_pos") == 0)) {
             continue; // the child does not have u_size/location_u_pos, ignore it
+        }
+
+        // handle Hercule UPS exception (multi-card device)
+        if (!id_serial_no.empty()
+            && (chAttr->count("serial_no") != 0)
+            && (id_serial_no == chAttr->at("serial_no").value)
+        ) {
+            continue; // same device, ignore it (can overlap)
         }
 
         size_t isize = 0;
@@ -215,7 +232,7 @@ AssetExpected<void> tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t siz
         }
     }
 
-    for (size_t i = loc - 1; i < loc + size - 1; ++i) {
+    for (size_t i = loc - 1; i < (loc + size - 1); ++i) {
         if (i >= place.size()) {
             return unexpected("Asset is out bounds"_tr);
         }
