@@ -78,20 +78,20 @@ std::string Import::mandatoryMissing() const
 
 std::map<std::string, std::string> Import::sanitizeRowExtNames(size_t row, bool sanitize) const
 {
-    static std::vector<std::string> sanitizeList = {
+    static const std::vector<std::string> sanitizeList = {
         "location", "logical_asset", "power_source.", "group."
     };
 
     std::map<std::string, std::string> result;
 
     // make copy of this one line
-    for (auto title : m_cm.getTitles()) {
+    for (const auto& title : m_cm.getTitles()) {
         result[title] = m_cm.get(row, title);
     }
 
     if (sanitize) {
         // sanitize ext names to t_bios_asset_element.name
-        for (auto item : sanitizeList) {
+        for (const auto& item : sanitizeList) {
             if (item[item.size() - 1] == '.') {
                 // iterate index .X
                 for (int i = 1; true; ++i) {
@@ -129,44 +129,43 @@ std::map<std::string, std::string> Import::sanitizeRowExtNames(size_t row, bool 
     return result;
 }
 
+// priority: "1".."5", "P1".."P5"
 // returns 1..5
 uint16_t Import::getPriority(const std::string& s) const
 {
-    if (s.size() > 2)
-        return 5;
-
-    for (size_t i = 0; i != 2; i++) {
-        if (s[i] >= 49 && s[i] <= 53) {
-            return uint16_t(s[i] - 48);
+    if (s.size() <= 2) {
+        for (size_t i = 0; i < 2; i++) {
+            char c = s[i];
+            if (('1' <= c) && (c <= '5')) {
+                return uint16_t(c - '1' + 1);
+            }
         }
     }
     return 5;
 }
 
-bool Import::checkUSize(const std::string& s) const
-{
-    static std::regex regex("^[0-9]{1,2}[uU]?$");
-    return std::regex_match(s, regex);
-}
-
 std::string Import::matchExtAttr(const std::string& value, const std::string& key) const
 {
     if (key == "u_size") {
-        if (checkUSize(value)) {
-            // need to drop the "U"
-            std::string tmp = value;
-            if (!(::isdigit(tmp.back()))) {
-                tmp.pop_back();
-            }
-            // remove trailing 0
-            if (tmp.size() == 2 && tmp[0] == '0') {
-                tmp.erase(tmp.begin());
-            }
-            return tmp;
-        } else {
-            return {};
+        auto checkUSize = [] (const std::string& s) {
+            return std::regex_match(s, std::regex{"^[0-9]{1,2}[uU]?$"});
+        };
+
+        if (!checkUSize(value)) {
+            return ""; //invalid
         }
+
+        // need to drop the ending 'U' and trailing '0'
+        std::string tmp = value;
+        if (!(::isdigit(tmp.back()))) {
+            tmp.pop_back();
+        }
+        if (tmp.size() == 2 && tmp[0] == '0') {
+            tmp.erase(tmp.begin());
+        }
+        return tmp;
     }
+
     return value;
 }
 

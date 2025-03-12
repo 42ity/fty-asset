@@ -53,7 +53,6 @@ private:
     uint16_t                           getPriority(const std::string& s) const;
     bool                               isDate(const std::string& key) const;
     std::string                        matchExtAttr(const std::string& value, const std::string& key) const;
-    bool                               checkUSize(const std::string& s) const;
 
     AssetExpected<void> updateDcRoomRowRackGroup(fty::db::Connection& conn, uint32_t elementId,
         const std::string& elementName, uint32_t parentId, const std::map<std::string, std::string>& extattributes,
