@@ -163,9 +163,7 @@ Expected<uint32_t> nameToAssetId(const std::string& assetName)
 
     try {
         fty::db::Connection db;
-
         auto res = db.selectRow(sql, "assetName"_p = assetName);
-
         return res.get<uint32_t>("id_asset_element");
     }
     catch (const fty::db::NotFound&) {
@@ -181,7 +179,9 @@ Expected<uint32_t> nameToAssetId(const std::string& assetName)
 Expected<std::pair<std::string, std::string>> idToNameExtName(uint32_t assetId)
 {
     static std::string sql = R"(
-        SELECT asset.name, ext.value
+        SELECT
+            asset.name,
+            ext.value
         FROM
             t_bios_asset_element AS asset
         LEFT JOIN
@@ -189,14 +189,12 @@ Expected<std::pair<std::string, std::string>> idToNameExtName(uint32_t assetId)
         ON
             ext.id_asset_element = asset.id_asset_element
         WHERE
-            ext.keytag = "name" AND asset.id_asset_element = :assetId
+            asset.id_asset_element = :assetId AND ext.keytag = "name"
     )";
 
     try {
         fty::db::Connection db;
-
         auto res = db.selectRow(sql, "assetId"_p = assetId);
-
         return std::make_pair(res.get<std::string>("name"), res.get<std::string>("value"));
     }
     catch (const fty::db::NotFound&) {
@@ -212,16 +210,21 @@ Expected<std::pair<std::string, std::string>> idToNameExtName(uint32_t assetId)
 Expected<std::string> nameToExtName(std::string assetName)
 {
     static const std::string sql = R"(
-        SELECT e.value
-        FROM t_bios_asset_ext_attributes AS e
-        INNER JOIN t_bios_asset_element AS a
-            ON a.id_asset_element = e.id_asset_element
-        WHERE keytag = 'name' AND a.name = :asset_name
+        SELECT
+            e.value
+        FROM
+            t_bios_asset_ext_attributes AS e
+        INNER JOIN
+            t_bios_asset_element AS a
+        ON
+            a.id_asset_element = e.id_asset_element
+        WHERE
+            keytag = 'name' AND a.name = :asset_name
     )";
 
     try {
         fty::db::Connection conn;
-        auto                res = conn.selectRow(sql, "asset_name"_p = assetName);
+        auto res = conn.selectRow(sql, "asset_name"_p = assetName);
         return res.get("value");
     }
     catch (const fty::db::NotFound&) {
@@ -237,8 +240,10 @@ Expected<std::string> nameToExtName(std::string assetName)
 Expected<std::string> extNameToAssetName(const std::string& assetExtName)
 {
     static const std::string sql = R"(
-        SELECT a.name
-        FROM t_bios_asset_element AS a
+        SELECT
+            a.name
+        FROM
+            t_bios_asset_element AS a
         INNER JOIN
             t_bios_asset_ext_attributes AS e
         ON
@@ -249,9 +254,7 @@ Expected<std::string> extNameToAssetName(const std::string& assetExtName)
 
     try {
         fty::db::Connection db;
-
         auto res = db.selectRow(sql, "extName"_p = assetExtName);
-
         return res.get("name");
     }
     catch (const fty::db::NotFound&) {
@@ -281,9 +284,7 @@ Expected<uint32_t> extNameToAssetId(const std::string& assetExtName)
 
     try {
         fty::db::Connection db;
-
         auto res = db.selectRow(sql, "extName"_p = assetExtName);
-
         return res.get<uint32_t>("id_asset_element");
     }
     catch (const fty::db::NotFound&) {
@@ -303,11 +304,13 @@ Expected<AssetElement> selectAssetElementByName(const std::string& elementName, 
             v.name, v.id_parent, v.status, v.priority, v.id, v.id_type, v.id_subtype
         FROM
             v_bios_asset_element v
-        WHERE v.name = :name
+        WHERE
+            v.name = :name
     )";
 
     static const std::string extNameSql = R"(
-        SELECT v.name, v.id_parent, v.status, v.priority, v.id, v.id_type, v.id_subtype
+        SELECT
+            v.name, v.id_parent, v.status, v.priority, v.id, v.id_type, v.id_subtype
         FROM
             v_bios_asset_element AS v
         LEFT JOIN
@@ -320,7 +323,7 @@ Expected<AssetElement> selectAssetElementByName(const std::string& elementName, 
 
     try {
         fty::db::Connection db;
-        fty::db::Row        row;
+        fty::db::Row row;
 
         if (extNameOnly) {
             row = db.selectRow(extNameSql, "name"_p = elementName);
@@ -381,11 +384,8 @@ Expected<void> selectAssetElementById(uint32_t elementId, Dto& asset)
 
     try {
         fty::db::Connection db;
-
         auto row = db.selectRow(sql, "id"_p = elementId);
-
         fetchDto(row, asset);
-
         return {};
     }
     catch (const fty::db::NotFound&) {
@@ -407,11 +407,8 @@ Expected<void> selectAssetElementWebById(uint32_t elementId, WebAssetElement& as
 
     try {
         fty::db::Connection db;
-
         auto row = db.selectRow(sql, "id"_p = elementId);
-
         fetchWebAsset(row, asset);
-
         return {};
     }
     catch (const fty::db::NotFound&) {
@@ -433,7 +430,6 @@ Expected<WebAssetElement> selectAssetElementWebByName(const std::string& name)
 
     try {
         fty::db::Connection db;
-
         auto row = db.selectRow(sql, "name"_p = name);
 
         WebAssetElement asset;
@@ -512,8 +508,14 @@ Expected<Attributes> selectExtAttributes(uint32_t elementId)
 
         // IPMPROG-4490: [resilience]
         // If no endpoint.1 port defined, set default related to the protocol
-        if ((attrs.count("endpoint.1.port") == 0) && (attrs.count("endpoint.1.protocol") != 0)) {
-            const std::map<std::string, std::string> map{{"nut_powercom", "443"}, {"nut_snmp", "161"}, {"nut_xml_pdc", "80"}};
+        if ((attrs.count("endpoint.1.port") == 0)
+            && (attrs.count("endpoint.1.protocol") != 0)
+        ) {
+            const std::map<std::string, std::string> map{
+                {"nut_powercom", "443"},
+                {"nut_snmp", "161"},
+                {"nut_xml_pdc", "80"}
+            };
             const auto& it = map.find(attrs.at("endpoint.1.protocol").value);
             if (it != map.cend()) {
                 attrs.emplace("endpoint.1.port", ExtAttrValue{it->second, false});
@@ -584,14 +586,11 @@ Expected<std::map<uint32_t, std::string>> selectAssetElementGroups(uint32_t elem
             v_bios_asset_group_relation v1,
             v_bios_asset_element v
         WHERE
-            v1.id_asset_element = :idelement AND
-            v.id = v1.id_asset_group
+            v1.id_asset_element = :idelement AND v.id = v1.id_asset_group
     )";
-
 
     try {
         fty::db::Connection db;
-
         auto res = db.select(sql, "idelement"_p = elementId);
 
         std::map<uint32_t, std::string> item;
@@ -656,8 +655,7 @@ Expected<uint> deleteAssetExtAttributesWithRo(fty::db::Connection& conn, uint32_
         DELETE FROM
             t_bios_asset_ext_attributes
         WHERE
-            id_asset_element = :element AND
-            read_only = :ro
+            id_asset_element = :element AND read_only = :ro
     )";
 
     try {
@@ -686,8 +684,9 @@ Expected<uint> insertIntoAssetExtAttributes(
             {}
         ON DUPLICATE KEY UPDATE
             id_asset_ext_attribute = LAST_INSERT_ID(id_asset_ext_attribute)
-    )",
-        fty::db::multiInsert({"keytag", "value", "id_asset_element", "read_only"}, attributes.size()));
+        )",
+        fty::db::multiInsert({"keytag", "value", "id_asset_element", "read_only"}, attributes.size())
+    );
 
     if (attributes.empty()) {
         return unexpected("no attributes to insert"_tr);
@@ -759,9 +758,11 @@ Expected<uint> insertElementIntoGroups(fty::db::Connection& conn, const std::set
         INSERT INTO
             t_bios_asset_group_relation
             (id_asset_group, id_asset_element)
-         VALUES {}
-    )",
-        fty::db::multiInsert({"gid", "elementId"}, groups.size()));
+        VALUES
+            {}
+        )",
+        fty::db::multiInsert({"gid", "elementId"}, groups.size())
+    );
 
     try {
         auto   st    = conn.prepare(sql);
@@ -797,11 +798,11 @@ static std::string createAssetName(fty::db::Connection& conn, uint32_t typeId, u
 {
     std::string indexStr;
     {
-        bool        valid = false;
-        unsigned    retry = 0;
-        timeval     t;
+        bool valid = false;
+        size_t retry = 0;
 
         while (!valid && (retry++ < MAX_CREATE_RETRY)) {
+            timeval t;
             gettimeofday(&t, nullptr);
             srand(static_cast<unsigned int>(t.tv_sec * t.tv_usec));
             // generate 8 digit random integer
@@ -832,19 +833,13 @@ static std::string createAssetName(fty::db::Connection& conn, uint32_t typeId, u
         }
     }
 
-    std::string assetName;
-    if (typeId == persist::DEVICE) {
-        std::string subtype = persist::subtypeid_to_subtype(static_cast<uint16_t>(subtypeId));
-        assetName = subtype + "-" + indexStr;
-    }
-    else {
-        std::string type = persist::typeid_to_type(static_cast<uint16_t>(typeId));
-        assetName = type + "-" + indexStr;
-    }
+    std::string prefix =
+        (typeId == persist::DEVICE)
+        ? persist::subtypeid_to_subtype(static_cast<uint16_t>(subtypeId))
+        : persist::typeid_to_type(static_cast<uint16_t>(typeId));
 
-    return assetName;
+    return prefix + "-" + indexStr; // asset iName
 }
-
 
 // =====================================================================================================================
 
@@ -1515,21 +1510,23 @@ Expected<std::vector<std::pair<uint32_t, std::string>>> selectShortElements(
                 v.id_type = :typeid
                 {}
             ORDER BY {} {}
-        )",
-            order, !subtypeId.empty() ? "AND v.id_subtype in (:subtypeid)" : "",
-            orderDir.empty() || orderDir == "ASC" ? "COALESCE (a.value, 'ZZZZZZ999999')" : "", !orderDir.empty() ? orderDir : "ASC");
+            )",
+            order,
+            !subtypeId.empty() ? "AND v.id_subtype in (:subtypeid)" : "",
+            orderDir.empty() || orderDir == "ASC" ? "COALESCE (a.value, 'ZZZZZZ999999')" : "",
+            !orderDir.empty() ? orderDir : "ASC"
+        );
     }
 
     try {
         fty::db::Connection conn;
-        auto                st = conn.prepare(sql);
+        auto st = conn.prepare(sql);
         st.bind("typeid"_p = typeId);
         if (!subtypeId.empty()) {
             st.bind("subtypeid"_p = implode(subtypeId, ", "));
         }
 
         std::vector<std::pair<uint32_t, std::string>> item;
-
         for (auto const& row : st.select()) {
             item.emplace_back(row.get<uint32_t>("id"), row.get("name"));
         }
@@ -1550,8 +1547,7 @@ Expected<int> countKeytag(const std::string& keytag, const std::string& value)
         FROM
             t_bios_asset_ext_attributes
         WHERE
-            keytag = :keytag AND
-            value = :value
+            keytag = :keytag AND value = :value
     )";
 
     try {
@@ -1577,8 +1573,8 @@ Expected<int32_t> hasAssetKeytagValue(fty::db::Connection& conn, uint32_t elemen
             COUNT(*) AS count
         FROM
             t_bios_asset_ext_attributes
-        WHERE id_asset_element = :element_id
-            AND keytag = :keytag AND value = :value
+        WHERE
+            id_asset_element = :element_id AND keytag = :keytag AND value = :value
     )";
 
     try {
@@ -1614,7 +1610,7 @@ Expected<uint16_t> convertAssetToMonitor(uint32_t assetElementId)
 
     try {
         fty::db::Connection conn;
-        auto                res = conn.selectRow(sql, "id"_p = assetElementId);
+        auto res = conn.selectRow(sql, "id"_p = assetElementId);
         return res.get<uint16_t>("id_discovered_device");
     }
     catch (const fty::db::NotFound&) {
@@ -1691,7 +1687,8 @@ Expected<std::vector<uint32_t>> selectAssetsByParent(uint32_t parentId)
             id
         FROM
             v_bios_asset_element
-        WHERE id_parent = :parentId
+        WHERE
+            id_parent = :parentId
     )";
 
     try {
@@ -1724,7 +1721,7 @@ Expected<std::vector<uint32_t>> selectAssetDeviceLinksSrc(uint32_t elementId)
     )";
 
     try {
-        fty::db::Connection   conn;
+        fty::db::Connection conn;
         std::vector<uint32_t> ids;
         for (const auto& it : conn.select(sql, "src"_p = elementId)) {
             ids.emplace_back(it.get<uint32_t>("id_asset_device_dest"));
@@ -1753,7 +1750,7 @@ Expected<std::vector<LinkEntry>> selectAssetLinks(uint32_t elementId)
     )";
 
     try {
-        fty::db::Connection    conn;
+        fty::db::Connection conn;
         std::vector<LinkEntry> links;
         for (const auto& it : conn.select(sql, "asset_id"_p = elementId)) {
             LinkEntry l;
@@ -1783,7 +1780,7 @@ Expected<uint32_t> maxNumberOfPowerLinks()
 
     try {
         fty::db::Connection conn;
-        auto                res = conn.selectRow(sql);
+        auto res = conn.selectRow(sql);
         return res.get<uint32_t>("maxCount");
     }
     catch (const std::exception& e) {
@@ -1805,7 +1802,7 @@ Expected<uint32_t> maxNumberOfAssetGroups()
 
     try {
         fty::db::Connection conn;
-        auto                res = conn.selectRow(sql);
+        auto res = conn.selectRow(sql);
         return res.get<uint32_t>("maxCount");
     }
     catch (const std::exception& e) {
@@ -1828,7 +1825,7 @@ Expected<std::vector<std::string>> selectExtRwAttributesKeytags()
     )";
 
     try {
-        fty::db::Connection      conn;
+        fty::db::Connection conn;
         std::vector<std::string> ret;
         for (const auto& row : conn.select(sql)) {
             ret.push_back(row.get("keytag"));
@@ -1888,10 +1885,12 @@ Expected<std::vector<std::string>> selectGroupNames(uint32_t id)
     static const std::string sql = R"(
         SELECT
             v2.name
-        FROM v_bios_asset_group_relation v1
+        FROM
+            v_bios_asset_group_relation v1
         JOIN v_bios_asset_element v2
-            ON v1.id_asset_group=v2.id
-            WHERE v1.id_asset_element=:id
+            ON v1.id_asset_group = v2.id
+        WHERE
+            v1.id_asset_element = :id
     )";
 
     try {
@@ -1916,27 +1915,27 @@ Expected<WebAssetElement> findParentByType(uint32_t assetId, uint16_t parentType
         SELECT
             id_parent,
             id_parent_type
-        FROM v_web_element
-            WHERE id = :id
+        FROM
+            v_web_element
+        WHERE
+            id = :id
     )";
 
     try {
         fty::db::Connection conn;
 
-        uint32_t aid = assetId;
+        uint32_t id = assetId;
         while (true) {
-            auto     row      = conn.selectRow(sql, "id"_p = aid);
+            auto row = conn.selectRow(sql, "id"_p = id);
             uint32_t idParent = row.get<uint32_t>("id_parent");
-            if (idParent) {
-                uint16_t type = row.get<uint16_t>("id_parent_type");
-                if (type == parentType) {
-                    return selectAssetElementWebById(idParent);
-                }
-                aid = idParent;
-            }
-            else {
+            if (idParent == 0) {
                 break;
             }
+            uint16_t type = row.get<uint16_t>("id_parent_type");
+            if (type == parentType) {
+                return selectAssetElementWebById(idParent);
+            }
+            id = idParent;
         }
 
         return unexpected(error(Errors::ElementNotFound).format("parent with type " + persist::typeid_to_type(parentType)));
@@ -1944,6 +1943,122 @@ Expected<WebAssetElement> findParentByType(uint32_t assetId, uint16_t parentType
     catch (const std::exception& e) {
         return unexpected(error(Errors::ExceptionForElement).format(e.what(), assetId));
     }
+}
+
+// =====================================================================================================================
+// Update location definition for assets
+
+Expected<uint> applyLocationAttributes(const std::vector<std::string>& inames, uint32_t parentId, const std::string& location_type, const std::string& location_u_pos, const std::string& u_size)
+{
+    static const std::string sql_updateParentId = R"(
+        UPDATE t_bios_asset_element
+        SET id_parent = :parentId
+        WHERE id_asset_element = :assetId
+    )";
+
+    static const std::string sql_updateExtAttributeValue = R"(
+        UPDATE t_bios_asset_ext_attributes
+        SET value = :value
+        WHERE id_asset_element = :assetId AND keytag = :keytag
+    )";
+
+    static const std::string sql_deleteExtAttribute = R"(
+        DELETE FROM t_bios_asset_ext_attributes
+        WHERE id_asset_element = :assetId AND keytag = :keytag
+    )";
+
+    fty::db::Connection conn;
+    uint count{0};
+
+    for (const auto& iname : inames) {
+        uint32_t assetId{0};
+        {
+            if (auto ret = nameToAssetId(iname)) { assetId = *ret; }
+            else { logError("nameToAssetId({}) failed ({})", iname, ret.error()); }
+        }
+        logDebug("iname {} id={}", iname, assetId);
+        if (assetId == 0) { continue; }
+
+        // update parentId for asset
+        try {
+            if (parentId != 0) {
+                uint res = conn.execute(sql_updateParentId, "assetId"_p = assetId, "parentId"_p = parentId);
+                logTrace("sql_updateParentId: {} {} res={}", iname, parentId, res);
+                if (res != 0) { count++; }
+            }
+        }
+        catch (const std::exception& e) {
+            logError("update parentId: {}", e.what());
+        }
+
+        // update the given ext. attributes for asset
+        const std::map<std::string, std::string> attr{
+            {"location_type", location_type},
+            {"location_u_pos", location_u_pos},
+            {"u_size", u_size},
+        };
+        for (const auto& it : attr) {
+            const std::string keytag{it.first};
+            const std::string value{it.second};
+
+            bool create{false}, update{false}, delet{false};
+            {
+                auto extAttrExist = [&conn, &assetId, &keytag] (std::string& value_)
+                {
+                    static const std::string sql = R"(
+                        SELECT value
+                        FROM t_bios_asset_ext_attributes
+                        WHERE id_asset_element = :assetId AND keytag = :keytag
+                    )";
+
+                    try {
+                        auto row = conn.selectRow(sql, "assetId"_p = assetId, "keytag"_p = keytag);
+                        value_ = row.get("value");
+                        logTrace("extAttrExist {} {}={}", assetId, keytag, value_);
+                        return true;
+                    }
+                    catch (const std::exception& e) {
+                        logTrace("extAttrExist {} {}, e: {}", assetId, keytag, e.what());
+                    }
+                    value_.clear();
+                    return false;
+                };
+
+                std::string current_value;
+                if (extAttrExist(current_value)) {
+                    if (value.empty()) { delet = true; }
+                    else if (current_value != value) { update = true; }
+                }
+                else {
+                    if (!value.empty()) { create = true; }
+                }
+            }
+
+            try {
+                if (create) {
+                    auto ret = insertIntoAssetExtAttributes(conn, assetId, {{keytag, value}}, false /*RO*/);
+                    if (ret) { logTrace("insertIntoAssetExtAttributes: {}='{}' res={}", keytag, value, *ret); }
+                    else { logError("insertIntoAssetExtAttributes: {}='{}' ret={}", keytag, value, ret.error()); }
+                    if (ret && (*ret != 0)) { count++; }
+                }
+                else if (update) {
+                    uint res = conn.execute(sql_updateExtAttributeValue, "assetId"_p = assetId, "keytag"_p = keytag, "value"_p = value);
+                    logTrace("sql_updateExtAttributeValue: {} {}='{}' res={}", iname, keytag, value, res);
+                    if (res != 0) { count++; }
+                }
+                else if (delet) {
+                    uint res = conn.execute(sql_deleteExtAttribute, "assetId"_p = assetId, "keytag"_p = keytag);
+                    logTrace("sql_deleteExtAttribute: {} {} res={}", iname, keytag, res);
+                    if (res != 0) { count++; }
+                }
+            }
+            catch (const std::exception& e) {
+                logError("update {} {}='{}': {}", iname, keytag, value, e.what());
+            }
+        }
+    }
+
+    return count;
 }
 
 // =====================================================================================================================

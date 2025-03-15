@@ -25,6 +25,7 @@
 #include <fty_common_db_dbpath.h>
 #include <fty_log.h>
 #include <regex>
+#include <sstream>
 
 namespace fty::asset {
 
@@ -203,6 +204,97 @@ AssetExpected<void> Import::process(bool checkLic)
         } else {
             m_el.emplace(row, unexpected(it.error()));
         }
+    }
+
+    // handle Hercule UPS (multi cards for one device serial_no)
+    // apply the *latest* (location, location_u_pos, u_size) changes to any cards
+    try {
+        struct deviceInfo {
+            std::string serial_no; // device identifier
+            std::vector<std::string> inames; // assets (multi-card)
+            uint32_t parentId{0}; // location
+            std::string location_type;
+            std::string location_u_pos;
+            std::string u_size;
+
+            //dump
+            std::string str() const {
+                std::string aux;
+                for (const auto& s : inames) { aux += (aux.empty() ? "" : ",") + s; }
+
+                std::ostringstream oss;
+                oss << "serial_no(" << serial_no << ")"
+                    << ", inames(" << aux << ")"
+                    << ", parentId(" << std::to_string(parentId) << ")"
+                    << ", location_type(" << location_type << ")"
+                    << ", location_u_pos(" << location_u_pos << ")"
+                    << ", u_size(" << u_size << ")";
+                return oss.str();
+            }
+        };
+
+        std::map<std::string, deviceInfo> realDevices; // <serial_no, deviceInfo>
+
+        // initialize realDevices from m_el (imported device assets)
+        for (const auto& [row, it] : m_el) {
+            if (!it) { continue; } // import error
+            if (it->typeId != persist::asset_type::DEVICE) { continue; } // device only
+            if (it->name.empty()) { continue; } // invalid iname
+            if (it->ext.count("serial_no") == 0) { continue; } // no serial_no
+            std::string serial_no = it->ext.at("serial_no");
+            if (serial_no.empty()) { continue; } // invalid
+
+            // update realDevices related to serial_no
+            if (realDevices.count(serial_no) == 0) { realDevices[serial_no] = deviceInfo{}; }
+            auto& di = realDevices[serial_no];
+            di.serial_no = serial_no;
+            di.inames.push_back(it->name);
+            // location infos (*latest* row values are kept)
+            if (it->parentId != 0) { di.parentId = it->parentId; }
+            if (it->ext.count("location_type") != 0) { di.location_type = it->ext.at("location_type"); }
+            if (it->ext.count("location_u_pos") != 0) { di.location_u_pos = it->ext.at("location_u_pos"); }
+            if (it->ext.count("u_size") != 0) { di.u_size = it->ext.at("u_size"); }
+        }
+
+        if (realDevices.size() != 0) {
+            // complete realDevices deviceInfo inames from DB
+            {
+                std::function<void(const tntdb::Row&)> cb = [&realDevices] (const tntdb::Row& row) {
+                    std::string serial_no;
+                    row["value"].get(serial_no);
+                    if (serial_no.empty()) { return; } // invalid
+                    if (realDevices.count(serial_no) == 0) { return; } // not concerned
+                    uint32_t asset_id{0};
+                    row["id_asset_element"].get(asset_id);
+                    std::string iname = DBAssets::id_to_name_ext_name(asset_id).first;
+                    if (iname.empty()) { return; } // invalid
+
+                    auto& inames = realDevices[serial_no].inames;
+                    if (std::find(inames.begin(), inames.end(), iname) == inames.end()) {
+                        inames.push_back(iname); // device inames completion
+                    }
+                };
+
+                // walk on all "serial_no" ext. attributes
+                tntdb::Connection conn = tntdb::connect(DBConn::url);
+                int r = DBAssets::select_asset_ext_attribute_by_keytag(conn, "serial_no", {}, cb);
+                if (r != 0) { logError("select_asset_ext_attribute_by_keytag failed (r: {})", r); }
+            }
+
+            // update location for all the assets based on the same device (serial_no)
+            for (const auto& d : realDevices) {
+                const auto& di{d.second}; // deviceInfo
+                if (di.inames.size() < 2) { continue; } // ignore mono-card device (nothing to do)
+
+                logDebug("DB updates of multi-cards device location for {}", di.str());
+                auto ret = fty::asset::db::applyLocationAttributes(di.inames, di.parentId, di.location_type, di.location_u_pos, di.u_size);
+                if (ret) { logDebug("DB updates count: {}", *ret); }
+                else { logError("applyLocationAttributes failed"); }
+            }
+        }
+    }
+    catch (const std::exception& e) {
+        logError("Updates of multi-cards device location, e: {}", e.what());
     }
 
     return {};
