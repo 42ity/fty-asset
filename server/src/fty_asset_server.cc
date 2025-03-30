@@ -728,8 +728,8 @@ static void s_handle_subject_assets(const fty::AssetServer& server, zmsg_t* msg)
     zmsg_destroy(&reply);
 }
 
-// CAUTION: very similar code in asset/src/asset-configure-infrom.cpp::sendConfigure()
-// subject changed
+// CAUTION: very similar code in asset/src/asset-configure-inform.cpp::sendConfigure()
+// NOTICE: subject changed
 static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_name,
     const std::string& asset_name, const char* operation, std::string& subject, bool test_mode)
 {
@@ -798,7 +798,7 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
         row["id"].get(asset_id);
     };
 
-    // select basic info
+    // select basic info (set aux)
     int r = select_asset_element_basic(asset_name, cb1, test_mode);
     if (r != 0) {
         log_warning("%s:\tCannot select info about '%s'", client_name.c_str(), asset_name.c_str());
@@ -814,7 +814,7 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
         zhash_insert(ext, keytag.c_str(), static_cast<void*>( const_cast<char*>(value.c_str())));
     };
 
-    // select ext attributes
+    // select ext attributes (set ext)
     r = select_ext_attributes(asset_id, cb2, test_mode);
     if (r != 0) {
         log_warning("%s:\tCannot select ext attributes for '%s'", client_name.c_str(), asset_name.c_str());
@@ -825,69 +825,66 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
     // handle required but missing ext. attributes (inventory)
     {
         zhash_t* inventory = zhash_new();
-        zhash_autofree(inventory);
+        if (!inventory) {
+            log_error("inventory zhash_new() failed");
+        }
+        else {
+            zhash_autofree(inventory);
 
-        // Workaroung IPMPROG-9644: update uuid ext attribute in database
-        // if it was generated with a previous calculation method
-        // or create it if it is missing
-        if (zhash_lookup(ext, "uuid")) {
-            const char* uuid_old = static_cast<const char*>(zhash_lookup(ext, "uuid"));
-
-            // calculate the new uuid if discriminant datas are available
-            const char* mfr = static_cast<const char*>(zhash_lookup(ext, "manufacturer"));
-            const char* serial = static_cast<const char*>(zhash_lookup(ext, "serial_no"));
-            if (mfr && serial) {
-                // we have all information => calculate expected uuid
+            // IPMPROG-9644: update uuid ext attribute in database
+            // if missing or different (computation method changed)
+            {
+                const char* mfr = static_cast<const char*>(zhash_lookup(ext, "manufacturer"));
+                const char* serial = static_cast<const char*>(zhash_lookup(ext, "serial_no"));
                 const char* macAddr = static_cast<const char*>(zhash_lookup(ext, "mac_address"));
                 const char* ipAddr = static_cast<const char*>(zhash_lookup(ext, "ip.1"));
+                if (!mfr) { mfr = ""; }
+                if (!serial) { serial = ""; }
                 if (!macAddr) { macAddr = ""; }
                 if (!ipAddr) { ipAddr = ""; }
 
+                // build uuid
                 fty::asset::AssetFilter assetFilter{mfr, serial, macAddr, ipAddr};
                 fty::asset::Uuid uuid = fty::asset::generateUUID(assetFilter);
 
-                // if current uuid value is different than expected, update it
-                if (strcmp(uuid_old, uuid.uuid.c_str()) != 0) {
-                    zhash_insert(inventory, "uuid", static_cast<void*>( const_cast<char*>(uuid.uuid.c_str())));
+                const char* cur_uuid = static_cast<const char*>(zhash_lookup(ext, "uuid"));
+
+                bool setUuid{false};
+                if (!(cur_uuid && (*cur_uuid))) { // NULL/empty
+                    setUuid = true; // missing
+                }
+                else if (uuid.type != fty::asset::UUID_TYPE_VERSION_4) { // uuid is not random
+                    // asset is a real device, with mfr & serial defined
+                    if (!streq(cur_uuid, uuid.uuid.c_str())) {
+                        setUuid = true; // different
+                    }
+                }
+
+                if (setUuid) {
+                    zhash_insert(inventory, "uuid", static_cast<void*>(const_cast<char*>(uuid.uuid.c_str())));
                 }
             }
-        }
-        else {
-            // uuid is missing, create it
-            const char* mfr = static_cast<const char*>(zhash_lookup(ext, "manufacturer"));
-            const char* serial = static_cast<const char*>(zhash_lookup(ext, "serial_no"));
-            const char* macAddr = static_cast<const char*>(zhash_lookup(ext, "mac_address"));
-            const char* ipAddr = static_cast<const char*>(zhash_lookup(ext, "ip.1"));
 
-            if (!mfr) { mfr = ""; }
-            if (!serial) { serial = ""; }
-            if (!macAddr) { macAddr = ""; }
-            if (!ipAddr) { ipAddr = ""; }
-
-            fty::asset::AssetFilter assetFilter{mfr, serial, macAddr, ipAddr};
-            fty::asset::Uuid uuid = fty::asset::generateUUID(assetFilter);
-
-            zhash_insert(inventory, "uuid", static_cast<void*>(const_cast<char*>(uuid.uuid.c_str())));
-        }
-
-        // create timestamp ext attribute if missing
-        if (!zhash_lookup(ext, "create_ts")) {
-            std::time_t timestamp = std::time(NULL);
-            char mbstr[128] = "";
-            std::strftime(mbstr, sizeof(mbstr), "%FT%T%z", std::localtime(&timestamp));
-            zhash_insert(inventory, "create_ts", static_cast<void*>( const_cast<char*>(mbstr)));
-        }
-
-        if (zhash_size(inventory) != 0) {
-            // update ext
-            for (void* it = zhash_first(inventory); it; it = zhash_next(inventory)) {
-                auto keytag = zhash_cursor(inventory);
-                auto value = it;
-                zhash_insert(ext, keytag, value);
+            // create timestamp ext attribute if missing
+            if (!zhash_lookup(ext, "create_ts")) {
+                std::time_t timestamp = std::time(NULL);
+                char mbstr[128];
+                memset(mbstr, 0, sizeof(mbstr));
+                std::strftime(mbstr, sizeof(mbstr), "%FT%T%z", std::localtime(&timestamp));
+                zhash_insert(inventory, "create_ts", static_cast<void*>( const_cast<char*>(mbstr)));
             }
 
-            // update db inventory
-            process_insert_inventory(asset_name.c_str(), inventory, true /*readonly*/, test_mode);
+            if (zhash_size(inventory) != 0) {
+                // *update* ext from inventory
+                for (void* it = zhash_first(inventory); it; it = zhash_next(inventory)) {
+                    auto keytag = zhash_cursor(inventory);
+                    auto value = it;
+                    zhash_update(ext, keytag, value);
+                }
+
+                // update db from inventory
+                process_insert_inventory(asset_name.c_str(), inventory, true /*readonly*/, test_mode);
+            }
         }
 
         zhash_destroy(&inventory);
@@ -912,11 +909,10 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
         }
     };
 
-    // select "physical topology"
+    // select "physical" topology (set aux)
     r = select_asset_element_super_parent(asset_id, cb3, test_mode);
     if (r != 0) {
-        log_error("%s:\tselect_asset_element_super_parent ('%s') failed.",
-            client_name.c_str(), asset_name.c_str());
+        log_error("%s:\tselect_asset_element_super_parent ('%s') failed.", client_name.c_str(), asset_name.c_str());
         CLEANUP;
         return NULL;
     }
