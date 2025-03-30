@@ -39,15 +39,17 @@ namespace fty::asset {
 Uuid generateUUID(const AssetFilter& assetFilter)
 {
     if (!assetFilter.manufacturer.empty() && !assetFilter.serial.empty()) {
+        // manufacturer & serial are defined (as for a real device)
+
         auto getNamespace = [] () {
-            static uuid_t uuid = "";
+            static uuid_t ns_uuid = ""; // namespace uuid
             static bool first{true};
             if (first) {
                 const char* NS = "\x93\x3d\x6c\x80\xde\xa9\x8c\x6b\xd1\x11\x8b\x3b\x46\xa1\x81\xf1";
-                uuid_parse(const_cast<char*>(NS), uuid);
-                first = false; // once
+                uuid_parse(const_cast<char*>(NS), ns_uuid);
+                first = false; // ns_uuid is built once (constant)
             }
-            return uuid;
+            return ns_uuid;
         };
 
         auto sanitizedMacAddress = [&assetFilter] () {
@@ -188,9 +190,9 @@ AssetExpected<void> tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t siz
     // get serial_no for id
     std::string id_serial_no; //empty
     {
-        auto aux = db::selectExtAttributes(id);
-        if (aux && (aux->count("serial_no") != 0)) {
-            id_serial_no = aux->at("serial_no").value;
+        auto ext = db::selectExtAttributes(id);
+        if (ext && (ext->count("serial_no") != 0)) {
+            id_serial_no = ext->at("serial_no").value;
         }
     }
 
@@ -200,10 +202,10 @@ AssetExpected<void> tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t siz
         }
 
         auto chAttr = db::selectExtAttributes(child);
-        if (!chAttr) {
-            continue;
-        }
-        if ((chAttr->count("u_size") == 0) || (chAttr->count("location_u_pos") == 0)) {
+        if (!chAttr
+            || (chAttr->count("u_size") == 0)
+            || (chAttr->count("location_u_pos") == 0)
+        ) {
             continue; // the child does not have u_size/location_u_pos, ignore it
         }
 
@@ -225,7 +227,7 @@ AssetExpected<void> tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t siz
             return unexpected("Asset child u_size/location_u_pos is not a number"_tr);
         }
 
-        for (size_t i = iloc; i < iloc + isize; ++i) {
+        for (size_t i = iloc; i < (iloc + isize); ++i) {
             if (i < place.size()) {
                 place[i] = true;
             }
