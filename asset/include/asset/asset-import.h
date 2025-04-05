@@ -75,6 +75,8 @@ private:
         uint16_t priority, const std::string& assetTag,
         const std::map<std::string, std::string>& extattributesRO) const;
 
+    Expected<void> postProcessMultiCardDevices() const; /// Hercule UPS
+
 private:
     const CsvMap&            m_cm;
     ImportResMap             m_el;

@@ -1441,7 +1441,6 @@ Expected<std::vector<DbAssetLink>> selectAssetDeviceLinksTo(uint32_t elementId, 
             v.id_asset_link_type = :idlinktype
     )";
 
-
     try {
         fty::db::Connection conn;
 
@@ -2001,7 +2000,7 @@ Expected<uint> applyLocationAttributes(const std::vector<std::string>& inames, u
             const std::string keytag{it.first};
             const std::string value{it.second};
 
-            bool create{false}, update{false}, delet{false};
+            bool insert{false}, update{false}, delet{false};
             {
                 auto extAttrExist = [&conn, &assetId, &keytag] (std::string& value_)
                 {
@@ -2030,30 +2029,34 @@ Expected<uint> applyLocationAttributes(const std::vector<std::string>& inames, u
                     else if (current_value != value) { update = true; }
                 }
                 else {
-                    if (!value.empty()) { create = true; }
+                    if (!value.empty()) { insert = true; }
                 }
             }
 
+            std::string action{"UNKNOWN"};
             try {
-                if (create) {
+                if (insert) {
+                    action = "insert";
                     auto ret = insertIntoAssetExtAttributes(conn, assetId, {{keytag, value}}, false /*RO*/);
                     if (ret) { logTrace("insertIntoAssetExtAttributes: {}='{}' res={}", keytag, value, *ret); }
                     else { logError("insertIntoAssetExtAttributes: {}='{}' ret={}", keytag, value, ret.error()); }
                     if (ret && (*ret != 0)) { count++; }
                 }
                 else if (update) {
+                    action = "update";
                     uint res = conn.execute(sql_updateExtAttributeValue, "assetId"_p = assetId, "keytag"_p = keytag, "value"_p = value);
                     logTrace("sql_updateExtAttributeValue: {} {}='{}' res={}", iname, keytag, value, res);
                     if (res != 0) { count++; }
                 }
                 else if (delet) {
+                    action = "delete";
                     uint res = conn.execute(sql_deleteExtAttribute, "assetId"_p = assetId, "keytag"_p = keytag);
                     logTrace("sql_deleteExtAttribute: {} {} res={}", iname, keytag, res);
                     if (res != 0) { count++; }
                 }
             }
             catch (const std::exception& e) {
-                logError("update {} {}='{}': {}", iname, keytag, value, e.what());
+                logError("{} {} {}='{}': {}", action, iname, keytag, value, e.what());
             }
         }
     }
