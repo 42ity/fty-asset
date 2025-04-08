@@ -832,7 +832,7 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
             zhash_autofree(inventory);
 
             // IPMPROG-9644: update uuid ext attribute in database
-            // if missing or different (computation method changed)
+            // if missing or different (computation method has changed)
             {
                 const char* mfr = static_cast<const char*>(zhash_lookup(ext, "manufacturer"));
                 const char* serial = static_cast<const char*>(zhash_lookup(ext, "serial_no"));
@@ -854,13 +854,14 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
                     setUuid = true; // missing
                 }
                 else if (uuid.type != fty::asset::UUID_TYPE_VERSION_4) { // uuid is not random
-                    // asset is a real device, with mfr & serial defined
+                    // here, asset is a real device, with mfr & serial defined
                     if (!streq(cur_uuid, uuid.uuid.c_str())) {
                         setUuid = true; // different
                     }
                 }
 
                 if (setUuid) {
+                    // update uuid
                     zhash_insert(inventory, "uuid", static_cast<void*>(const_cast<char*>(uuid.uuid.c_str())));
                 }
             }
@@ -937,7 +938,7 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
     #undef CLEANUP
 }
 
-//extern
+//extern (see asset-server.cc)
 void send_create_or_update_asset(const fty::AssetServer& server, const std::string& asset_name, const char* operation)
 {
     std::string subject{"unknown"}; // changed
@@ -1219,42 +1220,42 @@ static void s_update_topology(const fty::AssetServer& server, fty_proto_t* asset
     }
 
     const char* operation = fty_proto_operation(asset);
-    const char* name = fty_proto_name(asset); // iname
+    const char* nameC = fty_proto_name(asset); // iname of the container
 
     if (!streq(operation, FTY_PROTO_ASSET_OP_UPDATE)) {
-        log_debug("%s:\tIgnore: '%s' on '%s'", server.getAgentName().c_str(), operation, name);
+        log_debug("%s:\tIgnore: '%s' on '%s'", server.getAgentName().c_str(), operation, nameC);
         return;
     }
 
     // select assets, that were affected by the change
     std::set<std::string> filters; //empty
-    std::vector<std::string> asset_names;
-    int r = select_assets_by_container(name, filters, asset_names, server.getTestMode());
+    std::vector<std::string> inames;
+    int r = select_assets_by_container(nameC, filters, inames, server.getTestMode());
     if (r != 0) {
-        log_warning("%s:\tCannot select assets in container '%s'", server.getAgentName().c_str(), name);
+        log_warning("%s:\tCannot select assets in container '%s'", server.getAgentName().c_str(), nameC);
         return;
     }
 
-    // For every asset we need to form new message!
-    for (const auto& asset_name : asset_names) {
-        send_create_or_update_asset(server, asset_name, FTY_PROTO_ASSET_OP_UPDATE);
+    // send a new message for each asset
+    for (const auto& iname : inames) {
+        send_create_or_update_asset(server, iname, FTY_PROTO_ASSET_OP_UPDATE);
     }
 }
 
 static void s_repeat_all(const fty::AssetServer& server, const std::set<std::string>& assets_to_publish)
 {
-    std::vector<std::string> asset_names;
+    std::vector<std::string> inames;
 
-    std::function<void(const tntdb::Row&)> cb = [&asset_names, &assets_to_publish](const tntdb::Row& row) {
-        std::string foo;
-        row["name"].get(foo);
-        if (assets_to_publish.size() == 0)
-            asset_names.push_back(foo);
-        else if (assets_to_publish.count(foo) == 1)
-            asset_names.push_back(foo);
+    std::function<void(const tntdb::Row&)> cb = [&inames, &assets_to_publish](const tntdb::Row& row) {
+        std::string iname;
+        row["name"].get(iname);
+        if (iname.empty()) { return; }
+        if (assets_to_publish.empty() || (assets_to_publish.count(iname) != 0)) {
+            inames.push_back(iname);
+        }
     };
 
-    // select all assets
+    // select assets
     int r = select_assets(cb, server.getTestMode());
     if (r != 0) {
         log_warning("%s:\tCannot list all assets", server.getAgentName().c_str());
@@ -1262,8 +1263,8 @@ static void s_repeat_all(const fty::AssetServer& server, const std::set<std::str
     }
 
     // send a new message for each asset
-    for (const auto& asset_name : asset_names) {
-        send_create_or_update_asset(server, asset_name, FTY_PROTO_ASSET_OP_UPDATE);
+    for (const auto& iname :inames) {
+        send_create_or_update_asset(server, iname, FTY_PROTO_ASSET_OP_UPDATE);
     }
 }
 

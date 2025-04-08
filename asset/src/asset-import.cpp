@@ -217,7 +217,7 @@ AssetExpected<void> Import::process(bool checkLic)
 /// handle Hercule UPS (multi cards for one device serial_no)
 Expected<void> Import::postProcessMultiCardDevices() const
 {
-    const uint16_t LT_POWERCHAIN{1}; // powerchain link type
+    const uint16_t LT_POWERCHAIN{INPUT_POWER_CHAIN}; // powerchain link type
 
     struct deviceInfo {
         std::string serial_no; // device identifier
