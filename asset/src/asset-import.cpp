@@ -17,6 +17,7 @@
 #include "asset/asset-import.h"
 #include "asset/asset-helpers.h"
 #include "asset/asset-licensing.h"
+#include "asset/asset-db.h"
 #include "asset/csv.h"
 #include "asset/json.h"
 #include <fty/string-utils.h>
@@ -25,6 +26,7 @@
 #include <fty_common_db_dbpath.h>
 #include <fty_log.h>
 #include <regex>
+#include <sstream>
 
 namespace fty::asset {
 
@@ -78,20 +80,20 @@ std::string Import::mandatoryMissing() const
 
 std::map<std::string, std::string> Import::sanitizeRowExtNames(size_t row, bool sanitize) const
 {
-    static std::vector<std::string> sanitizeList = {
+    static const std::vector<std::string> sanitizeList = {
         "location", "logical_asset", "power_source.", "group."
     };
 
     std::map<std::string, std::string> result;
 
     // make copy of this one line
-    for (auto title : m_cm.getTitles()) {
+    for (const auto& title : m_cm.getTitles()) {
         result[title] = m_cm.get(row, title);
     }
 
     if (sanitize) {
         // sanitize ext names to t_bios_asset_element.name
-        for (auto item : sanitizeList) {
+        for (const auto& item : sanitizeList) {
             if (item[item.size() - 1] == '.') {
                 // iterate index .X
                 for (int i = 1; true; ++i) {
@@ -129,44 +131,43 @@ std::map<std::string, std::string> Import::sanitizeRowExtNames(size_t row, bool 
     return result;
 }
 
+// priority: "1".."5", "P1".."P5"
 // returns 1..5
 uint16_t Import::getPriority(const std::string& s) const
 {
-    if (s.size() > 2)
-        return 5;
-
-    for (size_t i = 0; i != 2; i++) {
-        if (s[i] >= 49 && s[i] <= 53) {
-            return uint16_t(s[i] - 48);
+    if (s.size() <= 2) {
+        for (size_t i = 0; i < 2; i++) {
+            char c = s[i];
+            if (('1' <= c) && (c <= '5')) {
+                return uint16_t(c - '1' + 1);
+            }
         }
     }
     return 5;
 }
 
-bool Import::checkUSize(const std::string& s) const
-{
-    static std::regex regex("^[0-9]{1,2}[uU]?$");
-    return std::regex_match(s, regex);
-}
-
 std::string Import::matchExtAttr(const std::string& value, const std::string& key) const
 {
     if (key == "u_size") {
-        if (checkUSize(value)) {
-            // need to drop the "U"
-            std::string tmp = value;
-            if (!(::isdigit(tmp.back()))) {
-                tmp.pop_back();
-            }
-            // remove trailing 0
-            if (tmp.size() == 2 && tmp[0] == '0') {
-                tmp.erase(tmp.begin());
-            }
-            return tmp;
-        } else {
-            return {};
+        auto checkUSize = [] (const std::string& s) {
+            return std::regex_match(s, std::regex{"^[0-9]{1,2}[uU]?$"});
+        };
+
+        if (!checkUSize(value)) {
+            return ""; //invalid
         }
+
+        // need to drop the ending 'U' and trailing '0'
+        std::string tmp = value;
+        if (!(::isdigit(tmp.back()))) {
+            tmp.pop_back();
+        }
+        if (tmp.size() == 2 && tmp[0] == '0') {
+            tmp.erase(tmp.begin());
+        }
+        return tmp;
     }
+
     return value;
 }
 
@@ -204,6 +205,163 @@ AssetExpected<void> Import::process(bool checkLic)
         } else {
             m_el.emplace(row, unexpected(it.error()));
         }
+    }
+
+    // handle Hercule UPS (multi cards for one device serial_no)
+    postProcessMultiCardDevices();
+
+    return {};
+}
+
+/// post process
+/// handle Hercule UPS (multi cards for one device serial_no)
+Expected<void> Import::postProcessMultiCardDevices() const
+{
+    const uint16_t LT_POWERCHAIN{INPUT_POWER_CHAIN}; // powerchain link type
+
+    struct deviceInfo {
+        std::string serial_no; // device identifier
+        std::vector<std::string> inames; // assets referencing the same serial_no
+        uint32_t parentId{0}; // location
+        std::string location_type;
+        std::string location_u_pos;
+        std::string u_size;
+        fty::asset::db::DbAssetLink link; // power input link
+
+        //dump
+        std::string str() const {
+            std::string aux; // inames list
+            for (const auto& s : inames) { aux += (aux.empty() ? "" : ",") + s; }
+
+            std::ostringstream oss;
+            oss << "serial_no(" << serial_no << ")"
+                << ", inames(" << aux << ")"
+                << ", parentId(" << std::to_string(parentId) << ")"
+                << ", location_type(" << location_type << ")"
+                << ", location_u_pos(" << location_u_pos << ")"
+                << ", u_size(" << u_size << ")"
+                << ", link(" << link.srcName << "," << link.srcId << "," << link.srcSocket << "," << link.destId << "," << link.destSocket << ")";
+            return oss.str();
+        }
+    };
+
+    // handle Hercule UPS (multi cards for one device serial_no)
+    // apply the *latest* location and power input changes to any cards for a same device
+    try {
+        std::map<std::string, deviceInfo> realDevices; // <serial_no, deviceInfo>
+
+        // initialize realDevices from m_el (imported assets)
+        for (const auto& [row, it] : m_el) {
+            if (!it) { continue; } // import error
+            if (it->id == 0) { continue; } // invalid
+            if (it->typeId != persist::asset_type::DEVICE) { continue; } // device only
+            if (it->name.empty()) { continue; } // invalid iname
+            if (it->ext.count("serial_no") == 0) { continue; } // no serial_no
+            std::string serial_no = it->ext.at("serial_no");
+            if (serial_no.empty()) { continue; } // invalid
+
+            // update realDevices related to serial_no
+            if (realDevices.count(serial_no) == 0) { realDevices[serial_no] = deviceInfo{}; }
+            auto& di = realDevices[serial_no];
+            di.serial_no = serial_no;
+            di.inames.push_back(it->name);
+
+            // location infos (*latest* row values are kept)
+            if (it->parentId != 0) { di.parentId = it->parentId; }
+            if (it->ext.count("location_type") != 0) { di.location_type = it->ext.at("location_type"); }
+            if (it->ext.count("location_u_pos") != 0) { di.location_u_pos = it->ext.at("location_u_pos"); }
+            if (it->ext.count("u_size") != 0) { di.u_size = it->ext.at("u_size"); }
+
+            // power input (*latest* is kept)
+            if (auto ret = fty::asset::db::selectAssetDeviceLinksTo(it->id, LT_POWERCHAIN)) {
+                if ((*ret).size() == 1) { // unique input
+                    auto& link = (*ret).at(0); // DbAssetLink
+                    if (link.srcId != 0) { di.link = link; }
+                }
+            }
+        }
+
+        // complete realDevices deviceInfo inames from DB
+        if (realDevices.size() != 0) {
+            // iterator callback on 'serial_no' ext. attributes
+            std::function<void(const tntdb::Row&)> cb = [&realDevices] (const tntdb::Row& row) {
+                std::string serial_no;
+                row["value"].get(serial_no);
+                if (serial_no.empty()) { return; } // invalid
+                if (realDevices.count(serial_no) == 0) { return; } // not concerned
+                uint32_t asset_id{0};
+                row["id_asset_element"].get(asset_id);
+                std::string iname = DBAssets::id_to_name_ext_name(asset_id).first;
+                if (iname.empty()) { return; } // invalid
+
+                auto& di = realDevices[serial_no]; // deviceInfo
+                if (std::find(di.inames.begin(), di.inames.end(), iname) == di.inames.end()) {
+                    di.inames.push_back(iname); // device inames completion
+                }
+            };
+
+            // walk on all "serial_no" ext. attributes
+            tntdb::Connection conn = tntdb::connect(DBConn::url);
+            int r = DBAssets::select_asset_ext_attribute_by_keytag(conn, "serial_no", {}, cb);
+            if (r != 0) { logError("select_asset_ext_attribute_by_keytag failed (r: {})", r); }
+        }
+
+        // DB updates of location & power input infos for all the assets
+        // based on the same device (serial_no)
+        for (const auto& d : realDevices) {
+            const auto& di{d.second}; // deviceInfo
+            if (di.inames.size() < 2) { continue; } // mono-card device (nothing to do)
+
+            logDebug("DB updates of multi-cards device for {}", di.str());
+
+            // location
+            if (auto ret = fty::asset::db::applyLocationAttributes(di.inames, di.parentId, di.location_type, di.location_u_pos, di.u_size)) {
+                logDebug("DB updates location count: {}", *ret);
+            } else {
+                logError("applyLocationAttributes failed");
+            }
+
+            // power input
+            if (di.link.srcId != 0) { // link srcId is set
+                fty::db::Connection conn;
+                uint count{0};
+                for (const auto& iname : di.inames) {
+                    uint32_t destId{0};
+                    if (auto ret = fty::asset::db::nameToAssetId(iname)) {
+                        destId = *ret;
+                        if (destId == 0) { logError("destId is nul"); continue; }
+                    } else {
+                        logError("nameToAssetId({}) failed", iname);
+                        continue;
+                    }
+
+                    // remove all links to destId
+                    if (auto ret = db::deleteAssetLinksTo(conn, destId); !ret) {
+                        logError("deleteAssetLinksTo({}) failed", destId);
+                        continue;
+                    }
+
+                    // create srcId->destId power link
+                    db::AssetLink link;
+                    link.src = di.link.srcId;
+                    link.srcOut = di.link.srcSocket;
+                    link.dest = destId;
+                    link.destIn = di.link.destSocket;
+                    link.type = LT_POWERCHAIN;
+
+                    if (auto ret = db::insertIntoAssetLinks(conn, {link})) {
+                        logDebug("insertIntoAssetLinks {}/'{}' -> {}({})/'{}'", link.src, link.srcOut, iname, link.dest, link.destIn);
+                        count++;
+                    } else {
+                        logError("insertIntoAssetLinks {}/'{}' -> {}({})/'{}' failed", link.src, link.srcOut, iname, link.dest, link.destIn);
+                    }
+                }
+                logDebug("DB updates power link count: {}", count);
+            }
+        }
+    }
+    catch (const std::exception& e) {
+        logError("Updates of multi-cards device, e: {}", e.what());
     }
 
     return {};
@@ -518,7 +676,7 @@ AssetExpected<db::AssetElement> Import::processRow(
             oneLink.srcOut   = linkSource1.substr(0, 4);
         } catch (const std::out_of_range& e) {
             logDebug("'{}' - is missing at all", linkColName1);
-            logDebug(e.what());
+            logDebug("{}", e.what());
         }
 
         // column name
@@ -529,7 +687,7 @@ AssetExpected<db::AssetElement> Import::processRow(
             oneLink.destIn   = linkSource2.substr(0, 4);
         } catch (const std::out_of_range& e) {
             logDebug("'{}' - is missing at all", linkColName2);
-            logDebug(e.what());
+            logDebug("{}", e.what());
         }
 
         if (oneLink.src != 0) {
@@ -924,7 +1082,7 @@ AssetExpected<void> Import::updateDevice(fty::db::Connection& conn, uint32_t ele
         auto ret = db::deleteAssetLinksTo(conn, elementId);
         if (!ret) {
             auto errmsg = "cannot remove old power sources"_tr;
-            logError(errmsg);
+            logError("{}", errmsg);
             return unexpected(errmsg);
         }
     }
@@ -933,7 +1091,7 @@ AssetExpected<void> Import::updateDevice(fty::db::Connection& conn, uint32_t ele
         auto ret = db::insertIntoAssetLinks(conn, linksCopy);
         if (!ret) {
             auto errmsg = "cannot add new power sources"_tr;
-            logError(errmsg);
+            logError("{}", errmsg);
             return unexpected(errmsg);
         }
     }

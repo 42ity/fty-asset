@@ -412,4 +412,14 @@ Expected<std::vector<std::string>> selectGroupNames(uint32_t id);
 /// @param assetId asset id
 /// @param parentType parent type
 Expected<WebAssetElement> findParentByType(uint32_t assetId, uint16_t parentType);
+
+/// Update location definition for assets
+/// @param inames list of asset inames to update
+/// @param parentId location asset id to set (id_parent)
+/// @param location_type location type to set
+/// @param location_u_pos location U-pos to set
+/// @param u_size U-size to set
+/// @return updates count or error
+Expected<uint> applyLocationAttributes(const std::vector<std::string>& inames, uint32_t parentId, const std::string& location_type, const std::string& location_u_pos, const std::string& u_size);
+
 } // namespace fty::asset::db

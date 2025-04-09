@@ -22,7 +22,6 @@ etn_target(shared ${PROJECT_NAME}-libng
         tntdb
         cxxtools
         uuid
-        crypto
         fty-asset
         fty_shm
         fty_proto
@@ -64,6 +63,7 @@ etn_test_target(${PROJECT_NAME}-libng
         test/delete.cpp
         test/usize.cpp
         test/norm-name.cpp
+        test/gen-uuid.cpp
 
         test/db2/misc.cpp
         test/db2/select.cpp

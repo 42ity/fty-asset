@@ -728,8 +728,8 @@ static void s_handle_subject_assets(const fty::AssetServer& server, zmsg_t* msg)
     zmsg_destroy(&reply);
 }
 
-// CAUTION: very similar code in asset/src/asset-configure-infrom.cpp::sendConfigure()
-// subject changed
+// CAUTION: very similar code in asset/src/asset-configure-inform.cpp::sendConfigure()
+// NOTICE: subject changed
 static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_name,
     const std::string& asset_name, const char* operation, std::string& subject, bool test_mode)
 {
@@ -798,7 +798,7 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
         row["id"].get(asset_id);
     };
 
-    // select basic info
+    // select basic info (set aux)
     int r = select_asset_element_basic(asset_name, cb1, test_mode);
     if (r != 0) {
         log_warning("%s:\tCannot select info about '%s'", client_name.c_str(), asset_name.c_str());
@@ -814,7 +814,7 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
         zhash_insert(ext, keytag.c_str(), static_cast<void*>( const_cast<char*>(value.c_str())));
     };
 
-    // select ext attributes
+    // select ext attributes (set ext)
     r = select_ext_attributes(asset_id, cb2, test_mode);
     if (r != 0) {
         log_warning("%s:\tCannot select ext attributes for '%s'", client_name.c_str(), asset_name.c_str());
@@ -825,56 +825,67 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
     // handle required but missing ext. attributes (inventory)
     {
         zhash_t* inventory = zhash_new();
-        zhash_autofree(inventory);
-
-        // Workaroung IPMPROG-9644: update uuid ext attribute in database if it was generated with the previous
-        // calculation method (with model name) or create it if it is missing
-        if (zhash_lookup(ext, "uuid")) {
-            const char* uuid_old = static_cast<const char*>(zhash_lookup(ext, "uuid"));
-            // calculate the new uuid (without model name)
-            const char* mfr = static_cast<const char*>(zhash_lookup(ext, "manufacturer"));
-            const char* serial = static_cast<const char*>(zhash_lookup(ext, "serial_no"));
-            if (mfr && serial) {
-                // we have all information => calculate expected uuid
-                fty::asset::AssetFilter assetFilter{mfr, serial};
-                auto uuidAsset = fty::asset::generateUUID(assetFilter);
-                // if current uuid value is different than expected, update it
-                if (strcmp(uuid_old, uuidAsset.uuid.c_str()) != 0) {
-                    zhash_insert(inventory, "uuid", static_cast<void*>( const_cast<char*>(uuidAsset.uuid.c_str())));
-                }
-            }
+        if (!inventory) {
+            log_error("inventory zhash_new() failed");
         }
         else {
-            // uuid missing, create it
-            const char* mfr = static_cast<const char*>(zhash_lookup(ext, "manufacturer"));
-            const char* serial = static_cast<const char*>(zhash_lookup(ext, "serial_no"));
+            zhash_autofree(inventory);
 
-            std::string mfr_str = mfr ? mfr : "";
-            std::string serial_str = serial ? serial : "";
+            // IPMPROG-9644: update uuid ext attribute in database
+            // if missing or different (computation method has changed)
+            {
+                const char* mfr = static_cast<const char*>(zhash_lookup(ext, "manufacturer"));
+                const char* serial = static_cast<const char*>(zhash_lookup(ext, "serial_no"));
+                const char* macAddr = static_cast<const char*>(zhash_lookup(ext, "mac_address"));
+                const char* ipAddr = static_cast<const char*>(zhash_lookup(ext, "ip.1"));
+                if (!mfr) { mfr = ""; }
+                if (!serial) { serial = ""; }
+                if (!macAddr) { macAddr = ""; }
+                if (!ipAddr) { ipAddr = ""; }
 
-            fty::asset::AssetFilter assetFilter{mfr_str, serial_str};
-            auto uuidAsset = fty::asset::generateUUID(assetFilter);
-            zhash_insert(inventory, "uuid", static_cast<void*>(const_cast<char*>(uuidAsset.uuid.c_str())));
-        }
+                // build uuid
+                fty::asset::AssetFilter assetFilter{mfr, serial, macAddr, ipAddr};
+                fty::asset::Uuid uuid = fty::asset::generateUUID(assetFilter);
 
-        // create timestamp ext attribute if missing
-        if (!zhash_lookup(ext, "create_ts")) {
-            std::time_t timestamp = std::time(NULL);
-            char mbstr[128] = "";
-            std::strftime(mbstr, sizeof(mbstr), "%FT%T%z", std::localtime(&timestamp));
-            zhash_insert(inventory, "create_ts", static_cast<void*>( const_cast<char*>(mbstr)));
-        }
+                const char* cur_uuid = static_cast<const char*>(zhash_lookup(ext, "uuid"));
 
-        if (zhash_size(inventory) != 0) {
-            // update ext
-            for (void* it = zhash_first(inventory); it; it = zhash_next(inventory)) {
-                auto keytag = zhash_cursor(inventory);
-                auto value = it;
-                zhash_insert(ext, keytag, value);
+                bool setUuid{false};
+                if (!(cur_uuid && (*cur_uuid))) { // NULL/empty
+                    setUuid = true; // missing
+                }
+                else if (uuid.type != fty::asset::UUID_TYPE_VERSION_4) { // uuid is not random
+                    // here, asset is a real device, with mfr & serial defined
+                    if (!streq(cur_uuid, uuid.uuid.c_str())) {
+                        setUuid = true; // different
+                    }
+                }
+
+                if (setUuid) {
+                    // update uuid
+                    zhash_insert(inventory, "uuid", static_cast<void*>(const_cast<char*>(uuid.uuid.c_str())));
+                }
             }
 
-            // update db inventory
-            process_insert_inventory(asset_name.c_str(), inventory, true /*readonly*/, test_mode);
+            // create timestamp ext attribute if missing
+            if (!zhash_lookup(ext, "create_ts")) {
+                std::time_t timestamp = std::time(NULL);
+                char mbstr[128];
+                memset(mbstr, 0, sizeof(mbstr));
+                std::strftime(mbstr, sizeof(mbstr), "%FT%T%z", std::localtime(&timestamp));
+                zhash_insert(inventory, "create_ts", static_cast<void*>( const_cast<char*>(mbstr)));
+            }
+
+            if (zhash_size(inventory) != 0) {
+                // *update* ext from inventory
+                for (void* it = zhash_first(inventory); it; it = zhash_next(inventory)) {
+                    auto keytag = zhash_cursor(inventory);
+                    auto value = it;
+                    zhash_update(ext, keytag, value);
+                }
+
+                // update db from inventory
+                process_insert_inventory(asset_name.c_str(), inventory, true /*readonly*/, test_mode);
+            }
         }
 
         zhash_destroy(&inventory);
@@ -899,11 +910,10 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
         }
     };
 
-    // select "physical topology"
+    // select "physical" topology (set aux)
     r = select_asset_element_super_parent(asset_id, cb3, test_mode);
     if (r != 0) {
-        log_error("%s:\tselect_asset_element_super_parent ('%s') failed.",
-            client_name.c_str(), asset_name.c_str());
+        log_error("%s:\tselect_asset_element_super_parent ('%s') failed.", client_name.c_str(), asset_name.c_str());
         CLEANUP;
         return NULL;
     }
@@ -928,7 +938,7 @@ static zmsg_t* s_publish_create_or_update_asset_msg(const std::string& client_na
     #undef CLEANUP
 }
 
-//extern
+//extern (see asset-server.cc)
 void send_create_or_update_asset(const fty::AssetServer& server, const std::string& asset_name, const char* operation)
 {
     std::string subject{"unknown"}; // changed
@@ -943,11 +953,12 @@ void send_create_or_update_asset(const fty::AssetServer& server, const std::stri
     }
 
     int r = mlm_client_send(const_cast<mlm_client_t*>(server.getStreamClient()), subject.c_str(), &msg);
+    zmsg_destroy(&msg);
+
     if (r != 0) {
         log_error("%s:\tmlm_client_send '%s' failed for asset '%s'",
             server.getAgentName().c_str(), operation, asset_name.c_str());
     }
-    zmsg_destroy(&msg);
 }
 
 static void s_sendto_create_or_update_asset(const fty::AssetServer& server, const std::string& asset_name,
@@ -968,11 +979,12 @@ static void s_sendto_create_or_update_asset(const fty::AssetServer& server, cons
     zmsg_pushstr(msg, uuid);
 
     int r = mlm_client_sendto(mailboxClient(server), address, subject.c_str(), NULL, 5000, &msg);
+    zmsg_destroy(&msg);
+
     if (r != 0) {
         log_error("%s:\tmlm_client_sendto '%s'/'%s' failed for asset '%s'",
             server.getAgentName().c_str(), address, subject.c_str(), asset_name.c_str());
     }
-    zmsg_destroy(&msg);
 }
 
 static void s_handle_subject_asset_detail(const fty::AssetServer& server, zmsg_t** zmessage_p)
@@ -987,18 +999,21 @@ static void s_handle_subject_asset_detail(const fty::AssetServer& server, zmsg_t
     if (!streq(c_command, "GET")) {
         log_error("%s:\tASSET_DETAIL: bad command '%s', expected GET", server.getAgentName().c_str(), c_command);
 
-        char* uuid  = zmsg_popstr(zmessage);
+        char* uuid = zmsg_popstr(zmessage);
         zmsg_t* reply = zmsg_new();
         if (uuid) { zmsg_addstr(reply, uuid); }
         zmsg_addstr(reply, "ERROR");
         zmsg_addstr(reply, "BAD_COMMAND");
 
         const char* sender = mlm_client_sender(mailboxClient(server));
-        mlm_client_sendto(mailboxClient(server), sender, "ASSET_DETAIL", NULL, 5000, &reply);
-
+        int r = mlm_client_sendto(mailboxClient(server), sender, "ASSET_DETAIL", NULL, 5000, &reply);
         zstr_free(&uuid);
         zstr_free(&c_command);
         zmsg_destroy(&reply);
+
+        if (r != 0) {
+            log_error("mlm_client_sendto failed (to: %s)", sender);
+        }
         return;
     }
     zstr_free(&c_command);
@@ -1006,6 +1021,8 @@ static void s_handle_subject_asset_detail(const fty::AssetServer& server, zmsg_t
     // select an asset and publish it through mailbox
     char* uuid = zmsg_popstr(zmessage);
     char* asset_name = zmsg_popstr(zmessage);
+    if (!uuid) { uuid = strdup("<null>"); } // secure
+    if (!asset_name) { asset_name = strdup("<null>"); }
 
     const char* sender = mlm_client_sender(mailboxClient(server));
     s_sendto_create_or_update_asset(server, asset_name, FTY_PROTO_ASSET_OP_UPDATE, sender, uuid);
@@ -1203,42 +1220,42 @@ static void s_update_topology(const fty::AssetServer& server, fty_proto_t* asset
     }
 
     const char* operation = fty_proto_operation(asset);
-    const char* name = fty_proto_name(asset); // iname
+    const char* nameC = fty_proto_name(asset); // iname of the container
 
     if (!streq(operation, FTY_PROTO_ASSET_OP_UPDATE)) {
-        log_debug("%s:\tIgnore: '%s' on '%s'", server.getAgentName().c_str(), operation, name);
+        log_debug("%s:\tIgnore: '%s' on '%s'", server.getAgentName().c_str(), operation, nameC);
         return;
     }
 
     // select assets, that were affected by the change
     std::set<std::string> filters; //empty
-    std::vector<std::string> asset_names;
-    int r = select_assets_by_container(name, filters, asset_names, server.getTestMode());
+    std::vector<std::string> inames;
+    int r = select_assets_by_container(nameC, filters, inames, server.getTestMode());
     if (r != 0) {
-        log_warning("%s:\tCannot select assets in container '%s'", server.getAgentName().c_str(), name);
+        log_warning("%s:\tCannot select assets in container '%s'", server.getAgentName().c_str(), nameC);
         return;
     }
 
-    // For every asset we need to form new message!
-    for (const auto& asset_name : asset_names) {
-        send_create_or_update_asset(server, asset_name, FTY_PROTO_ASSET_OP_UPDATE);
+    // send a new message for each asset
+    for (const auto& iname : inames) {
+        send_create_or_update_asset(server, iname, FTY_PROTO_ASSET_OP_UPDATE);
     }
 }
 
 static void s_repeat_all(const fty::AssetServer& server, const std::set<std::string>& assets_to_publish)
 {
-    std::vector<std::string> asset_names;
+    std::vector<std::string> inames;
 
-    std::function<void(const tntdb::Row&)> cb = [&asset_names, &assets_to_publish](const tntdb::Row& row) {
-        std::string foo;
-        row["name"].get(foo);
-        if (assets_to_publish.size() == 0)
-            asset_names.push_back(foo);
-        else if (assets_to_publish.count(foo) == 1)
-            asset_names.push_back(foo);
+    std::function<void(const tntdb::Row&)> cb = [&inames, &assets_to_publish](const tntdb::Row& row) {
+        std::string iname;
+        row["name"].get(iname);
+        if (iname.empty()) { return; }
+        if (assets_to_publish.empty() || (assets_to_publish.count(iname) != 0)) {
+            inames.push_back(iname);
+        }
     };
 
-    // select all assets
+    // select assets
     int r = select_assets(cb, server.getTestMode());
     if (r != 0) {
         log_warning("%s:\tCannot list all assets", server.getAgentName().c_str());
@@ -1246,8 +1263,8 @@ static void s_repeat_all(const fty::AssetServer& server, const std::set<std::str
     }
 
     // send a new message for each asset
-    for (const auto& asset_name : asset_names) {
-        send_create_or_update_asset(server, asset_name, FTY_PROTO_ASSET_OP_UPDATE);
+    for (const auto& iname :inames) {
+        send_create_or_update_asset(server, iname, FTY_PROTO_ASSET_OP_UPDATE);
     }
 }
 

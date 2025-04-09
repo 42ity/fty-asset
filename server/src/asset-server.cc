@@ -427,12 +427,20 @@ void AssetServer::createAsset(const messagebus::Message& msg) const
         fty::AssetImpl asset;
         fty::Asset::fromJson(msg.userData().front(), asset);
 
-        auto ipAddr = asset.getExtEntry("ip.1");
-        asset::AssetFilter filter(asset.getManufacturer(), asset.getSerialNo(), ipAddr);
-        auto ret = asset::checkDuplicatedAsset(filter);
-        if (!ret) {
-            throw std::runtime_error("Asset already exists");
-        }
+	    // check for duplicate
+        {
+            auto manufacturer = asset.getManufacturer();
+            auto serial = asset.getSerialNo();
+            auto macAddr = asset.getExtEntry("mac_address");
+            auto ipAddr = asset.getExtEntry("ip.1");
+
+            asset::AssetFilter filter(manufacturer, serial, macAddr, ipAddr);
+
+            auto ret = asset::checkDuplicatedAsset(filter);
+            if (!ret) {
+                throw std::runtime_error("Asset already exists");
+            }
+       	}
 
         bool requestActivation = (asset.getAssetStatus() == AssetStatus::Active);
 

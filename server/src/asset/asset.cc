@@ -325,12 +325,12 @@ static std::string generateRandomID()
     timeval t;
     gettimeofday(&t, NULL);
     srand(static_cast<unsigned int>(t.tv_sec * t.tv_usec));
-    // generate 8 digit random integer
+
+    // generate 8 digits random integer
     unsigned long index = static_cast<unsigned long>(rand()) % static_cast<unsigned long>(100000000);
 
+    // create 8 digits index with leading zeros
     std::string indexStr = std::to_string(index);
-
-    // create 8 digit index with leading zeros
     indexStr = std::string(8 - indexStr.length(), '0') + indexStr;
 
     return indexStr;
@@ -370,8 +370,15 @@ void AssetImpl::create()
         setExtEntry(fty::EXT_CREATE_TS, generateCurrentTimestamp(), true);
         // generate uuid if not already present in the payload
         if (getExtEntry("uuid").empty()) {
-            AssetFilter assetFilter{getManufacturer(), getSerialNo()};
-            setExtEntry(fty::EXT_UUID, generateUUID(assetFilter).uuid, true);
+            auto manufacturer{getManufacturer()};
+            auto serial{getSerialNo()};
+            auto macAddress{getExtEntry("mac_address")};
+            auto ipAddress{getExtEntry("ip.1")};
+
+            AssetFilter assetFilter{manufacturer, serial, macAddress, ipAddress};
+            Uuid uuid = generateUUID(assetFilter);
+
+            setExtEntry(fty::EXT_UUID, uuid.uuid, true);
         }
 
         m_storage.insert(*this);
@@ -660,7 +667,7 @@ void AssetImpl::assetToSrr(const AssetImpl& asset, cxxtools::SerializationInfo& 
 
 void AssetImpl::srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& asset)
 {
-    int         tmpInt = 0;
+    int tmpInt = 0;
     std::string tmpString;
 
     // uuid
@@ -736,8 +743,9 @@ void AssetImpl::srrToAsset(const cxxtools::SerializationInfo& si, AssetImpl& ass
     const cxxtools::SerializationInfo ext = si.getMember("ext");
     for (const auto& siExt : ext) {
         std::string key = siExt.name();
+
         std::string val;
-        bool        readOnly = false;
+        bool readOnly = false;
         siExt.getMember("value") >>= val;
         siExt.getMember("readOnly") >>= readOnly;
 
@@ -770,7 +778,7 @@ static void addSubTree(const std::string& internalName, std::vector<AssetImpl>& 
 
     AssetImpl& ref = a;
 
-    bool         end  = false;
+    bool end = false;
     unsigned int next = 0;
 
     while (!end) {
@@ -779,7 +787,7 @@ static void addSubTree(const std::string& internalName, std::vector<AssetImpl>& 
         if (next < children.size()) {
             stack.push_back(std::make_pair(ref, next + 1));
 
-            ref  = children[next];
+            ref = children[next];
             next = 0;
 
             auto found = std::find_if(toDel.begin(), toDel.end(), [&](const AssetImpl& assetImpl) {

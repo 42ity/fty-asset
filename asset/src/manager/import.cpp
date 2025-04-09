@@ -69,8 +69,7 @@ static std::string sanitize(const std::string& csvStr)
     return implode(out, "\n");
 }
 
-AssetExpected<AssetManager::ImportList> AssetManager::importCsv(
-    const std::string& csvStr, const std::string& user, bool sendNotify)
+AssetExpected<AssetManager::ImportList> AssetManager::importCsv(const std::string& csvStr, const std::string& user, bool sendNotify)
 {
     std::function<std::string(const std::string&)> iso_8859_1_to_utf8 = [](const std::string& strIn)
     {
@@ -109,7 +108,7 @@ AssetExpected<AssetManager::ImportList> AssetManager::importCsv(
     if (auto ret = import.process(sendNotify)) {
         AssetManager::ImportList res;
         const auto& list = import.items();
-        for (const auto&[row, el]: list) {
+        for (const auto& [row, el] : list) {
             if (el) {
                 res.emplace(row, el->id);
             } else {

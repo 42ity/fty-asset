@@ -53,7 +53,6 @@ private:
     uint16_t                           getPriority(const std::string& s) const;
     bool                               isDate(const std::string& key) const;
     std::string                        matchExtAttr(const std::string& value, const std::string& key) const;
-    bool                               checkUSize(const std::string& s) const;
 
     AssetExpected<void> updateDcRoomRowRackGroup(fty::db::Connection& conn, uint32_t elementId,
         const std::string& elementName, uint32_t parentId, const std::map<std::string, std::string>& extattributes,
@@ -75,6 +74,8 @@ private:
         const std::map<std::string, std::string>& extattributes, uint16_t assetDeviceTypeId, const std::string& status,
         uint16_t priority, const std::string& assetTag,
         const std::map<std::string, std::string>& extattributesRO) const;
+
+    Expected<void> postProcessMultiCardDevices() const; /// Hercule UPS
 
 private:
     const CsvMap&            m_cm;

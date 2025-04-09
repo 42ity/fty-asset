@@ -30,38 +30,39 @@ class FullAsset;
 
 namespace fty::asset {
 
-static constexpr auto UUID_TYPE_VERSION_NIL = 0;
-static constexpr auto UUID_TYPE_VERSION_4   = UUID_TYPE_DCE_RANDOM;
-static constexpr auto UUID_TYPE_VERSION_5   = UUID_TYPE_DCE_SHA1;
+static constexpr int UUID_TYPE_VERSION_4 = UUID_TYPE_DCE_RANDOM;
+static constexpr int UUID_TYPE_VERSION_5 = UUID_TYPE_DCE_SHA1;
 
 struct AssetFilter
 {
-    AssetFilter(const std::string& _manufacturer, const std::string& _serial, const std::string& _ipAddr = {})
+    AssetFilter(const std::string& _manufacturer, const std::string& _serial, const std::string& _macAddress, const std::string& _ipAddr)
         : manufacturer(_manufacturer)
         , serial(_serial)
+        , macAddress(_macAddress)
         , ipAddr(_ipAddr)
     {
     }
 
-    std::string manufacturer;
-    std::string serial;
-    std::string ipAddr;
+    std::string manufacturer; // manufacturer of device
+    std::string serial; // serial number of device
+    std::string macAddress; // MAC address of the communication card
+    std::string ipAddr; // IP address of the comm. card
 };
 
 struct Uuid
 {
-    Uuid(const std::string& _uuid = "", const int _type = UUID_TYPE_VERSION_NIL)
+    Uuid(const std::string& _uuid, int _type)
         : uuid(_uuid)
         , type(_type)
     {
     }
 
     std::string uuid;
-    int         type{UUID_TYPE_VERSION_NIL};
+    int type{UUID_TYPE_DCE_NIL};
 };
 
 AssetExpected<uint32_t>    checkElementIdentifier(const std::string& paramName, const std::string& paramValue);
-AssetExpected<std::string> sanitizeDate(const std::string& inp);
+AssetExpected<std::string> sanitizeDate(const std::string& dateIn);
 AssetExpected<double>      sanitizeValueDouble(const std::string& key, const std::string& value);
 AssetExpected<void>        tryToPlaceAsset(uint32_t id, uint32_t parentId, uint32_t size, uint32_t loc);
 AssetExpected<void>        checkDuplicatedAsset(const AssetFilter& assetFilter);
