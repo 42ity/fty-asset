@@ -23,6 +23,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <cstdint>
 
 namespace fty::db {
 class Row;

@@ -28,6 +28,7 @@
 
 #include <map>
 #include <string>
+#include <cstdint>
 
 int free_u_size(uint32_t elementId);
 int rack_outlets_available(uint32_t elementId, std::map<std::string, int>& res);
