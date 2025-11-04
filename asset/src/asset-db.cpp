@@ -207,7 +207,7 @@ Expected<std::pair<std::string, std::string>> idToNameExtName(uint32_t assetId)
 
 // =====================================================================================================================
 
-Expected<std::string> nameToExtName(std::string assetName)
+Expected<std::string> nameToExtName(const std::string& assetName)
 {
     static const std::string sql = R"(
         SELECT

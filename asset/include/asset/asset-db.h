@@ -118,7 +118,7 @@ Expected<std::string> extNameToAssetName(const std::string& assetExtName); //! t
 /// Converts internal name to extended name
 /// @param assetName asset internal name
 /// @return external name or error
-Expected<std::string> nameToExtName(std::string assetName);
+Expected<std::string> nameToExtName(const std::string& assetName);
 
 /// Converts asset's extended name to id
 /// @param assetExtName asset external name
