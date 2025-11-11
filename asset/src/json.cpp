@@ -49,7 +49,7 @@ static double s_rack_realpower_nominal(const std::string& name)
 
 // <name, value> property json serializer (<string>, <char*>, <bool>)
 static std::string s_jsonify(const std::string& name, const std::string& value)
-    { return "\"" + name + "\":\"" + value + "\""; }
+    { return "\"" + name + "\":\"" + UTF8::escape(value) + "\""; }
 static std::string s_jsonify(const std::string& name, const char* value)
     { return s_jsonify(name, std::string{value ? value : ""}); }
 static std::string s_jsonify(const std::string& name, bool value)
