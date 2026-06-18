@@ -350,7 +350,7 @@ The FTY-ASSET-AGENT peer MUST respond with one of the messages back to USER
 peer using MAILBOX SEND.
 
 * OK/'A1'/.../'An'
-* ERROR/<reason>
+* ERROR/'reason'
 
 where
 * '/' indicates a multipart frame message
@@ -371,24 +371,30 @@ where
     ASSET\_NOT\_FOUND / BAD\_COMMAND/INTERNAL\_ERROR
 * subject of the message MUST be "ASSETS\_IN\_CONTAINER"
 
+Example of bmsg request:
+```bash
+bmsg request asset-agent ASSETS_IN_CONTAINER GET datacenter-99071212
+bmsg request asset-agent ASSETS_IN_CONTAINER GET datacenter-99071212 ups
+```
+
 #### Assets of given type/subtype
 
 The USER peer sends the following messages using MAILBOX SEND to
 FTY-ASSET-AGENT ("asset-agent") peer:
 
-* GET/<uuid>/'type-1'/.../'type-n'
+* GET/'uuid'/'type-1'/.../'type-n'
 
 where
 * '/' indicates a multipart frame message
-* <uuid> zuuid of the message
+* 'uuid' is the correlation id of the message
 * 'type-1'/.../'type-n' MAY be asset types/subtypes
 * subject of the message MUST be "ASSETS".
 
 The FTY-ASSET-AGENT peer MUST respond with one of the messages back to USER
 peer using MAILBOX SEND.
 
-* OK/<uuid>/'A1'/.../'An'
-* ERROR/<uuid>/<reason>
+* OK/'uuid'/'A1'/.../'An'
+* ERROR/'uuid'/'reason'
 
 where
 * '/' indicates a multipart frame message
@@ -402,6 +408,13 @@ where
 
     ASSET\_NOT\_FOUND / BAD\_COMMAND / MISSING\_COMMAND / INTERNAL\_ERROR
 * subject of the message MUST be "ASSETS".
+
+Example of bmsg request:
+```bash
+bmsg request asset-agent ASSETS GET 1234
+bmsg request asset-agent ASSETS GET 1234 ups
+bmsg request asset-agent ASSETS GET 1234 datacenter ups
+```
 
 #### Creation and updating of assets
 
@@ -421,13 +434,12 @@ The FTY-ASSET-AGENT peer MUST:
 peer using MAILBOX SEND:
 
     * OK/'asset-iname'
-    * ERROR/<reason>
+    * ERROR/'reason'
 
 where
 * '/' indicates a multipart frame message
 * 'asset-iname' MUST be iname of created or updated asset
 * 'reason' is string detailing reason for error. Possible values are:
-
     OPERATION\_NOT\_IMPLEMENTED (MAY be empty)
 * subject of the message MUST be "ASSET\_MANIPULATION".
 
@@ -446,43 +458,45 @@ The FTY-ASSET-AGENT peer MUST respond with one of the messages back to USER
 peer using MAILBOX SEND.
 
 * OK/'asset-ename'
-* ERROR/<reason>
+* ERROR/'reason'
 
 where
 * '/' indicates a multipart frame message
 * 'asset-ename' is user-friendly name corresponding to 'asset-iname' from the request
 * 'reason' is string detailing reason for error. Possible values are:
-
-   MISSING\_INAME/ASSET\_NOT\_FOUND
+    MISSING\_INAME/ASSET\_NOT\_FOUND
 * subject of the message MUST be "ENAME\_FROM\_INAME".
+
+Example of bmsg request:
+```bash
+bmsg request asset-agent ENAME_FROM_INAME ups-88626033
+```
 
 #### Getting all the available asset data for given asset
 
 The USER peer sends the following messages using MAILBOX SEND to
 FTY-ASSET-AGENT ("asset-agent") peer:
 
-* GET/<uuid>/'asset-iname'
+* GET/'uuid'/'asset-iname'
 
 where
 * '/' indicates a multipart frame message
 * 'asset-iname' is internal name of an asset
-* <uuid> is zuuid of the message
+* 'uuid' is the correlation id of the message
 * subject of the message MUST be "ASSET\_DETAIL".
 
 The FTY-ASSET-AGENT peer MUST respond with one of the messages back to USER
 peer using MAILBOX SEND.
 
-* 'asset-message'
-* ERROR/<uuid>/<reason>
+* 'uuid'/'asset-message'
+* 'uuid'/ERROR/'reason'
 
 where
 * '/' indicates a multipart frame message
 * 'asset-message' is fty-proto update message containing available data for given asset
 * 'reason' is string detailing reason for error. Possible values are:
-
-   BAD\_COMMAND/ASSET\_NOT\_FOUND
+    BAD\_COMMAND/ASSET\_NOT\_FOUND
 * subject of the message MUST be "ASSET\_DETAIL".
-
 
 Example of bmsg request:
 ```bash
@@ -501,4 +515,4 @@ If it receives any other asset message, asset-server actor for all the children 
 * updates stored data
 
 * publishes update message on ASSETS stream
- 
+
