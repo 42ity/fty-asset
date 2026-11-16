@@ -241,7 +241,6 @@ dto::srr::SaveResponse AssetServer::handleSave(const dto::srr::SaveQuery& query)
                 fs1.mutable_status()->set_status(Status::FAILED);
                 fs1.mutable_status()->set_error(e.what());
             }
-
         }
         else {
             fs1.mutable_status()->set_status(Status::FAILED);

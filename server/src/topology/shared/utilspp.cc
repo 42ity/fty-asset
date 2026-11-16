@@ -39,7 +39,8 @@ namespace utils {
 namespace math {
 
 void dtos (double number, std::streamsize precision, std::string& result) {
-    std::ostringstream stream;
+    result = std::string{};
+    std::ostringstream stream{};
     stream.precision (precision);
     stream << std::fixed;
     stream << number;
@@ -136,7 +137,7 @@ strip (const std::string &_str) {
 
 std::string escape (const std::string& in, const std::string& escape_chars) {
 
-    std::stringstream s;
+    std::stringstream s{};
 
     if (in.empty() || escape_chars.empty())
         return in;

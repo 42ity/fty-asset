@@ -210,6 +210,15 @@ static int zsocket_type ([[maybe_unused]] void *socket) {
 }
 #endif
 
+//  -------------------------------------------------------------------------
+
+#ifdef __COVERITY__
+common_msg_t* common_msg_new(int id) { __coverity_alloc_nosize__(); }
+void common_msg_destroy(common_msg_t** p) { __coverity_free__(*p); }
+common_msg_t* common_msg_dup (common_msg_t *p) { __coverity_alloc_nosize__(); }
+void zstr_free(char** p) { __coverity_free__(*p); }
+#endif
+
 //  --------------------------------------------------------------------------
 //  Create a new common_msg
 

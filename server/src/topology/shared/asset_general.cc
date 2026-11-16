@@ -398,7 +398,7 @@ db_reply_t
 {
     LOG_START;
     if (DBAssets::extname_to_asset_id(element_name) != -1) {
-        db_reply_t ret;
+        db_reply_t ret{};
         ret.status     = 0;
         ret.errtype    = DB_ERR;
         ret.errsubtype = DB_ERROR_BADINPUT;

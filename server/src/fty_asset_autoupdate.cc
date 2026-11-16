@@ -46,6 +46,14 @@ struct fty_asset_autoupdate_t {
     bool verbose{false};
 };
 
+//  -------------------------------------------------------------------------
+
+#ifdef __COVERITY__
+fty_asset_autoupdate_t* fty_asset_autoupdate_new() { __coverity_alloc_nosize__(); }
+void fty_asset_autoupdate_destroy(fty_asset_autoupdate_t** p) { __coverity_free__(*p); }
+void zstr_free(char** p) { __coverity_free__(*p); }
+#endif
+
 //  --------------------------------------------------------------------------
 //  Destroy the fty_asset_autoupdate
 

@@ -26,7 +26,7 @@
 static constexpr const char* SECW_CRED_ID_KEY = "secw_credential_id";
 
 void getExtMapFromSi(const cxxtools::SerializationInfo& si, ExtMap& map) {
-    const cxxtools::SerializationInfo extSi = si.getMember("ext");
+    const cxxtools::SerializationInfo extSi{si.getMember("ext")};
 
     if (extSi.category() == cxxtools::SerializationInfo::Array) {
         log_debug("it is GET format");

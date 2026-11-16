@@ -1752,7 +1752,7 @@ Expected<std::vector<LinkEntry>> selectAssetLinks(uint32_t elementId)
         fty::db::Connection conn;
         std::vector<LinkEntry> links;
         for (const auto& it : conn.select(sql, "asset_id"_p = elementId)) {
-            LinkEntry l;
+            LinkEntry l{};
             l.source    = it.get("name");
             l.link_type = it.get<int32_t>("linkType");
             l.src_out   = it.get("srcOut");
@@ -1856,7 +1856,7 @@ Expected<std::vector<WebAssetElement>> selectAssetElementAll(const std::optional
     try {
         fty::db::Connection          db;
         std::vector<WebAssetElement> list;
-        fty::db::Rows                result;
+        fty::db::Rows                result{};
 
         if (dc) {
             result = db.select(sql, "containerid"_p = *dc);

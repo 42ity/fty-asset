@@ -213,7 +213,16 @@ static int zsocket_type (void *socket) {
 }
 #endif
 
-//  --------------------------------------------------------------------------
+//  -------------------------------------------------------------------------
+
+#ifdef __COVERITY__
+asset_msg_t* asset_msg_new(int id) { __coverity_alloc_nosize__(); }
+void asset_msg_destroy(asset_msg_t** p) { __coverity_free__(*p); }
+asset_msg_t* asset_msg_dup (asset_msg_t *p) { __coverity_alloc_nosize__(); }
+void zstr_free(char** p) { __coverity_free__(*p); }
+#endif
+
+//  -------------------------------------------------------------------------
 //  Create a new asset_msg
 
 asset_msg_t *
