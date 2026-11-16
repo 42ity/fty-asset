@@ -49,15 +49,15 @@ struct HasRead<T, decltype(std::declval<T>().read, void())> : std::true_type
  **/
 static const std::string _ci_strip(const std::string& str)
 {
-    std::ostringstream b;
+    std::ostringstream s{};
 
     for (const char c : str) {
         // allowed chars [a-zA-Z0-9_\.]
         if (::isalnum(c) || c == '_' || c == '.')
-            b << static_cast<char>(::tolower(c));
+            s << static_cast<char>(::tolower(c));
     }
 
-    return b.str();
+    return s.str();
 }
 
 void CsvMap::deserialize()
@@ -214,7 +214,7 @@ CsvMap CsvMap_from_istream(std::istream& in)
 
     std::vector<std::vector<std::string>> data;
     {
-        cxxtools::CsvDeserializer deserializer;
+        cxxtools::CsvDeserializer deserializer{};
         deserializer.delimiter(delimiter);
         deserializer.readTitle(false);
         deserializer.read(in);
